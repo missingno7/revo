@@ -1,60 +1,74 @@
 use super::evo_individual::EvoIndividual;
+use rand::Rng;
 
-pub struct Population<Individual> {
-    curr_gen: Vec<Individual>,
-    next_gen: Vec<Individual>,
+pub struct Population<Individual, IndividualData> {
+    curr_gen_inds: Vec<Individual>,
+    next_gen_inds: Vec<Individual>,
     pop_width: usize,
     pop_height: usize,
     i_generation: usize,
+
+    ind_data: IndividualData,
 }
 
-impl<Individual: EvoIndividual> Population<Individual> {
+impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Individual, IndividualData> {
     // Another associated function, taking two arguments:
-    pub fn new(pop_width: usize, pop_height: usize) -> Population<Individual> {
+    pub fn new(pop_width: usize, pop_height: usize, ind_data: IndividualData) -> Population<Individual, IndividualData> {
         let size = pop_width * pop_height;
-        let mut curr_gen: Vec<Individual> = Vec::with_capacity(size);
-        let mut next_gen: Vec<Individual> = Vec::with_capacity(size);
+        let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
+        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
 
+
+        let mut rng = rand::thread_rng();
         for _ in 0..size {
-            let mut curr_gen_ind = Individual::new_randomised();
-            curr_gen_ind.count_fitness();
-            curr_gen.push(curr_gen_ind);
-            next_gen.push(Individual::new());
+            let mut curr_gen_ind = Individual::new_randomised(&ind_data, &mut rng);
+            curr_gen_ind.count_fitness(&ind_data);
+            curr_gen_inds.push(curr_gen_ind);
+            next_gen_inds.push(Individual::new());
         }
 
         Population {
-            curr_gen,
-            next_gen,
+            curr_gen_inds,
+            next_gen_inds,
             pop_width,
             pop_height,
             i_generation: 0,
+            ind_data,
         }
     }
 
     pub fn next_gen(&mut self) {
-        for i in 0..self.curr_gen.len() {
-            self.curr_gen[self.tournament_l5(i)].copy_to(&mut self.next_gen[i]);
-            self.next_gen[i].mutate();
+        let mut rng = rand::thread_rng();
+        for i in 0..self.curr_gen_inds.len() {
+            self.curr_gen_inds[self.tournament_l5(i)].copy_to(&mut self.next_gen_inds[i]);
+            self.next_gen_inds[i].mutate(&self.ind_data, &mut rng);
+            self.next_gen_inds[i].count_fitness(&self.ind_data);
         }
 
         // Advance to next generation
-        std::mem::swap(&mut self.curr_gen, &mut self.next_gen);
+        std::mem::swap(&mut self.curr_gen_inds, &mut self.next_gen_inds);
         self.i_generation += 1;
     }
 
     pub fn get_best(&self) -> Individual {
-        let mut best_ind = &self.curr_gen[0];
+        let mut best_ind = &self.curr_gen_inds[0];
 
-        for i in 1..self.curr_gen.len() {
-            if self.curr_gen[i].get_fitness() > self.next_gen[i].get_fitness() {
-                best_ind = &self.curr_gen[i];
+        for i in 1..self.curr_gen_inds.len() {
+            if self.curr_gen_inds[i].get_fitness() > best_ind.get_fitness() {
+                best_ind = &self.curr_gen_inds[i];
             }
         }
 
         best_ind.clone()
     }
 
-    fn tournament_l5(&self, i: usize) -> usize {
+    pub fn get_generation(&self) -> usize
+    {
+        self.i_generation
+    }
+
+    fn tournament_l5(&self, i: usize) -> usize
+    {
         let x: usize = i % self.pop_width;
         let y: usize = i / self.pop_width;
 
@@ -69,25 +83,22 @@ impl<Individual: EvoIndividual> Population<Individual> {
             ((y + self.pop_height - 1) % self.pop_height) * self.pop_width + column_start_index;
         let d_i = ((y + 1) % self.pop_height) * self.pop_width + column_start_index;
 
-
-        //println!("i{} l{} r{} u{} d{}",i, l_i, r_i, u_i, d_i);
-
         // Left
-        if self.curr_gen[l_i].get_fitness() > self.curr_gen[best_i].get_fitness() {
+        if self.curr_gen_inds[l_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
             best_i = l_i;
         }
         // Right
-        if self.curr_gen[r_i].get_fitness() > self.curr_gen[best_i].get_fitness() {
+        if self.curr_gen_inds[r_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
             best_i = r_i;
         }
 
         // Up
-        if self.curr_gen[u_i].get_fitness() > self.curr_gen[best_i].get_fitness() {
+        if self.curr_gen_inds[u_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
             best_i = u_i;
         }
 
         // Down
-        if self.curr_gen[d_i].get_fitness() > self.curr_gen[best_i].get_fitness() {
+        if self.curr_gen_inds[d_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
             best_i = d_i;
         }
 
