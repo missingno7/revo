@@ -1,6 +1,1 @@
-
-pub struct PopulationConfig
-{
-
-}
-
+pub struct PopulationConfig {}
