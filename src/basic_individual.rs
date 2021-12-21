@@ -15,7 +15,7 @@ pub struct BasicIndividual {
 }
 
 impl EvoIndividual<BasicIndividualData> for BasicIndividual {
-    fn new() -> Self {
+    fn new(ind_data: &BasicIndividualData) -> Self {
         BasicIndividual {
             fitness: 0.0,
             value: 0.0,
@@ -35,15 +35,26 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     }
 
     fn clone(&self) -> Self {
-        let mut new_ind = Self::new();
-        self.copy_to(&mut new_ind);
-        new_ind
+        BasicIndividual
+        {
+            fitness: self.fitness,
+            value: self.value,
+        }
     }
 
     fn mutate(&mut self, ind_data: &BasicIndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
         self.value += rng.gen_range(-mut_amount as f64..mut_amount as f64);
 
         //println!("{}", self.value);
+
+
+    }
+
+    fn crossover_to(&self, another_ind: &BasicIndividual, dest_int: &mut BasicIndividual, ind_data: &BasicIndividualData, rng: &mut ThreadRng)
+    {
+        let ratio = rng.gen_range(0.0..1.0);
+
+        dest_int.value = self.value * ratio + another_ind.value * (1.0-ratio);
 
 
     }
