@@ -1,11 +1,14 @@
 use super::evo_individual::EvoIndividual;
-use rand::Rng;
+use crate::revo::pop_config::PopulationConfig;
+
 
 pub struct Population<Individual, IndividualData> {
     curr_gen_inds: Vec<Individual>,
     next_gen_inds: Vec<Individual>,
     pop_width: usize,
     pop_height: usize,
+    mut_prob: f32,
+    mut_amount: f32,
     i_generation: usize,
 
     ind_data: IndividualData,
@@ -13,8 +16,10 @@ pub struct Population<Individual, IndividualData> {
 
 impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Individual, IndividualData> {
     // Another associated function, taking two arguments:
-    pub fn new(pop_width: usize, pop_height: usize, ind_data: IndividualData) -> Population<Individual, IndividualData> {
-        let size = pop_width * pop_height;
+    pub fn new(pop_config: PopulationConfig, ind_data: IndividualData) -> Population<Individual, IndividualData> {
+
+
+        let size = pop_config.pop_width * pop_config.pop_height;
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
 
@@ -30,8 +35,10 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Indiv
         Population {
             curr_gen_inds,
             next_gen_inds,
-            pop_width,
-            pop_height,
+            pop_width: pop_config.pop_width,
+            pop_height: pop_config.pop_height,
+            mut_prob:  pop_config.mut_prob,
+            mut_amount:  pop_config.mut_amount,
             i_generation: 0,
             ind_data,
         }
@@ -41,7 +48,7 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Indiv
         let mut rng = rand::thread_rng();
         for i in 0..self.curr_gen_inds.len() {
             self.curr_gen_inds[self.tournament_l5(i)].copy_to(&mut self.next_gen_inds[i]);
-            self.next_gen_inds[i].mutate(&self.ind_data, &mut rng);
+            self.next_gen_inds[i].mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
             self.next_gen_inds[i].count_fitness(&self.ind_data);
         }
 

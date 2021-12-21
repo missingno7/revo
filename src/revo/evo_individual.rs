@@ -6,7 +6,7 @@ pub trait EvoIndividual<IndividualData> {
 
     fn copy_to(&self, ind: &mut Self);
     fn clone(&self) -> Self;
-    fn mutate(&mut self, ind_data: &IndividualData, rng: &mut ThreadRng);
+    fn mutate(&mut self, ind_data: &IndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32);
 
     fn count_fitness(&mut self, ind_data: &IndividualData);
 
