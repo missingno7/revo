@@ -1,0 +1,15 @@
+[package]
+name = "evo_salesman"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+revo = { path = "../revo", version = "*" }
+rand = "0.8.4"
+
+
+[profile.dev]
+opt-level = 3               # Use slightly better optimizations.
+overflow-checks = false     # Disable integer overflow checks.

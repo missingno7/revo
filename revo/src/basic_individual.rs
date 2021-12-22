@@ -1,13 +1,21 @@
 use rand::Rng;
 use rand::prelude::ThreadRng;
-use crate::revo::evo_individual::EvoIndividual;
+use crate::evo_individual::EvoIndividual;
 
 
 pub struct BasicIndividualData
 {
-
+    value: f64
 }
 
+impl BasicIndividualData
+{
+    pub fn new() -> Self {
+        BasicIndividualData {
+            value: 0.0,
+        }
+    }
+}
 
 pub struct BasicIndividual {
     fitness: f64,
@@ -18,14 +26,14 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     fn new(ind_data: &BasicIndividualData) -> Self {
         BasicIndividual {
             fitness: 0.0,
-            value: 0.0,
+            value: ind_data.value,
         }
     }
 
     fn new_randomised(ind_data: &BasicIndividualData, rng: &mut ThreadRng) -> Self {
         BasicIndividual {
             fitness: 0.0,
-            value: rng.gen_range(0.0..10.0),
+            value: ind_data.value + rng.gen_range(0.0..10.0),
         }
     }
 
@@ -42,15 +50,17 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         }
     }
 
-    fn mutate(&mut self, ind_data: &BasicIndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
-        self.value += rng.gen_range(-mut_amount as f64..mut_amount as f64);
+    fn mutate(&mut self, _ind_data: &BasicIndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
 
-        //println!("{}", self.value);
+        if rng.gen_range(0.0..1.0) < mut_prob
+        {
+        self.value += rng.gen_range(-mut_amount as f64..mut_amount as f64);
+        }
 
 
     }
 
-    fn crossover_to(&self, another_ind: &BasicIndividual, dest_int: &mut BasicIndividual, ind_data: &BasicIndividualData, rng: &mut ThreadRng)
+    fn crossover_to(&self, another_ind: &BasicIndividual, dest_int: &mut BasicIndividual, _ind_data: &BasicIndividualData, rng: &mut ThreadRng)
     {
         let ratio = rng.gen_range(0.0..1.0);
 
@@ -59,7 +69,7 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
 
     }
 
-    fn count_fitness(&mut self, ind_data: &BasicIndividualData) {
+    fn count_fitness(&mut self, _ind_data: &BasicIndividualData) {
         self.fitness = self.value;
     }
     fn get_fitness(&self) -> f64 {

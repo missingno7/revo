@@ -1,5 +1,5 @@
 use super::evo_individual::EvoIndividual;
-use crate::revo::pop_config::PopulationConfig;
+use crate::pop_config::PopulationConfig;
 use rand::Rng;
 
 
