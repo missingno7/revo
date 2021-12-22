@@ -8,7 +8,7 @@ use evo_salesman::salesman::{SalesmanIndividualData, SalesmanIndividual};
 
 fn main() {
 
-    let n_cities: u32 = 20;
+    let n_cities: u32 = 50;
     let screen_width: u32 = 512;
     let screen_height: u32 = 512;
     let shift_prob: f64 = 0.1;
@@ -18,12 +18,22 @@ fn main() {
 
     let pop_config = PopulationConfig::new("pop_config.json");
     let ind_data = SalesmanIndividualData::new(&mut rng, n_cities, screen_width, screen_height,shift_prob,rev_prob);
-    let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> = Population::new(pop_config, ind_data);
+    let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> = Population::new(pop_config, ind_data.clone());
 
-    for _ in 0..100
+
+    let mut all_best_ind = pop.get_best();
+    for _ in 0..1000
     {
-        println!("Round {}, best fitness: {}",pop.get_generation(), pop.get_best().get_fitness());
+        let best_ind = pop.get_best();
+        if best_ind.get_fitness() > all_best_ind.get_fitness()
+        {
+            all_best_ind = best_ind.clone();
+            all_best_ind.draw(format!("best_{}.png",pop.get_generation()).as_str(), &ind_data);
+        }
+
+        println!("Round {}, best fitness: {}",pop.get_generation(), best_ind.get_fitness());
         pop.next_gen();
+
     }
 
 

@@ -1,8 +1,9 @@
 {
- "pop_width": 512,
- "pop_height": 512,
- "mut_prob": 0.1,
- "mut_amount": 2.0
+ "pop_width": 4096,
+ "pop_height": 64,
+ "mut_prob": 0.002,
+ "mut_amount": 10.0,
+ "crossover_prob": 0.05
  
  
 }

@@ -2,7 +2,9 @@ use rand::Rng;
 use rand::seq::SliceRandom;
 use rand::prelude::ThreadRng;
 use revo::evo_individual::EvoIndividual;
-
+use image::{RgbImage, ImageBuffer, Rgb};
+use imageproc::drawing::{draw_hollow_rect_mut, draw_line_segment_mut};
+use imageproc::rect::Rect;
 
 pub struct SalesmanIndividualData
 {
@@ -37,6 +39,18 @@ impl SalesmanIndividualData
             rev_prob,
         }
     }
+
+    pub fn clone(&self) -> Self
+    {
+        SalesmanIndividualData
+        {
+            coords: self.coords.clone(),
+            screen_width: self.screen_width,
+            screen_height: self.screen_height,
+            shift_prob: self.shift_prob,
+            rev_prob: self.rev_prob,
+        }
+    }
 }
 
 pub struct SalesmanIndividual {
@@ -46,6 +60,38 @@ pub struct SalesmanIndividual {
 
 impl SalesmanIndividual
 {
+    pub fn draw(&self, output_filename: &str, ind_data: &SalesmanIndividualData)
+    {
+        let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
+        let city_color = Rgb([255, 0, 0]);
+        let road_color = Rgb([255, 255, 255]);
+
+        // Draw cities
+        for coord in &ind_data.coords
+        {
+            draw_hollow_rect_mut(&mut img, Rect::at(coord.0 as i32 - 5, coord.1 as i32 - 5).of_size(10, 10), city_color.clone());
+        }
+
+        // Draw roads
+        for i in 0..self.genom.len() - 1 {
+            let from_x = ind_data.coords[self.genom[i] as usize].0 as f32;
+            let from_y = ind_data.coords[self.genom[i] as usize].1 as f32;
+            let to_x = ind_data.coords[self.genom[i + 1] as usize].0 as f32;
+            let to_y = ind_data.coords[self.genom[i + 1] as usize].1 as f32;
+            draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color.clone());
+        }
+
+
+        let from_x = ind_data.coords[self.genom[0] as usize].0 as f32;
+        let from_y = ind_data.coords[self.genom[0] as usize].1 as f32;
+        let to_x = ind_data.coords[self.genom[self.genom.len()-1] as usize].0 as f32;
+        let to_y = ind_data.coords[self.genom[self.genom.len()-1] as usize].1 as f32;
+        draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color.clone());
+
+
+        img.save(output_filename).unwrap();
+    }
+
     fn distance(x1: u32, y1: u32, x2: u32, y2: u32) -> f64
     {
         let x = x2 as f64 - x1 as f64;
@@ -74,13 +120,13 @@ impl SalesmanIndividual
                 toi -= 1;
             }
 
-            if (frmi + 1 >= self.genom.len()) {
+            if frmi + 1 >= self.genom.len() {
                 frmi = 0;
             } else {
                 frmi += 1;
             }
 
-            if ((frmi - 1) == toi || frmi == toi)
+            if (frmi - 1) == toi || frmi == toi
             {
                 break;
             }
@@ -90,7 +136,7 @@ impl SalesmanIndividual
 
     fn shift_multiple(&mut self, from: usize, to: usize, forward: bool, cnt: usize) {
         if forward {
-            for i in cnt-1..=0 {
+            for i in cnt - 1..=0 {
                 let frmi = (from + i) % self.genom.len();
                 let toi = (to + i) % self.genom.len();
 
@@ -98,7 +144,7 @@ impl SalesmanIndividual
             }
         } else {
             // backwards
-            for i in 0..cnt{
+            for i in 0..cnt {
                 let frmi = (from + i) % self.genom.len();
                 let toi = (to + i) % self.genom.len();
 
@@ -116,7 +162,7 @@ impl SalesmanIndividual
 
         if forward {
             loop {
-                let next = (i + 1)%self.genom.len();
+                let next = (i + 1) % self.genom.len();
 
                 let tmp = self.genom[i];
                 self.genom[i] = self.genom[next];
@@ -134,10 +180,8 @@ impl SalesmanIndividual
             loop {
                 let next = if i < 1 {
                     self.genom.len() - 1
-                }
-                else
-                {
-                    i-1
+                } else {
+                    i - 1
                 };
 
                 let tmp = self.genom[i];
@@ -145,12 +189,11 @@ impl SalesmanIndividual
                 self.genom[next] = tmp;
 
                 i = next;
-            if i == to
-            {
-                break;
+                if i == to
+                {
+                    break;
+                }
             }
-            }
-
         }
     }
 }
@@ -191,35 +234,31 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
 
     fn mutate(&mut self, ind_data: &SalesmanIndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32)
     {
-
-        let mut swap_with: usize = 0;
         for i in 0..self.genom.len() {
-
-        if (rng.gen_range(0.0..1.0) < mut_prob) {
-            swap_with = rng.gen_range(0..self.genom.len() - 1);
-            if swap_with == i {
-                continue;
+            if rng.gen_range(0.0..1.0) < mut_prob {
+                let swap_with = rng.gen_range(0..self.genom.len() - 1);
+                if swap_with == i {
+                    continue;
+                }
+                // Simple swap
+                let tmp = self.genom[i];
+                self.genom[i] = self.genom[swap_with];
+                self.genom[swap_with] = tmp;
             }
-            // Simple swap
-            let tmp = self.genom[i];
-            self.genom[i] = self.genom[swap_with];
-            self.genom[swap_with] = tmp;
         }
-    }
 
         if rng.gen_range(0.0..1.0) < ind_data.shift_prob {
             // Shifting
 
             let mut cnttoshift = rng.gen_range(1..self.genom.len() - 1);
 
-            self.shift_multiple(rng.gen_range(0..self.genom.len() - 1),rng.gen_range(0..self.genom.len() - 1), rng.gen_bool(0.5),
-                          cnttoshift);
+            self.shift_multiple(rng.gen_range(0..self.genom.len() - 1), rng.gen_range(0..self.genom.len() - 1), rng.gen_bool(0.5),
+                                cnttoshift);
         }
 
         if rng.gen_range(0.0..1.0) < ind_data.rev_prob {
             self.reverse_part(rng.gen_range(0..self.genom.len() - 1), rng.gen_range(0..self.genom.len() - 1));
         }
-
     }
 
     fn crossover_to(&self, another_ind: &SalesmanIndividual, dest_int: &mut SalesmanIndividual, _ind_data: &SalesmanIndividualData, rng: &mut ThreadRng)
