@@ -8,11 +8,11 @@ use evo_salesman::salesman::{SalesmanIndividualData, SalesmanIndividual};
 
 fn main() {
 
-    let n_cities: u32 = 50;
-    let screen_width: u32 = 512;
-    let screen_height: u32 = 512;
-    let shift_prob: f64 = 0.1;
-    let rev_prob: f64 = 0.1;
+    let n_cities: u32 = 1500;
+    let screen_width: u32 = 1500;
+    let screen_height: u32 = 1500;
+    let shift_prob: f64 = 0.4;
+    let rev_prob: f64 = 0.4;
 
     let mut rng = rand::thread_rng();
 
@@ -22,16 +22,16 @@ fn main() {
 
 
     let mut all_best_ind = pop.get_best();
-    for _ in 0..1000
+    for _ in 0..500000
     {
         let best_ind = pop.get_best();
         if best_ind.get_fitness() > all_best_ind.get_fitness()
         {
             all_best_ind = best_ind.clone();
             all_best_ind.draw(format!("best_{}.png",pop.get_generation()).as_str(), &ind_data);
+            println!("Round {}, best fitness: {}",pop.get_generation(), best_ind.get_fitness());
         }
 
-        println!("Round {}, best fitness: {}",pop.get_generation(), best_ind.get_fitness());
         pop.next_gen();
 
     }

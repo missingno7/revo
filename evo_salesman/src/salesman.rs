@@ -232,7 +232,7 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         }
     }
 
-    fn mutate(&mut self, ind_data: &SalesmanIndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32)
+    fn mutate(&mut self, ind_data: &SalesmanIndividualData, rng: &mut ThreadRng, mut_prob: f32, _mut_amount: f32)
     {
         for i in 0..self.genom.len() {
             if rng.gen_range(0.0..1.0) < mut_prob {
@@ -250,7 +250,7 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         if rng.gen_range(0.0..1.0) < ind_data.shift_prob {
             // Shifting
 
-            let mut cnttoshift = rng.gen_range(1..self.genom.len() - 1);
+            let cnttoshift = rng.gen_range(1..self.genom.len() - 1);
 
             self.shift_multiple(rng.gen_range(0..self.genom.len() - 1), rng.gen_range(0..self.genom.len() - 1), rng.gen_bool(0.5),
                                 cnttoshift);
@@ -262,7 +262,57 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
     }
 
     fn crossover_to(&self, another_ind: &SalesmanIndividual, dest_int: &mut SalesmanIndividual, _ind_data: &SalesmanIndividualData, rng: &mut ThreadRng)
-    {}
+    {
+
+
+        let mut myarray: Vec<bool> = vec![false; self.genom.len()];
+        let cross_point = rng.gen_range(0..self.genom.len() - 1);
+        let mut i = cross_point;
+
+        loop {
+
+        if myarray[self.genom[i] as usize] {
+            if myarray[another_ind.genom[i] as usize] {
+                // Both on list
+                for j in 0..self.genom.len(){
+                    if !myarray[j] {
+            dest_int.genom[i] = j as u16;
+                        break;
+                    }
+                }
+
+            } else {
+                // second not used
+                dest_int.genom[i] = another_ind.genom[i];
+            }
+
+        } else {
+            if myarray[another_ind.genom[i] as usize] {
+                // first not used
+                dest_int.genom[i] = self.genom[i];
+            } else {
+                // None used
+                if rng.gen_bool(0.5) {
+                    dest_int.genom[i] = self.genom[i];
+                } else {
+                    dest_int.genom[i] = another_ind.genom[i];
+                }
+            }
+
+        }
+
+        myarray[dest_int.genom[i] as usize] = true;
+
+        i = (i + 1) % self.genom.len();
+
+     if (i % self.genom.len()) == cross_point
+     {
+         break;
+     }
+        }
+
+
+    }
 
     fn count_fitness(&mut self, ind_data: &SalesmanIndividualData)
     {

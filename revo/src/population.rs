@@ -2,7 +2,6 @@ use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
 use rand::Rng;
 
-
 pub struct Population<Individual, IndividualData> {
     curr_gen_inds: Vec<Individual>,
     next_gen_inds: Vec<Individual>,
