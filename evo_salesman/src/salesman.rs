@@ -220,8 +220,10 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
 
     fn copy_to(&self, ind: &mut Self)
     {
-        ind.fitness = self.fitness;
-        ind.genom = self.genom.clone();
+        for i in 0..self.genom.len()
+        {
+            ind.genom[i] = self.genom[i];
+        }
     }
 
     fn clone(&self) -> Self {

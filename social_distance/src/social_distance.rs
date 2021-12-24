@@ -49,12 +49,13 @@ impl DistanceIndividual
     pub fn draw(&self, output_filename: &str, ind_data: &DistanceIndividualData)
     {
         let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
-        let point_color = Rgb([255, 0, 0]);
 
         // Draw points
-        for coord in &self.coords
+        for i in 0..self.coords.len()
         {
-            draw_hollow_rect_mut(&mut img, Rect::at(coord.0 as i32 - 5, coord.1 as i32 - 5).of_size(10, 10), point_color.clone());
+            let point_color = Rgb([255, ((i*255)/(self.coords.len())) as u8 , 0]);
+
+            draw_hollow_rect_mut(&mut img, Rect::at(self.coords[i].0 as i32 - 5, self.coords[i].1 as i32 - 5).of_size(10, 10), point_color.clone());
         }
 
         img.save(output_filename).unwrap();

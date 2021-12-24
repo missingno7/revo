@@ -8,9 +8,9 @@ use evo_salesman::salesman::{SalesmanIndividualData, SalesmanIndividual};
 
 fn main() {
 
-    let n_cities: u32 = 1500;
-    let screen_width: u32 = 1500;
-    let screen_height: u32 = 1500;
+    let n_cities: u32 = 100;
+    let screen_width: u32 = 500;
+    let screen_height: u32 = 500;
     let shift_prob: f64 = 0.4;
     let rev_prob: f64 = 0.4;
 
