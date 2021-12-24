@@ -7,10 +7,10 @@ use social_distance::social_distance::{DistanceIndividualData, DistanceIndividua
 
 fn main() {
 
-    let n_points: usize = 30;
+    let n_points: usize = 100;
     let required_distance = 20;
-    let screen_width: u32 = 200;
-    let screen_height: u32 = 200;
+    let screen_width: u32 = 500;
+    let screen_height: u32 = 500;
 
     let pop_config = PopulationConfig::new("pop_config.json");
     let ind_data = DistanceIndividualData::new(n_points, screen_width, screen_height, required_distance);

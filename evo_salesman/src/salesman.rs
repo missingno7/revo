@@ -63,17 +63,23 @@ impl SalesmanIndividual
     pub fn draw(&self, output_filename: &str, ind_data: &SalesmanIndividualData)
     {
         let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
-        let city_color = Rgb([255, 0, 0]);
-        let road_color = Rgb([255, 255, 255]);
 
         // Draw cities
-        for coord in &ind_data.coords
+        for i in 0..ind_data.coords.len()
         {
-            draw_hollow_rect_mut(&mut img, Rect::at(coord.0 as i32 - 5, coord.1 as i32 - 5).of_size(10, 10), city_color.clone());
+            let col = ((i * 255) / (ind_data.coords.len())) as u8;
+            let city_color = Rgb([col, 255 - col, 0]);
+
+            let x = ind_data.coords[self.genom[i] as usize].0 as f32;
+            let y = ind_data.coords[self.genom[i] as usize].1 as f32;
+            draw_hollow_rect_mut(&mut img, Rect::at(x as i32 - 5, y as i32 - 5).of_size(10, 10), city_color.clone());
         }
 
         // Draw roads
         for i in 0..self.genom.len() - 1 {
+            let col = ((i * 255) / (ind_data.coords.len())) as u8;
+            let road_color = Rgb([col, 255 - col, 0]);
+
             let from_x = ind_data.coords[self.genom[i] as usize].0 as f32;
             let from_y = ind_data.coords[self.genom[i] as usize].1 as f32;
             let to_x = ind_data.coords[self.genom[i + 1] as usize].0 as f32;
@@ -82,10 +88,12 @@ impl SalesmanIndividual
         }
 
 
+        let road_color = Rgb([0, 255, 0]);
+
         let from_x = ind_data.coords[self.genom[0] as usize].0 as f32;
         let from_y = ind_data.coords[self.genom[0] as usize].1 as f32;
-        let to_x = ind_data.coords[self.genom[self.genom.len()-1] as usize].0 as f32;
-        let to_y = ind_data.coords[self.genom[self.genom.len()-1] as usize].1 as f32;
+        let to_x = ind_data.coords[self.genom[self.genom.len() - 1] as usize].0 as f32;
+        let to_y = ind_data.coords[self.genom[self.genom.len() - 1] as usize].1 as f32;
         draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color.clone());
 
 
@@ -265,55 +273,47 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
 
     fn crossover_to(&self, another_ind: &SalesmanIndividual, dest_int: &mut SalesmanIndividual, _ind_data: &SalesmanIndividualData, rng: &mut ThreadRng)
     {
-
-
         let mut myarray: Vec<bool> = vec![false; self.genom.len()];
         let cross_point = rng.gen_range(0..self.genom.len() - 1);
         let mut i = cross_point;
 
         loop {
-
-        if myarray[self.genom[i] as usize] {
-            if myarray[another_ind.genom[i] as usize] {
-                // Both on list
-                for j in 0..self.genom.len(){
-                    if !myarray[j] {
-            dest_int.genom[i] = j as u16;
-                        break;
+            if myarray[self.genom[i] as usize] {
+                if myarray[another_ind.genom[i] as usize] {
+                    // Both on list
+                    for j in 0..self.genom.len() {
+                        if !myarray[j] {
+                            dest_int.genom[i] = j as u16;
+                            break;
+                        }
                     }
-                }
-
-            } else {
-                // second not used
-                dest_int.genom[i] = another_ind.genom[i];
-            }
-
-        } else {
-            if myarray[another_ind.genom[i] as usize] {
-                // first not used
-                dest_int.genom[i] = self.genom[i];
-            } else {
-                // None used
-                if rng.gen_bool(0.5) {
-                    dest_int.genom[i] = self.genom[i];
                 } else {
+                    // second not used
                     dest_int.genom[i] = another_ind.genom[i];
                 }
+            } else {
+                if myarray[another_ind.genom[i] as usize] {
+                    // first not used
+                    dest_int.genom[i] = self.genom[i];
+                } else {
+                    // None used
+                    if rng.gen_bool(0.5) {
+                        dest_int.genom[i] = self.genom[i];
+                    } else {
+                        dest_int.genom[i] = another_ind.genom[i];
+                    }
+                }
             }
 
+            myarray[dest_int.genom[i] as usize] = true;
+
+            i = (i + 1) % self.genom.len();
+
+            if (i % self.genom.len()) == cross_point
+            {
+                break;
+            }
         }
-
-        myarray[dest_int.genom[i] as usize] = true;
-
-        i = (i + 1) % self.genom.len();
-
-     if (i % self.genom.len()) == cross_point
-     {
-         break;
-     }
-        }
-
-
     }
 
     fn count_fitness(&mut self, ind_data: &SalesmanIndividualData)
