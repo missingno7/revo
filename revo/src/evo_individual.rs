@@ -1,6 +1,6 @@
 use rand::rngs::ThreadRng;
 
-pub trait EvoIndividual<IndividualData> {
+pub trait EvoIndividual<IndividualData>: Send + Sync {
     fn new(ind_data: &IndividualData) -> Self;
     fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 

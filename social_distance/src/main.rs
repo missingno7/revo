@@ -7,7 +7,7 @@ use social_distance::social_distance::{DistanceIndividualData, DistanceIndividua
 
 fn main() {
 
-    let n_points: usize = 100;
+    let n_points: usize = 50;
     let required_distance = 20;
     let screen_width: u32 = 500;
     let screen_height: u32 = 500;

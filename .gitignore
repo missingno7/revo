@@ -1,0 +1,13 @@
+# Rust
+# Compiled libraries
+**/target/
+
+# IDE
+.idea/
+*.iml
+
+# Dependency directories
+cargo.lock
+vendor/
+
+

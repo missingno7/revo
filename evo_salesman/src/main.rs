@@ -7,7 +7,7 @@ use revo::evo_individual::EvoIndividual;
 use evo_salesman::salesman::{SalesmanIndividualData, SalesmanIndividual, SalesmanInitType};
 
 fn main() {
-    let n_cities: u32 = 500;
+    let n_cities: u32 = 100;
     let screen_width: u32 = 1000;
     let screen_height: u32 = 1000;
     let shift_prob: f64 = 0.4;
