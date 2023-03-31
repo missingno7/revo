@@ -16,9 +16,14 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
-impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sync> Population<Individual, IndividualData> {
+impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sync>
+    Population<Individual, IndividualData>
+{
     // Another associated function, taking two arguments:
-    pub fn new(pop_config: PopulationConfig, ind_data: IndividualData) -> Population<Individual, IndividualData> {
+    pub fn new(
+        pop_config: PopulationConfig,
+        ind_data: IndividualData,
+    ) -> Population<Individual, IndividualData> {
         let size = pop_config.pop_width * pop_config.pop_height;
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
@@ -45,21 +50,28 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
     }
 
     pub fn next_gen(&mut self) {
-        self.next_gen_inds.par_iter_mut()
+        self.next_gen_inds
+            .par_iter_mut()
             .enumerate()
             .take(self.curr_gen_inds.len())
             .for_each(|(i, res)| {
                 let mut rng = rand::thread_rng();
                 let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
 
-                if rng.gen_range(0.0..1.0) < self.crossover_prob
-                {
+                if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     // Do crossover
-                    let (first_ind, second_ind) = Self::dual_tournament(&indices, &self.curr_gen_inds);
-                    self.curr_gen_inds[first_ind].crossover_to(&self.curr_gen_inds[second_ind], res, &self.ind_data, &mut rng)
+                    let (first_ind, second_ind) =
+                        Self::dual_tournament(&indices, &self.curr_gen_inds);
+                    self.curr_gen_inds[first_ind].crossover_to(
+                        &self.curr_gen_inds[second_ind],
+                        res,
+                        &self.ind_data,
+                        &mut rng,
+                    )
                 } else {
                     // Just mutate
-                    self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)].copy_to(res);
+                    self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
+                        .copy_to(res);
                     res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
                 }
                 res.count_fitness(&self.ind_data);
@@ -82,8 +94,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
         best_ind.clone()
     }
 
-    pub fn get_generation(&self) -> usize
-    {
+    pub fn get_generation(&self) -> usize {
         self.i_generation
     }
 
@@ -103,7 +114,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
         vec![i, l_i, r_i, u_i, d_i]
     }
 
-    fn single_tournament(indices: &Vec<usize>, curr_gen_inds: &Vec<Individual>) -> usize {
+    fn single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
@@ -115,7 +126,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
         best_i
     }
 
-    fn dual_tournament(indices: &Vec<usize>, curr_gen_inds: &Vec<Individual>) -> (usize, usize) {
+    fn dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];
 
@@ -123,7 +134,9 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
             if curr_gen_inds[index].get_fitness() > curr_gen_inds[best_i].get_fitness() {
                 second_best_i = best_i;
                 best_i = index;
-            } else if curr_gen_inds[index].get_fitness() > curr_gen_inds[second_best_i].get_fitness() {
+            } else if curr_gen_inds[index].get_fitness()
+                > curr_gen_inds[second_best_i].get_fitness()
+            {
                 second_best_i = index;
             }
         }
@@ -132,13 +145,12 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::basic_individual::{BasicIndividual, BasicIndividualData};
 
-    type TestPopulation = Population::<BasicIndividual, BasicIndividualData>;
+    type TestPopulation = Population<BasicIndividual, BasicIndividualData>;
 
     #[test]
     fn test_l5_selection() {
@@ -175,6 +187,5 @@ mod tests {
         let i = 22;
         let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![22, 21, 23, 17, 2]);
-
     }
 }
