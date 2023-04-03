@@ -1,6 +1,7 @@
 use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
 use rand::Rng;
+use rayon::prelude::*;
 
 pub struct Population<Individual, IndividualData> {
     curr_gen_inds: Vec<Individual>,
@@ -15,13 +16,17 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
-impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Individual, IndividualData> {
+impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sync>
+    Population<Individual, IndividualData>
+{
     // Another associated function, taking two arguments:
-    pub fn new(pop_config: PopulationConfig, ind_data: IndividualData) -> Population<Individual, IndividualData> {
+    pub fn new(
+        pop_config: PopulationConfig,
+        ind_data: IndividualData,
+    ) -> Population<Individual, IndividualData> {
         let size = pop_config.pop_width * pop_config.pop_height;
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
-
 
         let mut rng = rand::thread_rng();
         for _ in 0..size {
@@ -45,20 +50,32 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Indiv
     }
 
     pub fn next_gen(&mut self) {
-        let mut rng = rand::thread_rng();
-        for i in 0..self.curr_gen_inds.len() {
-            if rng.gen_range(0.0..1.0) < self.crossover_prob
-            {
-                // Do crossover
-                let (first_ind, second_ind) = self.dual_tournament_l5(i);
-                self.curr_gen_inds[first_ind].crossover_to(&self.curr_gen_inds[second_ind], &mut self.next_gen_inds[i], &self.ind_data, &mut rng)
-            } else {
-                // Just mutate
-                self.curr_gen_inds[self.tournament_l5(i)].copy_to(&mut self.next_gen_inds[i]);
-                self.next_gen_inds[i].mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
-            }
-            self.next_gen_inds[i].count_fitness(&self.ind_data);
-        }
+        self.next_gen_inds
+            .par_iter_mut()
+            .enumerate()
+            .take(self.curr_gen_inds.len())
+            .for_each(|(i, res)| {
+                let mut rng = rand::thread_rng();
+                let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
+
+                if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                    // Do crossover
+                    let (first_ind, second_ind) =
+                        Self::dual_tournament(&indices, &self.curr_gen_inds);
+                    self.curr_gen_inds[first_ind].crossover_to(
+                        &self.curr_gen_inds[second_ind],
+                        res,
+                        &self.ind_data,
+                        &mut rng,
+                    )
+                } else {
+                    // Just mutate
+                    self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
+                        .copy_to(res);
+                    res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                }
+                res.count_fitness(&self.ind_data);
+            });
 
         // Advance to next generation
         std::mem::swap(&mut self.curr_gen_inds, &mut self.next_gen_inds);
@@ -77,103 +94,98 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData> Population<Indiv
         best_ind.clone()
     }
 
-    pub fn get_generation(&self) -> usize
-    {
+    pub fn get_generation(&self) -> usize {
         self.i_generation
     }
 
     // Private methods
+    fn l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
+        let x: usize = i % pop_width;
+        let y: usize = i / pop_width;
 
-    fn tournament_l5(&self, i: usize) -> usize
-    {
-        let x: usize = i % self.pop_width;
-        let y: usize = i / self.pop_width;
+        let row_start_index = y * pop_width;
+        let l_i = row_start_index + ((x + pop_width - 1) % pop_width);
+        let r_i = row_start_index + ((x + 1) % pop_width);
 
-        let mut best_i = i;
+        let column_start_index = x % pop_width;
+        let u_i = ((y + pop_height - 1) % pop_height) * pop_width + column_start_index;
+        let d_i = ((y + 1) % pop_height) * pop_width + column_start_index;
 
-        let row_start_index = y * self.pop_width;
-        let l_i = row_start_index + ((x + self.pop_width - 1) % self.pop_width);
-        let r_i = row_start_index + ((x + 1) % self.pop_width);
+        vec![i, l_i, r_i, u_i, d_i]
+    }
 
-        let column_start_index = x % self.pop_width;
-        let u_i =
-            ((y + self.pop_height - 1) % self.pop_height) * self.pop_width + column_start_index;
-        let d_i = ((y + 1) % self.pop_height) * self.pop_width + column_start_index;
+    fn single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
+        let mut best_i = indices[0];
 
-        // Left
-        if self.curr_gen_inds[l_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
-            best_i = l_i;
-        }
-        // Right
-        if self.curr_gen_inds[r_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
-            best_i = r_i;
-        }
-
-        // Up
-        if self.curr_gen_inds[u_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
-            best_i = u_i;
-        }
-
-        // Down
-        if self.curr_gen_inds[d_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness() {
-            best_i = d_i;
+        for &index in indices.iter().skip(1) {
+            if curr_gen_inds[index].get_fitness() > curr_gen_inds[best_i].get_fitness() {
+                best_i = index;
+            }
         }
 
         best_i
     }
 
+    fn dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
+        let mut best_i = indices[0];
+        let mut second_best_i = indices[1];
 
-    fn dual_tournament_l5(&self, i: usize) -> (usize, usize)
-    {
-        let x: usize = i % self.pop_width;
-        let y: usize = i / self.pop_width;
-
-        let row_start_index = y * self.pop_width;
-        let l_i = row_start_index + ((x + self.pop_width - 1) % self.pop_width);
-        let r_i = row_start_index + ((x + 1) % self.pop_width);
-
-        let column_start_index = x % self.pop_width;
-        let u_i =
-            ((y + self.pop_height - 1) % self.pop_height) * self.pop_width + column_start_index;
-        let d_i = ((y + 1) % self.pop_height) * self.pop_width + column_start_index;
-
-
-        let mut best_i = i;
-        let mut second_best_i = l_i;
-
-        if self.curr_gen_inds[second_best_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness()
-        {
-            std::mem::swap(&mut best_i, &mut second_best_i);
+        for &index in indices.iter().skip(1) {
+            if curr_gen_inds[index].get_fitness() > curr_gen_inds[best_i].get_fitness() {
+                second_best_i = best_i;
+                best_i = index;
+            } else if curr_gen_inds[index].get_fitness()
+                > curr_gen_inds[second_best_i].get_fitness()
+            {
+                second_best_i = index;
+            }
         }
-
-
-        if self.curr_gen_inds[r_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness()
-        {
-            best_i = r_i;
-        } else if self.curr_gen_inds[r_i].get_fitness() > self.curr_gen_inds[second_best_i].get_fitness()
-        {
-            second_best_i = r_i;
-        }
-
-
-        if self.curr_gen_inds[u_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness()
-        {
-            best_i = u_i;
-        } else if self.curr_gen_inds[u_i].get_fitness() > self.curr_gen_inds[second_best_i].get_fitness()
-        {
-            second_best_i = u_i;
-        }
-
-
-        if self.curr_gen_inds[d_i].get_fitness() > self.curr_gen_inds[best_i].get_fitness()
-        {
-            best_i = d_i;
-        } else if self.curr_gen_inds[d_i].get_fitness() > self.curr_gen_inds[second_best_i].get_fitness()
-        {
-            second_best_i = d_i;
-        }
-
 
         (best_i, second_best_i)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::basic_individual::{BasicIndividual, BasicIndividualData};
+
+    type TestPopulation = Population<BasicIndividual, BasicIndividualData>;
+
+    #[test]
+    fn test_l5_selection() {
+        let pop_width = 5;
+        let pop_height = 5;
+
+        // indices goes like [middle, left, right, up, down]
+        // Test top-left corner
+        let i = 0;
+        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        assert_eq!(neighbors, vec![0, 4, 1, 20, 5]);
+
+        // Test top-right corner
+        let i = 4;
+        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        assert_eq!(neighbors, vec![4, 3, 0, 24, 9]);
+
+        // Test bottom-left corner
+        let i = 20;
+        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        assert_eq!(neighbors, vec![20, 24, 21, 15, 0]);
+
+        // Test bottom-right corner
+        let i = 24;
+        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        assert_eq!(neighbors, vec![24, 23, 20, 19, 4]);
+
+        // Test middle element
+        let i = 12;
+        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        assert_eq!(neighbors, vec![12, 11, 13, 7, 17]);
+
+        // Test bottom-middle element
+        let i = 22;
+        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        assert_eq!(neighbors, vec![22, 21, 23, 17, 2]);
     }
 }
