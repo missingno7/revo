@@ -15,8 +15,30 @@ pub enum SalesmanInitType {
     GreedyJoining,
 }
 
+pub struct Coord {
+    x: u32,
+    y: u32,
+}
+
+impl Clone for Coord {
+    fn clone(&self) -> Self {
+        Coord {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
+impl Coord {
+    fn distance(first: &Self, second: &Self) -> f64 {
+        let x = second.x as f64 - first.x as f64;
+        let y = second.y as f64 - first.y as f64;
+        (x * x) + (y * y)
+    }
+}
+
 pub struct SalesmanIndividualData {
-    coords: Vec<(u32, u32)>,
+    coords: Vec<Coord>,
     screen_width: u32,
     screen_height: u32,
     shift_prob: f64,
@@ -34,13 +56,13 @@ impl SalesmanIndividualData {
         rev_prob: f64,
         init_type: SalesmanInitType,
     ) -> Self {
-        let mut coords: Vec<(u32, u32)> = Vec::new();
+        let mut coords: Vec<Coord> = Vec::new();
 
         for _ in 0..n_cities {
-            coords.push((
-                rng.gen_range(5..screen_width - 5),
-                rng.gen_range(5..screen_height - 5),
-            ));
+            coords.push(Coord {
+                x: rng.gen_range(5..screen_width - 5),
+                y: rng.gen_range(5..screen_height - 5),
+            });
         }
 
         SalesmanIndividualData {
@@ -80,8 +102,8 @@ impl SalesmanIndividual {
         for i in 0..ind_data.coords.len() {
             let city_color = Rgb([255, 0, 0]);
 
-            let x = ind_data.coords[i].0 as f32;
-            let y = ind_data.coords[i].1 as f32;
+            let x = ind_data.coords[i].x as f32;
+            let y = ind_data.coords[i].y as f32;
             draw_hollow_rect_mut(
                 &mut img,
                 Rect::at(x as i32 - 5, y as i32 - 5).of_size(10, 10),
@@ -94,28 +116,22 @@ impl SalesmanIndividual {
             let col = ((i * 255) / (self.genom.len())) as u8;
             let road_color = Rgb([col, 255 - col, 0]);
 
-            let from_x = ind_data.coords[self.genom[i] as usize].0 as f32;
-            let from_y = ind_data.coords[self.genom[i] as usize].1 as f32;
-            let to_x = ind_data.coords[self.genom[i + 1] as usize].0 as f32;
-            let to_y = ind_data.coords[self.genom[i + 1] as usize].1 as f32;
+            let from_x = ind_data.coords[self.genom[i] as usize].x as f32;
+            let from_y = ind_data.coords[self.genom[i] as usize].y as f32;
+            let to_x = ind_data.coords[self.genom[i + 1] as usize].x as f32;
+            let to_y = ind_data.coords[self.genom[i + 1] as usize].y as f32;
             draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color);
         }
 
         let road_color = Rgb([0, 255, 0]);
 
-        let from_x = ind_data.coords[self.genom[0] as usize].0 as f32;
-        let from_y = ind_data.coords[self.genom[0] as usize].1 as f32;
-        let to_x = ind_data.coords[self.genom[self.genom.len() - 1] as usize].0 as f32;
-        let to_y = ind_data.coords[self.genom[self.genom.len() - 1] as usize].1 as f32;
+        let from_x = ind_data.coords[self.genom[0] as usize].x as f32;
+        let from_y = ind_data.coords[self.genom[0] as usize].y as f32;
+        let to_x = ind_data.coords[self.genom[self.genom.len() - 1] as usize].x as f32;
+        let to_y = ind_data.coords[self.genom[self.genom.len() - 1] as usize].y as f32;
         draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color);
 
         img.save(output_filename).unwrap();
-    }
-
-    fn distance(x1: u32, y1: u32, x2: u32, y2: u32) -> f64 {
-        let x = x2 as f64 - x1 as f64;
-        let y = y2 as f64 - y1 as f64;
-        (x * x) + (y * y)
     }
 
     fn reverse_part(&mut self, from: usize, to: usize) {
@@ -153,25 +169,21 @@ impl SalesmanIndividual {
         let mut to = to + len;
         let shift = shift % len;
 
-        for _ in 0..shift
-        {
+        for _ in 0..shift {
             let mut i = to;
 
-            loop
-            {
+            loop {
                 self.genom.swap(i % len, (i + 1) % len);
-                if i % len == from % len
-                {
+                if i % len == from % len {
                     break;
                 }
-                i = i - 1
+                i -= 1
             }
 
-            from = from + 1;
-            to = to + 1;
+            from += 1;
+            to += 1;
         }
     }
-
 
     fn new_random_naive(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
         let mut visited: Vec<bool> = vec![false; ind_data.coords.len()];
@@ -190,11 +202,8 @@ impl SalesmanIndividual {
                     continue;
                 }
 
-                let x1 = ind_data.coords[genom[i - 1] as usize].0;
-                let y1 = ind_data.coords[genom[i - 1] as usize].1;
-                let x2 = ind_data.coords[j].0;
-                let y2 = ind_data.coords[j].1;
-                let distance = SalesmanIndividual::distance(x1, y1, x2, y2);
+                let distance =
+                    Coord::distance(&ind_data.coords[j], &ind_data.coords[genom[i - 1] as usize]);
 
                 if distance < closest_dist {
                     closest_j = j;
@@ -249,28 +258,18 @@ impl SalesmanIndividual {
             };
             cities.remove(&selected_city);
 
-            let x1 = ind_data.coords[genom[0] as usize].0;
-            let y1 = ind_data.coords[genom[0] as usize].1;
+            let city_1 = &ind_data.coords[genom[0] as usize];
+            let city_2 = &ind_data.coords[selected_city as usize];
+            let city_3 = &ind_data.coords[genom[genom.len() - 1] as usize];
 
-            let x2 = ind_data.coords[selected_city as usize].0;
-            let y2 = ind_data.coords[selected_city as usize].1;
-
-            let x3 = ind_data.coords[genom[genom.len() - 1] as usize].0;
-            let y3 = ind_data.coords[genom[genom.len() - 1] as usize].1;
-
-            let mut shortest_dist = Self::distance(x1, y1, x2, y2) + Self::distance(x2, y2, x3, y3);
+            let mut shortest_dist =
+                Coord::distance(city_1, city_2) + Coord::distance(city_2, city_3);
             let mut shortest_j = genom.len();
 
             for j in 0..genom.len() - 1 {
-                let x1 = ind_data.coords[genom[j] as usize].0;
-                let y1 = ind_data.coords[genom[j] as usize].1;
-
-                let x2 = ind_data.coords[selected_city as usize].0;
-                let y2 = ind_data.coords[selected_city as usize].1;
-
-                let x3 = ind_data.coords[genom[j + 1] as usize].0;
-                let y3 = ind_data.coords[genom[j + 1] as usize].1;
-                let distance = Self::distance(x1, y1, x2, y2) + Self::distance(x2, y2, x3, y3);
+                let city_1 = &ind_data.coords[genom[j] as usize];
+                let city_3 = &ind_data.coords[genom[j + 1] as usize];
+                let distance = Coord::distance(city_1, city_2) + Coord::distance(city_2, city_3);
 
                 if distance < shortest_dist {
                     shortest_dist = distance;
@@ -302,9 +301,9 @@ impl SalesmanIndividual {
             let mut shortest: usize = 0;
             let mut shortest_distance: f64 = std::f64::MAX;
 
-            let (x_first, y_first) = ind_data.coords[paths[selected_path][0] as usize];
-            let (x_last, y_last) =
-                ind_data.coords[paths[selected_path][paths[selected_path].len() - 1] as usize];
+            let city_first = &ind_data.coords[paths[selected_path][0] as usize];
+            let city_last =
+                &ind_data.coords[paths[selected_path][paths[selected_path].len() - 1] as usize];
 
             for i in 0..paths.len() {
                 if i == selected_path {
@@ -313,8 +312,8 @@ impl SalesmanIndividual {
 
                 // Insert to  shortest
                 {
-                    let (xi, yi) = ind_data.coords[paths[i][paths[i].len() - 1] as usize];
-                    let distance = SalesmanIndividual::distance(x_first, y_first, xi, yi);
+                    let city_i = &ind_data.coords[paths[i][paths[i].len() - 1] as usize];
+                    let distance = Coord::distance(city_first, city_i);
 
                     if distance < shortest_distance {
                         shortest_distance = distance;
@@ -325,8 +324,8 @@ impl SalesmanIndividual {
 
                 // Insert from shortest
                 {
-                    let (xi, yi) = ind_data.coords[paths[i][0] as usize];
-                    let distance = SalesmanIndividual::distance(x_last, y_last, xi, yi);
+                    let city_i = &ind_data.coords[paths[i][0] as usize];
+                    let distance = Coord::distance(city_last, city_i);
 
                     if distance < shortest_distance {
                         shortest_distance = distance;
@@ -420,7 +419,7 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             self.shift_multiple(
                 rng.gen_range(0..self.genom.len() - 1),
                 rng.gen_range(0..self.genom.len() - 1),
-                 cnttoshift,
+                cnttoshift,
             );
         }
 
@@ -483,18 +482,16 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         self.fitness = 0.0;
 
         for i in 0..ind_data.coords.len() - 1 {
-            let x1 = ind_data.coords[self.genom[i] as usize].0;
-            let x2 = ind_data.coords[self.genom[i + 1] as usize].0;
-            let y1 = ind_data.coords[self.genom[i] as usize].1;
-            let y2 = ind_data.coords[self.genom[i + 1] as usize].1;
-            self.fitness -= SalesmanIndividual::distance(x1, y1, x2, y2);
+            self.fitness -= Coord::distance(
+                &ind_data.coords[self.genom[i] as usize],
+                &ind_data.coords[self.genom[i + 1] as usize],
+            );
         }
 
-        let x1 = ind_data.coords[self.genom[0] as usize].0;
-        let x2 = ind_data.coords[self.genom[self.genom.len() - 1] as usize].0;
-        let y1 = ind_data.coords[self.genom[0] as usize].1;
-        let y2 = ind_data.coords[self.genom[self.genom.len() - 1] as usize].1;
-        self.fitness -= SalesmanIndividual::distance(x1, y1, x2, y2);
+        self.fitness -= Coord::distance(
+            &ind_data.coords[self.genom[0] as usize],
+            &ind_data.coords[self.genom[self.genom.len() - 1] as usize],
+        );
     }
 
     fn get_fitness(&self) -> f64 {
@@ -502,29 +499,23 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_shift_multiple() {
-
         let mut rng = rand::thread_rng();
-        let ind_data = SalesmanIndividualData::new(&mut rng, 6, 100,100,0.0, 0.0, SalesmanInitType::Naive);
+        let ind_data =
+            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
 
         // [0, 1, 2, 3, 4, 5]
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.shift_multiple(0, 2, 3);
         assert_eq!(ind.genom, vec![3, 4, 5, 0, 1, 2]);
 
-
         ind = SalesmanIndividual::new(&ind_data);
         ind.shift_multiple(0, 2, 1);
         assert_eq!(ind.genom, vec![3, 0, 1, 2, 4, 5]);
-
-
     }
-
-
 }

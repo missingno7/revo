@@ -7,7 +7,7 @@
 *.iml
 
 # Dependency directories
-cargo.lock
+Cargo.lock
 vendor/
 
 

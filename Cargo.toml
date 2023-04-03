@@ -1,0 +1,19 @@
+[workspace]
+members = ["revo", "evo_salesman", "social_distance"]
+
+[profile.release.package.evo_salesman]
+codegen-units = 1
+incremental = false
+
+[profile.release.package.social_distance]
+codegen-units = 1
+incremental = false
+
+[profile.release]
+rpath = false
+lto = true
+overflow-checks = true
+opt-level = 3
+debug = false
+debug-assertions = false
+
