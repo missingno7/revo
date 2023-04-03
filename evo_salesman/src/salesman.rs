@@ -147,57 +147,31 @@ impl SalesmanIndividual {
         }
     }
 
-    fn shift_multiple(&mut self, from: usize, to: usize, forward: bool, cnt: usize) {
-        println!("shift_multiple: {} {} {} {}", from, to, forward, cnt);
+    fn shift_multiple(&mut self, from: usize, to: usize, shift: usize) {
+        let len = self.genom.len();
+        let mut from = from + len;
+        let mut to = to + len;
+        let shift = shift % len;
 
-        if forward {
-            for i in (0..cnt).rev()  {
-                let frmi = (from + i) % self.genom.len();
-                let toi = (to + i) % self.genom.len();
+        for _ in 0..shift
+        {
+            let mut i = to;
 
-                self.shift(frmi, toi, true);
+            loop
+            {
+                self.genom.swap(i % len, (i + 1) % len);
+                if i % len == from % len
+                {
+                    break;
+                }
+                i = i - 1
             }
-        } else {
-            // backwards
-            for i in 0..cnt {
-                let frmi = (from + i) % self.genom.len();
-                let toi = (to + i) % self.genom.len();
 
-                self.shift(frmi, toi, false);
-            }
+            from = from + 1;
+            to = to + 1;
         }
     }
 
-    fn shift(&mut self, from: usize, to: usize, forward: bool) {
-        if from == to {
-            return;
-        }
-
-        let mut i = from;
-
-        if forward {
-            loop {
-                let next = (i + 1) % self.genom.len();
-                self.genom.swap(i, next);
-
-                i = next;
-                if i == to {
-                    break;
-                }
-            }
-        } else {
-            // backwards
-            loop {
-                let next = if i < 1 { self.genom.len() - 1 } else { i - 1 };
-                self.genom.swap(i, next);
-
-                i = next;
-                if i == to {
-                    break;
-                }
-            }
-        }
-    }
 
     fn new_random_naive(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
         let mut visited: Vec<bool> = vec![false; ind_data.coords.len()];
@@ -446,8 +420,7 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             self.shift_multiple(
                 rng.gen_range(0..self.genom.len() - 1),
                 rng.gen_range(0..self.genom.len() - 1),
-                rng.gen_bool(0.5),
-                cnttoshift,
+                 cnttoshift,
             );
         }
 
@@ -538,17 +511,17 @@ mod tests {
     fn test_shift_multiple() {
 
         let mut rng = rand::thread_rng();
-        let ind_data = SalesmanIndividualData::new(&mut rng, 10, 100,100,0.0, 0.0, SalesmanInitType::Naive);
+        let ind_data = SalesmanIndividualData::new(&mut rng, 6, 100,100,0.0, 0.0, SalesmanInitType::Naive);
 
-        // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+        // [0, 1, 2, 3, 4, 5]
         let mut ind = SalesmanIndividual::new(&ind_data);
-        ind.shift_multiple(0, 2, true, 3);
-        assert_eq!(ind.genom, vec![3, 4, 5, 0, 1, 2, 6, 7, 8, 9]);
+        ind.shift_multiple(0, 2, 3);
+        assert_eq!(ind.genom, vec![3, 4, 5, 0, 1, 2]);
 
 
         ind = SalesmanIndividual::new(&ind_data);
-        ind.shift_multiple(0, 2, true, 1);
-        assert_eq!(ind.genom, vec![2, 0, 1, 3, 4, 5, 6, 7, 8, 9]);
+        ind.shift_multiple(0, 2, 1);
+        assert_eq!(ind.genom, vec![3, 0, 1, 2, 4, 5]);
 
 
     }
