@@ -36,9 +36,9 @@ impl Coord {
         (x * x) + (y * y)
     }
 
-    fn as_f32(&self) ->(f32, f32)
+    fn as_f32(&self) -> (f32, f32)
     {
-        return (self.x as f32, self.y as f32)
+        (self.x as f32, self.y as f32)
     }
 }
 
@@ -107,7 +107,7 @@ impl SalesmanIndividual {
         for i in 0..ind_data.coords.len() {
             let city_color = Rgb([255, 0, 0]);
 
-            let i_city  = &ind_data.coords[i] ;
+            let i_city = &ind_data.coords[i];
             draw_hollow_rect_mut(
                 &mut img,
                 Rect::at(i_city.x as i32 - 5, i_city.y as i32 - 5).of_size(10, 10),
@@ -140,27 +140,30 @@ impl SalesmanIndividual {
             return;
         }
 
+        let len = self.genom.len();
+
+        let to = match from < to
+        {
+            true => to,
+            false => to + len
+        };
+
+
         let mut frmi = from;
         let mut toi = to;
 
         loop {
-            self.genom.swap(frmi, toi);
-
-            if toi < 1 {
-                toi = self.genom.len() - 1;
-            } else {
-                toi -= 1;
-            }
-
-            if frmi + 1 >= self.genom.len() {
-                frmi = 0;
-            } else {
-                frmi += 1;
-            }
+            let abs_toi = toi % len;
+            let abs_frmi = frmi % len;
 
             if (frmi - 1) == toi || frmi == toi {
                 break;
             }
+
+            self.genom.swap(abs_frmi, abs_toi);
+
+            frmi += 1;
+            toi -= 1;
         }
     }
 
@@ -430,8 +433,6 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
                 rng.gen_range(0..self.genom.len() - 1),
                 rng.gen_range(0..self.genom.len() - 1),
             );
-
-
         }
     }
 
@@ -521,5 +522,33 @@ mod tests {
         ind = SalesmanIndividual::new(&ind_data);
         ind.shift_multiple(0, 2, 1);
         assert_eq!(ind.genom, vec![3, 0, 1, 2, 4, 5]);
+    }
+
+    #[test]
+    fn test_reverse_part() {
+        let mut rng = rand::thread_rng();
+        let ind_data =
+            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+
+
+        // [0, 1, 2, 3, 4, 5]
+        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind.reverse_part(0, 2);
+        assert_eq!(ind.genom, vec![2, 1, 0, 3, 4, 5]);
+
+
+        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind.reverse_part(5, 0);
+        assert_eq!(ind.genom, vec![5, 1, 2, 3, 4, 0]);
+
+
+        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind.reverse_part(5, 1);
+        assert_eq!(ind.genom, vec![0, 5, 2, 3, 4, 1]);
+
+
+        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind.reverse_part(5, 2);
+        assert_eq!(ind.genom, vec![1, 0, 5, 3, 4, 2]);
     }
 }

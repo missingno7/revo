@@ -7,7 +7,7 @@ use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 
 fn main() {
-    let n_cities: u32 = 50;
+    let n_cities: u32 = 100;
     let screen_width: u32 = 1000;
     let screen_height: u32 = 1000;
     let shift_prob: f64 = 0.4;
@@ -23,7 +23,7 @@ fn main() {
         screen_height,
         shift_prob,
         rev_prob,
-        SalesmanInitType::Noise,
+        SalesmanInitType::GreedyJoining,
     );
     let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> =
         Population::new(pop_config, ind_data.clone());
