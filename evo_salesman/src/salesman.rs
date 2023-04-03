@@ -35,6 +35,11 @@ impl Coord {
         let y = second.y as f64 - first.y as f64;
         (x * x) + (y * y)
     }
+
+    fn as_f32(&self) ->(f32, f32)
+    {
+        return (self.x as f32, self.y as f32)
+    }
 }
 
 pub struct SalesmanIndividualData {
@@ -102,11 +107,10 @@ impl SalesmanIndividual {
         for i in 0..ind_data.coords.len() {
             let city_color = Rgb([255, 0, 0]);
 
-            let x = ind_data.coords[i].x as f32;
-            let y = ind_data.coords[i].y as f32;
+            let i_city  = &ind_data.coords[i] ;
             draw_hollow_rect_mut(
                 &mut img,
-                Rect::at(x as i32 - 5, y as i32 - 5).of_size(10, 10),
+                Rect::at(i_city.x as i32 - 5, i_city.y as i32 - 5).of_size(10, 10),
                 city_color,
             );
         }
@@ -116,20 +120,17 @@ impl SalesmanIndividual {
             let col = ((i * 255) / (self.genom.len())) as u8;
             let road_color = Rgb([col, 255 - col, 0]);
 
-            let from_x = ind_data.coords[self.genom[i] as usize].x as f32;
-            let from_y = ind_data.coords[self.genom[i] as usize].y as f32;
-            let to_x = ind_data.coords[self.genom[i + 1] as usize].x as f32;
-            let to_y = ind_data.coords[self.genom[i + 1] as usize].y as f32;
-            draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color);
+            let from_city = &ind_data.coords[self.genom[i] as usize];
+            let to_city = &ind_data.coords[self.genom[i + 1] as usize];
+
+            draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
         }
 
         let road_color = Rgb([0, 255, 0]);
 
-        let from_x = ind_data.coords[self.genom[0] as usize].x as f32;
-        let from_y = ind_data.coords[self.genom[0] as usize].y as f32;
-        let to_x = ind_data.coords[self.genom[self.genom.len() - 1] as usize].x as f32;
-        let to_y = ind_data.coords[self.genom[self.genom.len() - 1] as usize].y as f32;
-        draw_line_segment_mut(&mut img, (from_x, from_y), (to_x, to_y), road_color);
+        let from_city = &ind_data.coords[self.genom[0] as usize];
+        let to_city = &ind_data.coords[self.genom[self.genom.len() - 1] as usize];
+        draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
 
         img.save(output_filename).unwrap();
     }
@@ -423,11 +424,14 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             );
         }
 
+
         if rng.gen_range(0.0..1.0) < ind_data.rev_prob {
             self.reverse_part(
                 rng.gen_range(0..self.genom.len() - 1),
                 rng.gen_range(0..self.genom.len() - 1),
             );
+
+
         }
     }
 
