@@ -36,8 +36,7 @@ impl Coord {
         (x * x) + (y * y)
     }
 
-    fn as_f32(&self) -> (f32, f32)
-    {
+    fn as_f32(&self) -> (f32, f32) {
         (self.x as f32, self.y as f32)
     }
 }
@@ -142,12 +141,10 @@ impl SalesmanIndividual {
 
         let len = self.genom.len();
 
-        let to = match from < to
-        {
+        let to = match from < to {
             true => to,
-            false => to + len
+            false => to + len,
         };
-
 
         let mut frmi = from;
         let mut toi = to;
@@ -169,23 +166,23 @@ impl SalesmanIndividual {
 
     fn shift_multiple(&mut self, from: usize, to: usize, shift: usize) {
         let len = self.genom.len();
-        let mut from = from + len;
-        let mut to = to + len;
-        let shift = shift % len;
+        let mut i_from = from;
+        // To prevent underflow if to < from
+        let mut i_to = to + len;
 
         for _ in 0..shift {
-            let mut i = to;
+            let mut i = i_to;
 
             loop {
                 self.genom.swap(i % len, (i + 1) % len);
-                if i % len == from % len {
+                if i % len == i_from % len {
                     break;
                 }
                 i -= 1
             }
 
-            from += 1;
-            to += 1;
+            i_from += 1;
+            i_to += 1;
         }
     }
 
@@ -396,43 +393,34 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         &mut self,
         ind_data: &SalesmanIndividualData,
         rng: &mut ThreadRng,
-        _mut_prob: f32,
+        mut_prob: f32,
         _mut_amount: f32,
     ) {
-        /*
-        Too much of unnecessary overhead
-        for i in 0..self.genom.len() {
-            if rng.gen_range(0.0..1.0) < mut_prob {
-                let swap_with = rng.gen_range(0..self.genom.len() - 1);
-                if swap_with == i {
-                    continue;
-                }
-                // Simple swap
-                let tmp = self.genom[i];
-                self.genom[i] = self.genom[swap_with];
-                self.genom[swap_with] = tmp;
-            }
-        }
-        */
-
+        // Shifting
         if rng.gen_range(0.0..1.0) < ind_data.shift_prob {
-            // Shifting
-
-            let cnttoshift = rng.gen_range(1..self.genom.len() - 1);
-
             self.shift_multiple(
                 rng.gen_range(0..self.genom.len() - 1),
                 rng.gen_range(0..self.genom.len() - 1),
-                cnttoshift,
+                rng.gen_range(1..self.genom.len() - 1),
             );
         }
 
-
+        // Reversing
         if rng.gen_range(0.0..1.0) < ind_data.rev_prob {
             self.reverse_part(
                 rng.gen_range(0..self.genom.len() - 1),
                 rng.gen_range(0..self.genom.len() - 1),
             );
+        }
+
+        // Swapping
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            let i = rng.gen_range(0..self.genom.len() - 1);
+            let j = rng.gen_range(0..self.genom.len() - 1);
+
+            if i != j {
+                self.genom.swap(i, j);
+            }
         }
     }
 
@@ -514,6 +502,7 @@ mod tests {
         let ind_data =
             SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
 
+        // 6 cities test
         // [0, 1, 2, 3, 4, 5]
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.shift_multiple(0, 2, 3);
@@ -522,6 +511,23 @@ mod tests {
         ind = SalesmanIndividual::new(&ind_data);
         ind.shift_multiple(0, 2, 1);
         assert_eq!(ind.genom, vec![3, 0, 1, 2, 4, 5]);
+
+        ind = SalesmanIndividual::new(&ind_data);
+        ind.shift_multiple(0, 2, 6);
+        assert_eq!(ind.genom, vec![0, 1, 2, 3, 4, 5]);
+
+        // 7 cities test
+        // [0, 1, 2, 3, 4, 5, 6]
+        let ind_data =
+            SalesmanIndividualData::new(&mut rng, 7, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+
+        ind = SalesmanIndividual::new(&ind_data);
+        ind.shift_multiple(1, 3, 7);
+        assert_eq!(ind.genom, vec![6, 1, 2, 3, 0, 4, 5]);
+
+        ind = SalesmanIndividual::new(&ind_data);
+        ind.shift_multiple(1, 3, 13);
+        assert_eq!(ind.genom, vec![1, 2, 3, 5, 6, 0, 4]);
     }
 
     #[test]
@@ -530,22 +536,18 @@ mod tests {
         let ind_data =
             SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
 
-
         // [0, 1, 2, 3, 4, 5]
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(0, 2);
         assert_eq!(ind.genom, vec![2, 1, 0, 3, 4, 5]);
 
-
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(5, 0);
         assert_eq!(ind.genom, vec![5, 1, 2, 3, 4, 0]);
 
-
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(5, 1);
         assert_eq!(ind.genom, vec![0, 5, 2, 3, 4, 1]);
-
 
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(5, 2);

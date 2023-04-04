@@ -7,10 +7,10 @@ use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 
 fn main() {
-    let n_cities: u32 = 100;
-    let screen_width: u32 = 1000;
-    let screen_height: u32 = 1000;
-    let shift_prob: f64 = 0.4;
+    let n_cities: u32 = 500;
+    let screen_width: u32 = 1500;
+    let screen_height: u32 = 1500;
+    let shift_prob: f64 = 0.2;
     let rev_prob: f64 = 0.4;
 
     let mut rng = rand::thread_rng();

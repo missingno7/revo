@@ -1,6 +1,6 @@
 use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
-use rand::Rng;
+use rand::{Rng, thread_rng};
 use rayon::prelude::*;
 
 pub struct Population<Individual, IndividualData> {
@@ -55,26 +55,29 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
             .enumerate()
             .take(self.curr_gen_inds.len())
             .for_each(|(i, res)| {
-                let mut rng = rand::thread_rng();
-                let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
 
-                if rng.gen_range(0.0..1.0) < self.crossover_prob {
-                    // Do crossover
-                    let (first_ind, second_ind) =
-                        Self::dual_tournament(&indices, &self.curr_gen_inds);
-                    self.curr_gen_inds[first_ind].crossover_to(
-                        &self.curr_gen_inds[second_ind],
-                        res,
-                        &self.ind_data,
-                        &mut rng,
-                    )
-                } else {
-                    // Just mutate
-                    self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
-                        .copy_to(res);
-                    res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
-                }
-                res.count_fitness(&self.ind_data);
+                    let mut rng = thread_rng();
+
+                    let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
+
+                    if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                        // Do crossover
+                        let (first_ind, second_ind) =
+                            Self::dual_tournament(&indices, &self.curr_gen_inds);
+                        self.curr_gen_inds[first_ind].crossover_to(
+                            &self.curr_gen_inds[second_ind],
+                            res,
+                            &self.ind_data,
+                            &mut rng,
+                        )
+                    } else {
+                        // Just mutate
+                        self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
+                            .copy_to(res);
+                        res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                    }
+                    res.count_fitness(&self.ind_data);
+
             });
 
         // Advance to next generation
