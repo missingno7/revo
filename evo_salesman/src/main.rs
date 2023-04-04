@@ -1,29 +1,19 @@
 extern crate evo_salesman;
 extern crate revo;
 
-use evo_salesman::salesman::{SalesmanIndividual, SalesmanIndividualData, SalesmanInitType};
+use evo_salesman::salesman::{SalesmanIndividual};
+use evo_salesman::salesman_data::{SalesmanIndividualData};
 use revo::evo_individual::EvoIndividual;
 use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 
 fn main() {
-    let n_cities: u32 = 500;
-    let screen_width: u32 = 1500;
-    let screen_height: u32 = 1500;
-    let shift_prob: f64 = 0.2;
-    let rev_prob: f64 = 0.4;
-
     let mut rng = rand::thread_rng();
 
     let pop_config = PopulationConfig::new("pop_config.json");
-    let ind_data = SalesmanIndividualData::new(
+    let ind_data = SalesmanIndividualData::from_config(
         &mut rng,
-        n_cities,
-        screen_width,
-        screen_height,
-        shift_prob,
-        rev_prob,
-        SalesmanInitType::GreedyJoining,
+        &pop_config,
     );
     let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> =
         Population::new(pop_config, ind_data.clone());

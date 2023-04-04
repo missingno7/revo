@@ -6,18 +6,12 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
 use std::collections::HashSet;
+use crate::salesman_data::{SalesmanIndividualData, SalesmanInitType};
 
-#[derive(Clone)]
-pub enum SalesmanInitType {
-    Naive,
-    Noise,
-    Insertion,
-    GreedyJoining,
-}
 
 pub struct Coord {
-    x: u32,
-    y: u32,
+    pub x: u32,
+    pub y: u32,
 }
 
 impl Clone for Coord {
@@ -41,57 +35,6 @@ impl Coord {
     }
 }
 
-pub struct SalesmanIndividualData {
-    coords: Vec<Coord>,
-    screen_width: u32,
-    screen_height: u32,
-    shift_prob: f64,
-    rev_prob: f64,
-    init_type: SalesmanInitType,
-}
-
-impl SalesmanIndividualData {
-    pub fn new(
-        rng: &mut ThreadRng,
-        n_cities: u32,
-        screen_width: u32,
-        screen_height: u32,
-        shift_prob: f64,
-        rev_prob: f64,
-        init_type: SalesmanInitType,
-    ) -> Self {
-        let mut coords: Vec<Coord> = Vec::new();
-
-        for _ in 0..n_cities {
-            coords.push(Coord {
-                x: rng.gen_range(5..screen_width - 5),
-                y: rng.gen_range(5..screen_height - 5),
-            });
-        }
-
-        SalesmanIndividualData {
-            coords,
-            screen_width,
-            screen_height,
-            shift_prob,
-            rev_prob,
-            init_type,
-        }
-    }
-}
-
-impl Clone for SalesmanIndividualData {
-    fn clone(&self) -> Self {
-        SalesmanIndividualData {
-            coords: self.coords.clone(),
-            screen_width: self.screen_width,
-            screen_height: self.screen_height,
-            shift_prob: self.shift_prob,
-            rev_prob: self.rev_prob,
-            init_type: self.init_type.clone(),
-        }
-    }
-}
 
 pub struct SalesmanIndividual {
     pub fitness: f64,
@@ -164,25 +107,51 @@ impl SalesmanIndividual {
         }
     }
 
+
     fn shift_multiple(&mut self, from: usize, to: usize, shift: usize) {
         let len = self.genom.len();
         let mut i_from = from;
+
         // To prevent underflow if to < from
-        let mut i_to = to + len;
+        let mut i_to = if to < from { to + len } else { to };
 
-        for _ in 0..shift {
-            let mut i = i_to;
+        let slice_len = (i_to - i_from) + 1;
 
-            loop {
-                self.genom.swap(i % len, (i + 1) % len);
-                if i % len == i_from % len {
-                    break;
-                }
-                i -= 1
+
+        if shift % slice_len != 0
+        {
+            // slice part will be shuffled - need to store it in tmp
+
+            // Prepare tmp vec
+            let mut tmp = vec![0u16; slice_len];
+
+            for i in 0..slice_len
+            {
+                tmp[i] = self.genom[(i_from + i) % len];
             }
 
-            i_from += 1;
-            i_to += 1;
+            // Do shifting
+            for _ in 0..shift {
+                self.genom.swap(i_from % len, (i_to + 1) % len);
+
+                i_from += 1;
+                i_to += 1;
+            }
+
+
+            // Put stuff back
+            for i in 0..slice_len
+            {
+                self.genom[(i_from + i) % len] = tmp[i];
+            }
+        } else {
+            // Just do the shifting, slice part will end in correct order
+            for _ in 0..shift {
+                self.genom.swap(i_from % len, (i_to + 1) % len);
+
+                i_from += 1;
+                i_to += 1;
+            }
         }
     }
 
@@ -300,7 +269,7 @@ impl SalesmanIndividual {
 
             let mut insert_to_shortest: bool = false;
             let mut shortest: usize = 0;
-            let mut shortest_distance: f64 = std::f64::MAX;
+            let mut shortest_distance: f64 = f64::MAX;
 
             let city_first = &ind_data.coords[paths[selected_path][0] as usize];
             let city_last =

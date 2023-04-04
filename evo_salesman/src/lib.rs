@@ -4,3 +4,4 @@ extern crate rand;
 extern crate revo;
 
 pub mod salesman;
+pub mod salesman_data;

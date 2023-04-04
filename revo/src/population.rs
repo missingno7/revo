@@ -33,6 +33,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
             let mut curr_gen_ind = Individual::new_randomised(&ind_data, &mut rng);
             curr_gen_ind.count_fitness(&ind_data);
             curr_gen_inds.push(curr_gen_ind);
+
             next_gen_inds.push(Individual::new(&ind_data));
         }
 

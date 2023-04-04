@@ -8,6 +8,7 @@ pub struct PopulationConfig {
     pub mut_prob: f32,
     pub mut_amount: f32,
     pub crossover_prob: f32,
+    pub json: Json,
 }
 
 const DEFAULT_POP_WIDTH: usize = 128;
@@ -55,6 +56,7 @@ impl PopulationConfig {
             mut_prob,
             mut_amount,
             crossover_prob,
+            json,
         }
     }
 }
