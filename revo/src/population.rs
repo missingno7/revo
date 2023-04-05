@@ -1,6 +1,8 @@
 use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
-use rand::Rng;
+use image::RgbImage;
+use lab::Lab;
+use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 pub struct Population<Individual, IndividualData> {
@@ -21,7 +23,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
 {
     // Another associated function, taking two arguments:
     pub fn new(
-        pop_config: PopulationConfig,
+        pop_config: &PopulationConfig,
         ind_data: IndividualData,
     ) -> Population<Individual, IndividualData> {
         let size = pop_config.pop_width * pop_config.pop_height;
@@ -33,6 +35,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
             let mut curr_gen_ind = Individual::new_randomised(&ind_data, &mut rng);
             curr_gen_ind.count_fitness(&ind_data);
             curr_gen_inds.push(curr_gen_ind);
+
             next_gen_inds.push(Individual::new(&ind_data));
         }
 
@@ -55,7 +58,8 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
             .enumerate()
             .take(self.curr_gen_inds.len())
             .for_each(|(i, res)| {
-                let mut rng = rand::thread_rng();
+                let mut rng = thread_rng();
+
                 let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
 
                 if rng.gen_range(0.0..1.0) < self.crossover_prob {
@@ -142,6 +146,54 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
         }
 
         (best_i, second_best_i)
+    }
+
+    // Function creates a visualization of the current generation in the form of an PNG image
+    // It maps the fitness (L) and visual attributes (A, B) of each individual
+    pub fn visualise(&self, filename: &str) {
+        let mut lab: Vec<(f64, f64, f64)> = Vec::with_capacity(self.curr_gen_inds.len());
+        let mut max: (f64, f64, f64) = (f64::MIN, f64::MIN, f64::MIN);
+        let mut min: (f64, f64, f64) = (f64::MAX, f64::MAX, f64::MAX);
+
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+
+        // Prepare LAB vector of representation for each individual
+        for ind in &self.curr_gen_inds {
+            let l = ind.get_fitness();
+            let (a, b) = ind.get_visuals(&self.ind_data);
+            lab.push((l, a, b));
+
+            // Get min and max values of L, A, and B
+            max.0 = f64::max(max.0, l);
+            min.0 = f64::min(min.0, l);
+
+            max.1 = f64::max(max.1, a);
+            min.1 = f64::min(min.1, a);
+
+            max.2 = f64::max(max.2, b);
+            min.2 = f64::min(min.2, b);
+        }
+
+        // Write normalized LAB data to RGB image
+        for i in 0..self.curr_gen_inds.len() {
+            // Get coordinates on image
+            let x: u32 = (i % self.pop_width) as u32;
+            let y: u32 = (i / self.pop_width) as u32;
+
+            // Get normalized LAB data
+            let diff = (max.0 - min.0, max.1 - min.1, max.2 - min.2);
+
+            let l: f32 = (((lab[i].0 - min.0) * 80.0) / diff.0) as f32 + 10.0;
+            let a: f32 = ((((lab[i].1 - min.1) * 256.0) / diff.1) - 128.0) as f32;
+            let b: f32 = ((((lab[i].2 - min.2) * 256.0) / diff.2) - 128.0) as f32;
+
+            // Convert LAB to RGB and put it to result image
+            let rgb: &[u8; 3] = &Lab { l, a, b }.to_rgb();
+            img.put_pixel(x, y, image::Rgb(*rgb));
+        }
+
+        // Save image to file
+        img.save(filename).unwrap();
     }
 }
 

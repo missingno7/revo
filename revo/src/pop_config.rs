@@ -8,6 +8,8 @@ pub struct PopulationConfig {
     pub mut_prob: f32,
     pub mut_amount: f32,
     pub crossover_prob: f32,
+    pub visualise: bool,
+    pub json: Json,
 }
 
 const DEFAULT_POP_WIDTH: usize = 128;
@@ -15,6 +17,7 @@ const DEFAULT_POP_HEIGHT: usize = 128;
 const DEFAULT_MUT_PROB: f32 = 0.1;
 const DEFAULT_MUT_AMOUNT: f32 = 1.0;
 const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
+const DEFAULT_VISUALISE: bool = false;
 
 impl PopulationConfig {
     pub fn new(config_filename: &str) -> Self {
@@ -49,12 +52,19 @@ impl PopulationConfig {
             Some(data) => data.as_f64().unwrap() as f32,
         };
 
+        let visualise: bool = match json.find_path(&["visualise"]) {
+            None => DEFAULT_VISUALISE,
+            Some(data) => data.as_boolean().unwrap(),
+        };
+
         PopulationConfig {
             pop_width,
             pop_height,
             mut_prob,
             mut_amount,
             crossover_prob,
+            visualise,
+            json,
         }
     }
 }
