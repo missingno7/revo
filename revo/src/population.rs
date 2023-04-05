@@ -6,22 +6,30 @@ use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 pub struct Population<Individual, IndividualData> {
+    // Current and next generation of individuals
     curr_gen_inds: Vec<Individual>,
     next_gen_inds: Vec<Individual>,
+
+    // Population size
     pop_width: usize,
     pop_height: usize,
+
+    // Probability parameters
     mut_prob: f32,
     mut_amount: f32,
     crossover_prob: f32,
+
+    // Current generation number
     i_generation: usize,
 
+    // Data for individuals
     ind_data: IndividualData,
 }
 
 impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
     Population<Individual, IndividualData>
 {
-    // Another associated function, taking two arguments:
+    // Function creates a new population with randomised individuals and counts their fitness
     pub fn new(
         pop_config: &PopulationConfig,
         ind_data: IndividualData,
@@ -52,7 +60,10 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         }
     }
 
+    // Function moves the population to the next generation
+    // It does selection, crossover/mutation and counts fitness for each individual
     pub fn next_gen(&mut self) {
+        // Do selection and crossover/mutation in parallel for each individual
         self.next_gen_inds
             .par_iter_mut()
             .enumerate()
@@ -60,8 +71,10 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
             .for_each(|(i, res)| {
                 let mut rng = thread_rng();
 
+                // Select 5 individuals
                 let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
 
+                // Decide whether to do crossover or mutation
                 if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     // Do crossover
                     let (first_ind, second_ind) =
@@ -73,7 +86,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                         &mut rng,
                     )
                 } else {
-                    // Just mutate
+                    // Do mutation
                     self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
                         .copy_to(res);
                     res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
@@ -86,6 +99,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         self.i_generation += 1;
     }
 
+    // Function returns the best individual in the current generation
     pub fn get_best(&self) -> Individual {
         let mut best_ind = &self.curr_gen_inds[0];
 
@@ -98,26 +112,33 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         best_ind.clone()
     }
 
+    // Function returns the number of the current generation
     pub fn get_generation(&self) -> usize {
         self.i_generation
     }
 
-    // Private methods
+    /// Private methods
+
+    // Function returns the indices of 5 neighbours of i in a + shape
     fn l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
+        // Get x and y coordinates of i
         let x: usize = i % pop_width;
         let y: usize = i / pop_width;
 
+        // Get indices of left, right, up and down neighbours
         let row_start_index = y * pop_width;
-        let l_i = row_start_index + ((x + pop_width - 1) % pop_width);
-        let r_i = row_start_index + ((x + 1) % pop_width);
+        let left_neighbour = row_start_index + ((x + pop_width - 1) % pop_width);
+        let right_neigbour = row_start_index + ((x + 1) % pop_width);
 
         let column_start_index = x % pop_width;
-        let u_i = ((y + pop_height - 1) % pop_height) * pop_width + column_start_index;
-        let d_i = ((y + 1) % pop_height) * pop_width + column_start_index;
+        let top_neighbour = ((y + pop_height - 1) % pop_height) * pop_width + column_start_index;
+        let bottom_neighbour = ((y + 1) % pop_height) * pop_width + column_start_index;
 
-        vec![i, l_i, r_i, u_i, d_i]
+        // Return indices of 5 neighbours in a + shape with i in the middle
+        vec![i, left_neighbour, right_neigbour, top_neighbour, bottom_neighbour]
     }
 
+    // Function returns the index of the best individual in the tournament
     fn single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
@@ -130,6 +151,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         best_i
     }
 
+    // Function returns the indices of the two best individuals in the tournament
     fn dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];

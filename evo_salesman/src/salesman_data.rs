@@ -2,6 +2,7 @@ use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::pop_config::PopulationConfig;
 use revo::utils::Coord;
+use std::str::FromStr;
 
 const DEFAULT_N_CITIES: u32 = 500;
 const DEFAULT_SCREEN_WIDTH: u32 = 1000;
@@ -18,14 +19,16 @@ pub enum SalesmanInitType {
     GreedyJoining,
 }
 
-impl SalesmanInitType {
-    pub fn from_string(string: &str) -> Self {
-        match string {
-            "naive" => SalesmanInitType::Naive,
-            "noise" => SalesmanInitType::Noise,
-            "insertion" => SalesmanInitType::Insertion,
-            "greedy" => SalesmanInitType::GreedyJoining,
-            _ => panic!("Unknown type"),
+impl FromStr for SalesmanInitType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "naive" => Ok(SalesmanInitType::Naive),
+            "noise" => Ok(SalesmanInitType::Noise),
+            "insertion" => Ok(SalesmanInitType::Insertion),
+            "greedy" => Ok(SalesmanInitType::GreedyJoining),
+            _ => Err(format!("Unknown type: {}", s)),
         }
     }
 }
@@ -97,7 +100,7 @@ impl SalesmanIndividualData {
 
         let init_type: SalesmanInitType = match config.json.find_path(&["init_type"]) {
             None => DEFAULT_INIT_TYPE,
-            Some(data) => SalesmanInitType::from_string(data.as_string().unwrap()),
+            Some(data) => SalesmanInitType::from_str(data.as_string().unwrap()).unwrap(),
         };
 
         Self::new(
