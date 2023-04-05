@@ -1,4 +1,4 @@
-use crate::salesman::Coord;
+use revo::utils::Coord;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::pop_config::PopulationConfig;

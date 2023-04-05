@@ -4,6 +4,7 @@ use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
+use revo::utils::Coord;
 
 pub struct DistanceIndividualData {
     screen_width: u32,
@@ -41,7 +42,7 @@ impl Clone for DistanceIndividualData {
 
 pub struct DistanceIndividual {
     fitness: f64,
-    coords: Vec<(u32, u32)>,
+    coords: Vec<Coord>,
 }
 
 impl DistanceIndividual {
@@ -54,7 +55,7 @@ impl DistanceIndividual {
 
             draw_hollow_rect_mut(
                 &mut img,
-                Rect::at(self.coords[i].0 as i32 - 5, self.coords[i].1 as i32 - 5).of_size(10, 10),
+                Rect::at(self.coords[i].x as i32 - 5, self.coords[i].y as i32 - 5).of_size(10, 10),
                 point_color,
             );
         }
@@ -71,10 +72,10 @@ impl DistanceIndividual {
 
 impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
     fn new(ind_data: &DistanceIndividualData) -> Self {
-        let mut coords: Vec<(u32, u32)> = Vec::new();
+        let mut coords: Vec<Coord> = Vec::new();
 
         for _ in 0..ind_data.n_points {
-            coords.push((100, 100));
+            coords.push(Coord { x: 100, y: 100 });
         }
 
         DistanceIndividual {
@@ -84,12 +85,12 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
     }
 
     fn new_randomised(ind_data: &DistanceIndividualData, rng: &mut ThreadRng) -> Self {
-        let mut coords: Vec<(u32, u32)> = Vec::new();
+        let mut coords: Vec<Coord> = Vec::new();
         for _ in 0..ind_data.n_points {
-            coords.push((
-                rng.gen_range(5..ind_data.screen_width - 5),
-                rng.gen_range(5..ind_data.screen_height - 5),
-            ));
+            coords.push(Coord {
+                x: rng.gen_range(5..ind_data.screen_width - 5),
+                y: rng.gen_range(5..ind_data.screen_height - 5),
+            });
         }
 
         DistanceIndividual {
@@ -123,20 +124,20 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
                 let x_mut = rng.gen_range(-mut_amount..mut_amount) as i32;
                 let y_mut = rng.gen_range(-mut_amount..mut_amount) as i32;
 
-                if (coord.0 as i32 + x_mut) < 0
-                    || (coord.0 as i32 + x_mut) > ind_data.screen_width as i32
+                if (coord.x as i32 + x_mut) < 0
+                    || (coord.x as i32 + x_mut) > ind_data.screen_width as i32
                 {
-                    coord.0 = (coord.0 as i32 - x_mut) as u32;
+                    coord.x = (coord.x as i32 - x_mut) as u32;
                 } else {
-                    coord.0 = (coord.0 as i32 + x_mut) as u32;
+                    coord.x = (coord.x as i32 + x_mut) as u32;
                 }
 
-                if (coord.1 as i32 + y_mut) < 0
-                    || (coord.1 as i32 + y_mut) > ind_data.screen_height as i32
+                if (coord.y as i32 + y_mut) < 0
+                    || (coord.y as i32 + y_mut) > ind_data.screen_height as i32
                 {
-                    coord.1 = (coord.1 as i32 - y_mut) as u32;
+                    coord.y = (coord.y as i32 - y_mut) as u32;
                 } else {
-                    coord.1 = (coord.1 as i32 + y_mut) as u32;
+                    coord.y = (coord.y as i32 + y_mut) as u32;
                 }
             }
         }
@@ -151,11 +152,11 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
     ) {
         for i in 0..self.coords.len() {
             let ratio: f32 = rng.gen_range(0.0..1.0);
-            dest_int.coords[i].0 = ((self.coords[i].0 as f32 * ratio)
-                + (another_ind.coords[i].0 as f32 * (1.0 - ratio)))
+            dest_int.coords[i].x = ((self.coords[i].x as f32 * ratio)
+                + (another_ind.coords[i].x as f32 * (1.0 - ratio)))
                 as u32;
-            dest_int.coords[i].1 = ((self.coords[i].1 as f32 * ratio)
-                + (another_ind.coords[i].1 as f32 * (1.0 - ratio)))
+            dest_int.coords[i].y = ((self.coords[i].y as f32 * ratio)
+                + (another_ind.coords[i].y as f32 * (1.0 - ratio)))
                 as u32;
         }
     }
@@ -169,16 +170,16 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         for i in 0..self.coords.len() {
             let mut closest_dist = std::i64::MAX;
 
-            let x1 = self.coords[i].0;
-            let y1 = self.coords[i].1;
+            let x1 = self.coords[i].x;
+            let y1 = self.coords[i].y;
 
             for j in 0..self.coords.len() {
                 if i == j {
                     continue;
                 }
 
-                let x2 = self.coords[j].0;
-                let y2 = self.coords[j].1;
+                let x2 = self.coords[j].x;
+                let y2 = self.coords[j].y;
                 let distance = DistanceIndividual::distance(x1, y1, x2, y2);
 
                 if distance < closest_dist {
@@ -204,8 +205,8 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         let mut b: f64 = 0.0;
 
         for i in 0..self.coords.len() {
-            a += self.coords[i].0 as f64;
-            b += self.coords[i].1 as f64;
+            a += self.coords[i].x as f64;
+            b += self.coords[i].y as f64;
         }
 
         (a, b)

@@ -7,32 +7,7 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
 use std::collections::HashSet;
-
-pub struct Coord {
-    pub x: u32,
-    pub y: u32,
-}
-
-impl Clone for Coord {
-    fn clone(&self) -> Self {
-        Coord {
-            x: self.x,
-            y: self.y,
-        }
-    }
-}
-
-impl Coord {
-    fn distance(first: &Self, second: &Self) -> f64 {
-        let x = second.x as f64 - first.x as f64;
-        let y = second.y as f64 - first.y as f64;
-        (x * x) + (y * y)
-    }
-
-    fn as_f32(&self) -> (f32, f32) {
-        (self.x as f32, self.y as f32)
-    }
-}
+use revo::utils::Coord;
 
 pub struct SalesmanIndividual {
     pub fitness: f64,
