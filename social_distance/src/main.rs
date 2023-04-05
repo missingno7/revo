@@ -18,7 +18,7 @@ fn main() {
     let ind_data =
         DistanceIndividualData::new(n_points, screen_width, screen_height, required_distance);
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> =
-        Population::new(pop_config, ind_data.clone());
+        Population::new(&pop_config, ind_data.clone());
 
     fs::create_dir(output_dir).unwrap();
 
@@ -45,7 +45,11 @@ fn main() {
             );
         }
 
-        pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+        if pop_config.visualise
+        {
+            pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+        }
+
 
         pop.next_gen();
     }

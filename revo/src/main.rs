@@ -22,7 +22,9 @@ fn main() {
             pop_best.get_fitness()
         );
 
-        pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
+        if pop_config.visualise {
+            pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
+        }
 
         pop.next_gen();
     }

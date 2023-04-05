@@ -23,7 +23,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
 {
     // Another associated function, taking two arguments:
     pub fn new(
-        pop_config: PopulationConfig,
+        pop_config: &PopulationConfig,
         ind_data: IndividualData,
     ) -> Population<Individual, IndividualData> {
         let size = pop_config.pop_width * pop_config.pop_height;

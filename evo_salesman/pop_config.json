@@ -1,15 +1,16 @@
 {
- "pop_width": 500,
- "pop_height": 500,
+ "pop_width": 400,
+ "pop_height": 400,
  "mut_prob": 0.02,
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
+ "visualise": false,
 
-  "n_cities": 100,
-  "screen_width": 500,
-  "screen_height":  500,
-  "shift_prob": 0.4,
-  "rev_prob": 0.4,
-  "init_type": "greedy"
+ "n_cities": 300,
+ "screen_width": 600,
+ "screen_height":  600,
+ "shift_prob": 0.4,
+ "rev_prob": 0.4,
+ "init_type": "greedy"
 
 }

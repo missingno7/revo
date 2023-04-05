@@ -18,7 +18,7 @@ fn main() {
 
     let ind_data = SalesmanIndividualData::from_config(&mut rng, &pop_config);
     let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> =
-        Population::new(pop_config, ind_data.clone());
+        Population::new(&pop_config, ind_data.clone());
 
     let mut all_best_ind = pop.get_best();
 
@@ -48,7 +48,9 @@ fn main() {
             );
         }
 
-        pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+        if pop_config.visualise {
+            pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+        }
 
         pop.next_gen();
     }

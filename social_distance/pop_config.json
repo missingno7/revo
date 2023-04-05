@@ -3,7 +3,6 @@
  "pop_height": 512,
  "mut_prob": 0.1,
  "mut_amount": 5.0,
- "crossover_prob": 0.2
- 
- 
+ "crossover_prob": 0.2,
+ "visualise" : true
 }

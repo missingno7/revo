@@ -76,10 +76,6 @@ impl SalesmanIndividual {
     }
 
     fn reverse_part(&mut self, from: usize, to: usize) {
-        if from == to {
-            return;
-        }
-
         let len = self.genom.len();
 
         let to = match from < to {
@@ -90,13 +86,9 @@ impl SalesmanIndividual {
         let mut frmi = from;
         let mut toi = to;
 
-        loop {
+        while frmi <= toi {
             let abs_toi = toi % len;
             let abs_frmi = frmi % len;
-
-            if (frmi - 1) == toi || frmi == toi {
-                break;
-            }
 
             self.genom.swap(abs_frmi, abs_toi);
 
@@ -108,42 +100,50 @@ impl SalesmanIndividual {
     fn shift_multiple(&mut self, from: usize, to: usize, shift: usize) {
         let len = self.genom.len();
         let mut i_from = from;
+        let mut i_to = to + 1;
 
-        // To prevent underflow if to < from
-        let mut i_to = if to < from { to + len } else { to };
-
-        let slice_len = (i_to - i_from) + 1;
-
-        if shift % slice_len != 0 {
-            // slice part will be shuffled - need to store it in tmp
-
-            // Prepare tmp vec
-            let mut tmp = vec![0u16; slice_len];
-
-            for i in 0..slice_len {
-                tmp[i] = self.genom[(i_from + i) % len];
-            }
-
-            // Do shifting
-            for _ in 0..shift {
-                self.genom.swap(i_from % len, (i_to + 1) % len);
-
-                i_from += 1;
-                i_to += 1;
-            }
-
-            // Put stuff back
-            for i in 0..slice_len {
-                self.genom[(i_from + i) % len] = tmp[i];
-            }
+        let slice_len = if to < from {
+            i_to + len - i_from
         } else {
-            // Just do the shifting, slice part will end in correct order
-            for _ in 0..shift {
-                self.genom.swap(i_from % len, (i_to + 1) % len);
+            i_to - i_from
+        };
 
-                i_from += 1;
-                i_to += 1;
+        let mut tmp: Vec<u16> = Vec::with_capacity(slice_len);
+
+        let mut source_i = i_from;
+        for _ in 0..slice_len {
+            tmp.push(self.genom[source_i]);
+
+            source_i += 1;
+            if source_i >= len {
+                source_i = 0
+            };
+        }
+
+        // Do shifting
+        for _ in 0..shift {
+            self.genom.swap(i_from, i_to);
+
+            i_from += 1;
+            if i_from >= len {
+                i_from = 0;
             }
+
+            i_to += 1;
+            if i_to >= len {
+                i_to = 0;
+            }
+        }
+
+        // Put stuff back
+        let mut source_i = i_from;
+        for i in 0..slice_len {
+            self.genom[source_i] = tmp[i];
+
+            source_i += 1;
+            if source_i >= len {
+                source_i = 0
+            };
         }
     }
 
@@ -452,31 +452,6 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         self.fitness
     }
 
-    /*
-    fn get_visuals(&self, ind_data: &SalesmanIndividualData) -> (f64, f64) {
-        let mut a: f64 = 0.0;
-        let mut b: f64 = 0.0;
-
-        for i in 0..self.genom.len()-1
-        {
-            let city1 = &ind_data.coords[self.genom[i] as usize];
-            let city2 = &ind_data.coords[self.genom[i+1] as usize ];
-
-            a +=  f64::abs(city2.x as f64 - city1.y as f64);
-            b +=  f64::abs(city2.y as f64 - city1.x as f64);
-        }
-
-
-        let city1 = &ind_data.coords[self.genom[0] as usize];
-        let city2 = &ind_data.coords[self.genom[self.genom.len()-1] as usize ];
-
-        a +=  f64::abs(city2.x as f64 - city1.y as f64);
-        b +=  f64::abs(city2.y as f64 - city1.x as f64);
-
-        (a, b)
-    }
-    */
-
     fn get_visuals(&self, _ind_data: &SalesmanIndividualData) -> (f64, f64) {
         let mut a: f64 = 0.0;
         let mut b: f64 = 0.0;
@@ -539,6 +514,18 @@ mod tests {
         ind = SalesmanIndividual::new(&ind_data);
         ind.shift_multiple(1, 3, 13);
         assert_eq!(ind.genom, vec![1, 2, 3, 5, 6, 0, 4]);
+
+        ind = SalesmanIndividual::new(&ind_data);
+        ind.shift_multiple(1, 3, 0);
+        assert_eq!(ind.genom, vec![0, 1, 2, 3, 4, 5, 6]);
+
+        ind = SalesmanIndividual::new(&ind_data);
+        ind.shift_multiple(3, 3, 5);
+        assert_eq!(ind.genom, vec![1, 3, 2, 4, 5, 6, 0]);
+
+        ind = SalesmanIndividual::new(&ind_data);
+        ind.shift_multiple(3, 3, 6);
+        assert_eq!(ind.genom, vec![1, 2, 3, 4, 5, 6, 0]);
     }
 
     #[test]
@@ -563,5 +550,9 @@ mod tests {
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(5, 2);
         assert_eq!(ind.genom, vec![1, 0, 5, 3, 4, 2]);
+
+        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind.reverse_part(2, 2);
+        assert_eq!(ind.genom, vec![4, 3, 2, 1, 0, 5]);
     }
 }
