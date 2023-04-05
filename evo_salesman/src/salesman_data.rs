@@ -1,7 +1,7 @@
-use revo::utils::Coord;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::pop_config::PopulationConfig;
+use revo::utils::Coord;
 
 const DEFAULT_N_CITIES: u32 = 500;
 const DEFAULT_SCREEN_WIDTH: u32 = 1000;
@@ -30,6 +30,7 @@ impl SalesmanInitType {
     }
 }
 
+#[derive(Clone)]
 pub struct SalesmanIndividualData {
     pub coords: Vec<Coord>,
     pub screen_width: u32,
@@ -108,18 +109,5 @@ impl SalesmanIndividualData {
             rev_prob,
             init_type,
         )
-    }
-}
-
-impl Clone for SalesmanIndividualData {
-    fn clone(&self) -> Self {
-        SalesmanIndividualData {
-            coords: self.coords.clone(),
-            screen_width: self.screen_width,
-            screen_height: self.screen_height,
-            shift_prob: self.shift_prob,
-            rev_prob: self.rev_prob,
-            init_type: self.init_type.clone(),
-        }
     }
 }

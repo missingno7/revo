@@ -6,6 +6,7 @@ use rand::Rng;
 use revo::evo_individual::EvoIndividual;
 use revo::utils::Coord;
 
+#[derive(Clone)]
 pub struct DistanceIndividualData {
     screen_width: u32,
     screen_height: u32,
@@ -29,17 +30,7 @@ impl DistanceIndividualData {
     }
 }
 
-impl Clone for DistanceIndividualData {
-    fn clone(&self) -> Self {
-        DistanceIndividualData {
-            screen_width: self.screen_width,
-            screen_height: self.screen_height,
-            n_points: self.n_points,
-            required_distance: self.required_distance,
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct DistanceIndividual {
     fitness: f64,
     coords: Vec<Coord>,
@@ -102,13 +93,6 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
     fn copy_to(&self, ind: &mut Self) {
         for i in 0..self.coords.len() {
             ind.coords[i] = self.coords[i];
-        }
-    }
-
-    fn clone(&self) -> Self {
-        DistanceIndividual {
-            fitness: self.fitness,
-            coords: self.coords.clone(),
         }
     }
 

@@ -5,7 +5,7 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
     fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 
     fn copy_to(&self, ind: &mut Self);
-    fn clone(&self) -> Self;
+
     fn mutate(
         &mut self,
         ind_data: &IndividualData,

@@ -18,7 +18,7 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
-impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sync>
+impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
     Population<Individual, IndividualData>
 {
     // Another associated function, taking two arguments:

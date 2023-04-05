@@ -12,6 +12,7 @@ impl Default for BasicIndividualData {
     }
 }
 
+#[derive(Clone)]
 pub struct BasicIndividual {
     fitness: f64,
     value: f64,
@@ -29,18 +30,6 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         BasicIndividual {
             fitness: 0.0,
             value: ind_data.value + rng.gen_range(0.0..10.0),
-        }
-    }
-
-    fn copy_to(&self, ind: &mut Self) {
-        ind.fitness = self.fitness;
-        ind.value = self.value
-    }
-
-    fn clone(&self) -> Self {
-        BasicIndividual {
-            fitness: self.fitness,
-            value: self.value,
         }
     }
 
@@ -66,6 +55,11 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         let ratio = rng.gen_range(0.0..1.0);
 
         dest_int.value = self.value * ratio + another_ind.value * (1.0 - ratio);
+    }
+
+    fn copy_to(&self, ind: &mut Self) {
+        ind.fitness = self.fitness;
+        ind.value = self.value
     }
 
     fn count_fitness(&mut self, _ind_data: &BasicIndividualData) {

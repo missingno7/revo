@@ -6,9 +6,10 @@ use rand::prelude::ThreadRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
-use std::collections::HashSet;
 use revo::utils::Coord;
+use std::collections::HashSet;
 
+#[derive(Clone)]
 pub struct SalesmanIndividual {
     pub fitness: f64,
     genom: Vec<u16>,
@@ -315,13 +316,6 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
     fn copy_to(&self, ind: &mut Self) {
         for i in 0..self.genom.len() {
             ind.genom[i] = self.genom[i];
-        }
-    }
-
-    fn clone(&self) -> Self {
-        SalesmanIndividual {
-            fitness: self.fitness,
-            genom: self.genom.clone(),
         }
     }
 
