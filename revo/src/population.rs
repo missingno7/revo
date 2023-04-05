@@ -148,54 +148,51 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
         (best_i, second_best_i)
     }
 
+    // Function creates a visualization of the current generation in the form of an PNG image
+    // It maps the fitness (L) and visual attributes (A, B) of each individual
     pub fn visualise(&self, filename: &str) {
         let mut lab: Vec<(f64, f64, f64)> = Vec::with_capacity(self.curr_gen_inds.len());
         let mut max: (f64, f64, f64) = (f64::MIN, f64::MIN, f64::MIN);
         let mut min: (f64, f64, f64) = (f64::MAX, f64::MAX, f64::MAX);
 
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+
+        // Prepare LAB vector of representation for each individual
         for ind in &self.curr_gen_inds {
             let l = ind.get_fitness();
             let (a, b) = ind.get_visuals(&self.ind_data);
             lab.push((l, a, b));
 
-            if l > max.0 {
-                max.0 = l
-            }
-            if l < min.0 {
-                min.0 = l
-            }
+            // Get min and max values of L, A, and B
+            max.0 = f64::max(max.0, l);
+            min.0 = f64::min(min.0, l);
 
-            if a > max.1 {
-                max.1 = a
-            }
-            if a < min.1 {
-                min.1 = a
-            }
+            max.1 = f64::max(max.1, a);
+            min.1 = f64::min(min.1, a);
 
-            if b > max.2 {
-                max.2 = b
-            }
-            if b < min.2 {
-                min.2 = b
-            }
+            max.2 = f64::max(max.2, b);
+            min.2 = f64::min(min.2, b);
         }
 
-        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
-
+        // Write normalized LAB data to RGB image
         for i in 0..self.curr_gen_inds.len() {
+            // Get coordinates on image
             let x: u32 = (i % self.pop_width) as u32;
             let y: u32 = (i / self.pop_width) as u32;
 
+            // Get normalized LAB data
             let diff = (max.0 - min.0, max.1 - min.1, max.2 - min.2);
 
             let l: f32 = (((lab[i].0 - min.0) * 80.0) / diff.0) as f32 + 10.0;
             let a: f32 = ((((lab[i].1 - min.1) * 256.0) / diff.1) - 128.0) as f32;
             let b: f32 = ((((lab[i].2 - min.2) * 256.0) / diff.2) - 128.0) as f32;
 
+            // Convert LAB to RGB and put it to result image
             let rgb: &[u8; 3] = &Lab { l, a, b }.to_rgb();
             img.put_pixel(x, y, image::Rgb(*rgb));
         }
 
+        // Save image to file
         img.save(filename).unwrap();
     }
 }

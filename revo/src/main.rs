@@ -11,7 +11,7 @@ fn main() {
     let pop_config = PopulationConfig::new("pop_config.json");
     let ind_data = BasicIndividualData::default();
     let mut pop: Population<BasicIndividual, BasicIndividualData> =
-        Population::new(pop_config, ind_data);
+        Population::new(&pop_config, ind_data);
 
     for _ in 0..10 {
         let pop_best = pop.get_best();

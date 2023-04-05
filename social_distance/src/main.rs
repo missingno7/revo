@@ -45,11 +45,9 @@ fn main() {
             );
         }
 
-        if pop_config.visualise
-        {
+        if pop_config.visualise {
             pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
         }
-
 
         pop.next_gen();
     }
