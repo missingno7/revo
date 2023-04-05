@@ -8,26 +8,10 @@ use revo::utils::Coord;
 
 #[derive(Clone)]
 pub struct DistanceIndividualData {
-    screen_width: u32,
-    screen_height: u32,
-    n_points: usize,
-    required_distance: u32,
-}
-
-impl DistanceIndividualData {
-    pub fn new(
-        n_points: usize,
-        screen_width: u32,
-        screen_height: u32,
-        required_distance: u32,
-    ) -> Self {
-        DistanceIndividualData {
-            screen_width,
-            screen_height,
-            n_points,
-            required_distance,
-        }
-    }
+    pub screen_width: u32,
+    pub screen_height: u32,
+    pub n_points: usize,
+    pub required_distance: u32,
 }
 
 #[derive(Clone)]

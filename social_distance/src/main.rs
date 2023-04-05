@@ -15,8 +15,12 @@ fn main() {
     let pop_config = PopulationConfig::new("pop_config.json");
     let output_dir = "./out";
 
-    let ind_data =
-        DistanceIndividualData::new(n_points, screen_width, screen_height, required_distance);
+    let ind_data = DistanceIndividualData {
+        n_points,
+        screen_width,
+        screen_height,
+        required_distance,
+    };
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> =
         Population::new(&pop_config, ind_data.clone());
 
