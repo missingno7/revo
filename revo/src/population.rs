@@ -1,6 +1,8 @@
 use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
-use rand::{Rng, thread_rng};
+use image::RgbImage;
+use lab::Lab;
+use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 pub struct Population<Individual, IndividualData> {
@@ -56,29 +58,27 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
             .enumerate()
             .take(self.curr_gen_inds.len())
             .for_each(|(i, res)| {
+                let mut rng = thread_rng();
 
-                    let mut rng = thread_rng();
+                let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
 
-                    let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
-
-                    if rng.gen_range(0.0..1.0) < self.crossover_prob {
-                        // Do crossover
-                        let (first_ind, second_ind) =
-                            Self::dual_tournament(&indices, &self.curr_gen_inds);
-                        self.curr_gen_inds[first_ind].crossover_to(
-                            &self.curr_gen_inds[second_ind],
-                            res,
-                            &self.ind_data,
-                            &mut rng,
-                        )
-                    } else {
-                        // Just mutate
-                        self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
-                            .copy_to(res);
-                        res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
-                    }
-                    res.count_fitness(&self.ind_data);
-
+                if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                    // Do crossover
+                    let (first_ind, second_ind) =
+                        Self::dual_tournament(&indices, &self.curr_gen_inds);
+                    self.curr_gen_inds[first_ind].crossover_to(
+                        &self.curr_gen_inds[second_ind],
+                        res,
+                        &self.ind_data,
+                        &mut rng,
+                    )
+                } else {
+                    // Just mutate
+                    self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
+                        .copy_to(res);
+                    res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                }
+                res.count_fitness(&self.ind_data);
             });
 
         // Advance to next generation
@@ -146,6 +146,57 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync, IndividualData: Sy
         }
 
         (best_i, second_best_i)
+    }
+
+    pub fn visualise(&self, filename: &str) {
+        let mut lab: Vec<(f64, f64, f64)> = Vec::with_capacity(self.curr_gen_inds.len());
+        let mut max: (f64, f64, f64) = (f64::MIN, f64::MIN, f64::MIN);
+        let mut min: (f64, f64, f64) = (f64::MAX, f64::MAX, f64::MAX);
+
+        for ind in &self.curr_gen_inds {
+            let l = ind.get_fitness();
+            let (a, b) = ind.get_visuals(&self.ind_data);
+            lab.push((l, a, b));
+
+            if l > max.0 {
+                max.0 = l
+            }
+            if l < min.0 {
+                min.0 = l
+            }
+
+            if a > max.1 {
+                max.1 = a
+            }
+            if a < min.1 {
+                min.1 = a
+            }
+
+            if b > max.2 {
+                max.2 = b
+            }
+            if b < min.2 {
+                min.2 = b
+            }
+        }
+
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+
+        for i in 0..self.curr_gen_inds.len() {
+            let x: u32 = (i % self.pop_width) as u32;
+            let y: u32 = (i / self.pop_width) as u32;
+
+            let diff = (max.0 - min.0, max.1 - min.1, max.2 - min.2);
+
+            let l: f32 = (((lab[i].0 - min.0) * 80.0) / diff.0) as f32 + 10.0;
+            let a: f32 = ((((lab[i].1 - min.1) * 256.0) / diff.1) - 128.0) as f32;
+            let b: f32 = ((((lab[i].2 - min.2) * 256.0) / diff.2) - 128.0) as f32;
+
+            let rgb: &[u8; 3] = &Lab { l, a, b }.to_rgb();
+            img.put_pixel(x, y, image::Rgb(*rgb));
+        }
+
+        img.save(filename).unwrap();
     }
 }
 

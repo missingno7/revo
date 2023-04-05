@@ -74,4 +74,8 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     fn get_fitness(&self) -> f64 {
         self.fitness
     }
+
+    fn get_visuals(&self, _ind_data: &BasicIndividualData) -> (f64, f64) {
+        (self.value, self.value)
+    }
 }

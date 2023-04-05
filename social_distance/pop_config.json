@@ -1,6 +1,6 @@
 {
- "pop_width": 4,
- "pop_height": 4096,
+ "pop_width": 512,
+ "pop_height": 512,
  "mut_prob": 0.1,
  "mut_amount": 5.0,
  "crossover_prob": 0.2

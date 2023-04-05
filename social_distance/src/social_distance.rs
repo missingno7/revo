@@ -198,4 +198,16 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
     fn get_fitness(&self) -> f64 {
         self.fitness
     }
+
+    fn get_visuals(&self, _ind_data: &DistanceIndividualData) -> (f64, f64) {
+        let mut a: f64 = 0.0;
+        let mut b: f64 = 0.0;
+
+        for i in 0..self.coords.len() {
+            a += self.coords[i].0 as f64;
+            b += self.coords[i].1 as f64;
+        }
+
+        (a, b)
+    }
 }

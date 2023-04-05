@@ -14,11 +14,16 @@ fn main() {
         Population::new(pop_config, ind_data);
 
     for _ in 0..10 {
+        let pop_best = pop.get_best();
+
         println!(
             "Round {}, best fitness: {}",
             pop.get_generation(),
-            pop.get_best().get_fitness()
+            pop_best.get_fitness()
         );
+
+        pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
+
         pop.next_gen();
     }
 }

@@ -25,4 +25,6 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
     fn count_fitness(&mut self, ind_data: &IndividualData);
 
     fn get_fitness(&self) -> f64;
+
+    fn get_visuals(&self, ind_data: &IndividualData) -> (f64, f64);
 }

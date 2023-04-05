@@ -1,7 +1,7 @@
+use crate::salesman::Coord;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::pop_config::PopulationConfig;
-use crate::salesman::Coord;
 
 const DEFAULT_N_CITIES: u32 = 500;
 const DEFAULT_SCREEN_WIDTH: u32 = 1000;
@@ -18,17 +18,14 @@ pub enum SalesmanInitType {
     GreedyJoining,
 }
 
-impl SalesmanInitType
-{
-    pub fn from_string(string: &str) -> Self
-    {
-        match string
-        {
+impl SalesmanInitType {
+    pub fn from_string(string: &str) -> Self {
+        match string {
             "naive" => SalesmanInitType::Naive,
             "noise" => SalesmanInitType::Noise,
             "insertion" => SalesmanInitType::Insertion,
             "greedy" => SalesmanInitType::GreedyJoining,
-            _ => panic!("Unknown type")
+            _ => panic!("Unknown type"),
         }
     }
 }
@@ -41,7 +38,6 @@ pub struct SalesmanIndividualData {
     pub rev_prob: f64,
     pub init_type: SalesmanInitType,
 }
-
 
 impl SalesmanIndividualData {
     pub fn new(
@@ -72,9 +68,7 @@ impl SalesmanIndividualData {
         }
     }
 
-
-    pub fn from_config(rng: &mut ThreadRng, config: &PopulationConfig) -> Self
-    {
+    pub fn from_config(rng: &mut ThreadRng, config: &PopulationConfig) -> Self {
         let n_cities: u32 = match config.json.find_path(&["n_cities"]) {
             None => DEFAULT_N_CITIES,
             Some(data) => data.as_u64().unwrap() as u32,
@@ -89,7 +83,6 @@ impl SalesmanIndividualData {
             None => DEFAULT_SCREEN_HEIGHT,
             Some(data) => data.as_u64().unwrap() as u32,
         };
-
 
         let shift_prob: f64 = match config.json.find_path(&["shift_prob"]) {
             None => DEFAULT_SHIFT_PROB,
@@ -106,7 +99,15 @@ impl SalesmanIndividualData {
             Some(data) => SalesmanInitType::from_string(data.as_string().unwrap()),
         };
 
-        Self::new(rng, n_cities, screen_width, screen_height, shift_prob, rev_prob, init_type)
+        Self::new(
+            rng,
+            n_cities,
+            screen_width,
+            screen_height,
+            shift_prob,
+            rev_prob,
+            init_type,
+        )
     }
 }
 

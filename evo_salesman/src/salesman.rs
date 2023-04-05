@@ -1,3 +1,4 @@
+use crate::salesman_data::{SalesmanIndividualData, SalesmanInitType};
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_line_segment_mut};
 use imageproc::rect::Rect;
@@ -6,8 +7,6 @@ use rand::seq::SliceRandom;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
 use std::collections::HashSet;
-use crate::salesman_data::{SalesmanIndividualData, SalesmanInitType};
-
 
 pub struct Coord {
     pub x: u32,
@@ -34,7 +33,6 @@ impl Coord {
         (self.x as f32, self.y as f32)
     }
 }
-
 
 pub struct SalesmanIndividual {
     pub fitness: f64,
@@ -107,7 +105,6 @@ impl SalesmanIndividual {
         }
     }
 
-
     fn shift_multiple(&mut self, from: usize, to: usize, shift: usize) {
         let len = self.genom.len();
         let mut i_from = from;
@@ -117,16 +114,13 @@ impl SalesmanIndividual {
 
         let slice_len = (i_to - i_from) + 1;
 
-
-        if shift % slice_len != 0
-        {
+        if shift % slice_len != 0 {
             // slice part will be shuffled - need to store it in tmp
 
             // Prepare tmp vec
             let mut tmp = vec![0u16; slice_len];
 
-            for i in 0..slice_len
-            {
+            for i in 0..slice_len {
                 tmp[i] = self.genom[(i_from + i) % len];
             }
 
@@ -138,10 +132,8 @@ impl SalesmanIndividual {
                 i_to += 1;
             }
 
-
             // Put stuff back
-            for i in 0..slice_len
-            {
+            for i in 0..slice_len {
                 self.genom[(i_from + i) % len] = tmp[i];
             }
         } else {
@@ -458,6 +450,56 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
 
     fn get_fitness(&self) -> f64 {
         self.fitness
+    }
+
+    /*
+    fn get_visuals(&self, ind_data: &SalesmanIndividualData) -> (f64, f64) {
+        let mut a: f64 = 0.0;
+        let mut b: f64 = 0.0;
+
+        for i in 0..self.genom.len()-1
+        {
+            let city1 = &ind_data.coords[self.genom[i] as usize];
+            let city2 = &ind_data.coords[self.genom[i+1] as usize ];
+
+            a +=  f64::abs(city2.x as f64 - city1.y as f64);
+            b +=  f64::abs(city2.y as f64 - city1.x as f64);
+        }
+
+
+        let city1 = &ind_data.coords[self.genom[0] as usize];
+        let city2 = &ind_data.coords[self.genom[self.genom.len()-1] as usize ];
+
+        a +=  f64::abs(city2.x as f64 - city1.y as f64);
+        b +=  f64::abs(city2.y as f64 - city1.x as f64);
+
+        (a, b)
+    }
+    */
+
+    fn get_visuals(&self, _ind_data: &SalesmanIndividualData) -> (f64, f64) {
+        let mut a: f64 = 0.0;
+        let mut b: f64 = 0.0;
+
+        for i in 0..self.genom.len() {
+            match i % 4 {
+                0 => {
+                    a += self.genom[i] as f64;
+                }
+                1 => {
+                    a -= self.genom[i] as f64;
+                }
+                2 => {
+                    b += self.genom[i] as f64;
+                }
+                3 => {
+                    b -= self.genom[i] as f64;
+                }
+                _ => {}
+            }
+        }
+
+        (a, b)
     }
 }
 
