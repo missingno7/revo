@@ -29,6 +29,14 @@ pub struct Population<Individual, IndividualData> {
 impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
     Population<Individual, IndividualData>
 {
+    // Function creates a new individual with randomised values and counts its fitness
+    fn _new_random_individual(ind_data: &IndividualData) -> Individual {
+        let mut rng = rand::thread_rng();
+        let mut curr_gen_ind = Individual::new_randomised(ind_data, &mut rng);
+        curr_gen_ind.count_fitness(ind_data);
+        curr_gen_ind
+    }
+
     // Function creates a new population with randomised individuals and counts their fitness
     pub fn new(
         pop_config: &PopulationConfig,
@@ -38,14 +46,19 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
 
-        let mut rng = rand::thread_rng();
-        for _ in 0..size {
-            let mut curr_gen_ind = Individual::new_randomised(&ind_data, &mut rng);
-            curr_gen_ind.count_fitness(&ind_data);
-            curr_gen_inds.push(curr_gen_ind);
+        // Initialise population with randomised individuals and count their fitness in parallel
+        curr_gen_inds.par_extend(
+            (0..size)
+                .into_par_iter()
+                .map(|_| Self::_new_random_individual(&ind_data)),
+        );
 
-            next_gen_inds.push(Individual::new(&ind_data));
-        }
+        // Just fill next_gen with default values
+        next_gen_inds.par_extend(
+            (0..size)
+                .into_par_iter()
+                .map(|_| Individual::new(&ind_data)),
+        );
 
         Population {
             curr_gen_inds,
@@ -179,104 +192,63 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     // Function creates a visualization of the current generation in the form of an PNG image
     // It maps the fitness (L) and visual attributes (A, B) of each individual
     pub fn visualise(&self, filename: &str) {
-        let len = self.curr_gen_inds.len();
-        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
-        let mut lab: Vec<(f64, f64, f64, usize)> = Vec::with_capacity(len);
+        let mut lab_data = self._prepare_pop_lab_data();
 
-        // Prepare LAB vector of representation for each individual
+        self._normalize_lab_data_rank_based(&mut lab_data);
+
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+        self._write_lab_data_to_image(&mut img, &lab_data);
+        img.save(filename).unwrap();
+    }
+
+    // Function gets the L, A and B values of the current generation
+    fn _prepare_pop_lab_data(&self) -> Vec<(f64, f64, f64, usize)> {
+        let len = self.curr_gen_inds.len();
+        let mut lab = Vec::with_capacity(len);
         for (i, ind) in self.curr_gen_inds.iter().enumerate() {
             let l = ind.get_fitness();
             let (a, b) = ind.get_visuals(&self.ind_data);
             lab.push((l, a, b, i));
         }
-
-        // Sort by L
-        lab.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        for (i, (l, _a, _b, _)) in lab.iter_mut().enumerate() {
-            *l = ((i as f64) * 100.0) / len as f64;
-        }
-
-        // Sort by A
-        lab.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        for (i, (_l, a, _b, _)) in lab.iter_mut().enumerate() {
-            *a = ((i as f64) * 256.0) / len as f64 - 128.0;
-        }
-
-        // Sort by B
-        lab.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
-        for (i, (_l, _a, b, _)) in lab.iter_mut().enumerate() {
-            *b = ((i as f64) * 256.0) / len as f64 - 128.0;
-        }
-
-        // Sort by index
-        lab.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
-
-        // Write normalized LAB data to RGB image
-        for i in 0..len {
-            // Get coordinates on image
-            let x: u32 = (i % self.pop_width) as u32;
-            let y: u32 = (i / self.pop_width) as u32;
-
-            // Convert LAB to RGB and put it to result image
-            let rgb: &[u8; 3] = &Lab {
-                l: lab[i].0 as f32,
-                a: lab[i].1 as f32,
-                b: lab[i].2 as f32,
-            }
-            .to_rgb();
-            img.put_pixel(x, y, image::Rgb(*rgb));
-        }
-
-        // Save image to file
-        img.save(filename).unwrap();
+        lab
     }
 
-    // Function creates a visualization of the current generation in the form of an PNG image
-    // It maps the fitness (L) and visual attributes (A, B) of each individual
-    pub fn normalized_visualise(&self, filename: &str) {
-        let mut lab: Vec<(f64, f64, f64)> = Vec::with_capacity(self.curr_gen_inds.len());
-        let mut max: (f64, f64, f64) = (f64::MIN, f64::MIN, f64::MIN);
-        let mut min: (f64, f64, f64) = (f64::MAX, f64::MAX, f64::MAX);
+    // Function normalizes the L, A and B values of the population using the rank-based method
+    // This method doesn't preserve the order of the values
+    fn _normalize_lab_data_rank_based(&self, lab: &mut [(f64, f64, f64, usize)]) {
+        let len = lab.len();
 
-        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
-
-        // Prepare LAB vector of representation for each individual
-        for ind in &self.curr_gen_inds {
-            let l = ind.get_fitness();
-            let (a, b) = ind.get_visuals(&self.ind_data);
-            lab.push((l, a, b));
-
-            // Get min and max values of L, A, and B
-            max.0 = f64::max(max.0, l);
-            min.0 = f64::min(min.0, l);
-
-            max.1 = f64::max(max.1, a);
-            min.1 = f64::min(min.1, a);
-
-            max.2 = f64::max(max.2, b);
-            min.2 = f64::min(min.2, b);
+        // Sort and normalize L
+        lab.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        for (i, value) in lab.iter_mut().enumerate() {
+            value.0 = ((i as f64) * 100.0) / len as f64;
         }
-
-        // Write normalized LAB data to RGB image
-        for i in 0..self.curr_gen_inds.len() {
-            // Get coordinates on image
-            let x: u32 = (i % self.pop_width) as u32;
-            let y: u32 = (i / self.pop_width) as u32;
-
-            // Get normalized LAB data
-            let diff = (max.0 - min.0, max.1 - min.1, max.2 - min.2);
-
-            let l: f32 = (((lab[i].0 - min.0) * 80.0) / diff.0) as f32 + 10.0;
-            let a: f32 = ((((lab[i].1 - min.1) * 256.0) / diff.1) - 128.0) as f32;
-            let b: f32 = ((((lab[i].2 - min.2) * 256.0) / diff.2) - 128.0) as f32;
-
-            // Convert LAB to RGB and put it to result image
-            let rgb: &[u8; 3] = &Lab { l, a, b }.to_rgb();
-            img.put_pixel(x, y, image::Rgb(*rgb));
+        // Sort and normalize A
+        lab.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        for (i, value) in lab.iter_mut().enumerate() {
+            value.1 = ((i as f64) * 256.0) / len as f64 - 128.0;
         }
+        // Sort and normalize B
+        lab.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
+        for (i, value) in lab.iter_mut().enumerate() {
+            value.2 = ((i as f64) * 256.0) / len as f64 - 128.0;
+        }
+    }
 
-        // Save image to file
-        img.save(filename).unwrap();
+    // Function writes the L, A and B values of the population to an RgbImage object
+    fn _write_lab_data_to_image(&self, img: &mut RgbImage, lab: &[(f64, f64, f64, usize)]) {
+        for (l, a, b, i) in lab {
+            let x = i % self.pop_width;
+            let y = i / self.pop_width;
+
+            let rgb = Lab {
+                l: *l as f32,
+                a: *a as f32,
+                b: *b as f32,
+            }
+            .to_rgb();
+            img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
+        }
     }
 }
 
