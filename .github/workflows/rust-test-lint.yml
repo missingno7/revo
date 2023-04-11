@@ -1,13 +1,9 @@
 name: Rust Test and Lint
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     strategy:
@@ -16,19 +12,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
-      - name: Set up Rust stable
-        uses: actions-rs/toolchain@v1
+      - name: Set up Rust
+        uses: actions-rs/cargo@v1
         with:
-          profile: minimal
-          toolchain: stable
-
-      - name: Install Clippy
-        run: cargo install --version=latest --force clippy
-
+          rust-version: stable
       - name: Build and test ${{ matrix.example }}
         run: |
           cd ${{ matrix.example }}
           cargo clippy -- -D warnings
           cargo build --verbose
           cargo test --verbose
+        
