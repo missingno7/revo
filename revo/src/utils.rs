@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, Copy)]
 pub struct Coord {
-    pub x: u32,
-    pub y: u32,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl Coord {
@@ -12,8 +12,8 @@ impl Coord {
     }
 
     pub fn distance_manhattan(first: &Self, second: &Self) -> i32 {
-        let x = second.x as i32 - first.x as i32;
-        let y = second.y as i32 - first.y as i32;
+        let x = second.x - first.x;
+        let y = second.y - first.y;
         x.abs() + y.abs()
     }
 
@@ -22,6 +22,7 @@ impl Coord {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct LabData {
     pub l: f64,
     pub a: f64,

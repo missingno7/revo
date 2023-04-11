@@ -1,0 +1,26 @@
+name: Rust Test and Lint
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        example: [revo, revo/example, social_distance, evo_salesman]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Rust
+        uses: actions-rs/cargo@v1
+        with:
+          rust-version: stable
+      - name: Build and test ${{ matrix.example }}
+        run: |
+          cd ${{ matrix.example }}
+          cargo fmt -- --check
+          cargo clippy -- -D warnings
+          cargo build --verbose
+          cargo test --verbose
+        

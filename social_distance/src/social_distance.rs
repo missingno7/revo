@@ -30,7 +30,7 @@ impl DistanceIndividual {
 
             draw_hollow_rect_mut(
                 &mut img,
-                Rect::at(self.coords[i].x as i32 - 5, self.coords[i].y as i32 - 5).of_size(10, 10),
+                Rect::at(self.coords[i].x - 5, self.coords[i].y - 5).of_size(10, 10),
                 point_color,
             );
         }
@@ -38,7 +38,7 @@ impl DistanceIndividual {
         img.save(output_filename).unwrap();
     }
 
-    fn distance(x1: u32, y1: u32, x2: u32, y2: u32) -> i64 {
+    fn distance(x1: i32, y1: i32, x2: i32, y2: i32) -> i64 {
         let x = x2 as i64 - x1 as i64;
         let y = y2 as i64 - y1 as i64;
         (x * x) + (y * y)
@@ -63,8 +63,8 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         let mut coords: Vec<Coord> = Vec::new();
         for _ in 0..ind_data.n_points {
             coords.push(Coord {
-                x: rng.gen_range(5..ind_data.screen_width - 5),
-                y: rng.gen_range(5..ind_data.screen_height - 5),
+                x: rng.gen_range(5..ind_data.screen_width - 5) as i32,
+                y: rng.gen_range(5..ind_data.screen_height - 5) as i32,
             });
         }
 
@@ -92,20 +92,16 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
                 let x_mut = rng.gen_range(-mut_amount..mut_amount) as i32;
                 let y_mut = rng.gen_range(-mut_amount..mut_amount) as i32;
 
-                if (coord.x as i32 + x_mut) < 0
-                    || (coord.x as i32 + x_mut) > ind_data.screen_width as i32
-                {
-                    coord.x = (coord.x as i32 - x_mut) as u32;
+                if (coord.x + x_mut) < 0 || (coord.x + x_mut) > ind_data.screen_width as i32 {
+                    coord.x -= x_mut;
                 } else {
-                    coord.x = (coord.x as i32 + x_mut) as u32;
+                    coord.x += x_mut;
                 }
 
-                if (coord.y as i32 + y_mut) < 0
-                    || (coord.y as i32 + y_mut) > ind_data.screen_height as i32
-                {
-                    coord.y = (coord.y as i32 - y_mut) as u32;
+                if (coord.y + y_mut) < 0 || (coord.y + y_mut) > ind_data.screen_height as i32 {
+                    coord.y -= y_mut;
                 } else {
-                    coord.y = (coord.y as i32 + y_mut) as u32;
+                    coord.y += y_mut;
                 }
             }
         }
@@ -122,18 +118,19 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
             let ratio: f32 = rng.gen_range(0.0..1.0);
             dest_int.coords[i].x = ((self.coords[i].x as f32 * ratio)
                 + (another_ind.coords[i].x as f32 * (1.0 - ratio)))
-                as u32;
+                as i32;
+
             dest_int.coords[i].y = ((self.coords[i].y as f32 * ratio)
                 + (another_ind.coords[i].y as f32 * (1.0 - ratio)))
-                as u32;
+                as i32;
         }
     }
 
     fn count_fitness(&mut self, ind_data: &DistanceIndividualData) {
         self.fitness = 0.0;
 
-        let center_x = ind_data.screen_width / 2;
-        let center_y = ind_data.screen_height / 2;
+        let center_x: i32 = (ind_data.screen_width / 2) as i32;
+        let center_y: i32 = (ind_data.screen_height / 2) as i32;
 
         for i in 0..self.coords.len() {
             let mut closest_dist = std::i64::MAX;

@@ -126,6 +126,18 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         best_ind.clone()
     }
 
+    pub fn get_at(&self, x: usize, y: usize) -> Individual {
+        self.curr_gen_inds[y * self.pop_width + x].clone()
+    }
+
+    pub fn get_width(&self) -> usize {
+        self.pop_width
+    }
+
+    pub fn get_height(&self) -> usize {
+        self.pop_height
+    }
+
     // Function returns the number of the current generation
     pub fn get_generation(&self) -> usize {
         self.i_generation
@@ -264,9 +276,77 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::basic_individual::{BasicIndividual, BasicIndividualData};
+    use crate::utils::LabData;
+    use rand::rngs::ThreadRng;
+    use rustc_serialize::json::Json;
 
-    type TestPopulation = Population<BasicIndividual, BasicIndividualData>;
+    #[derive(Clone)]
+    struct MockIndividualData {}
+
+    #[derive(Clone)]
+    struct MockIndividual {
+        fitness: f64,
+        visuals: (f64, f64),
+        value: f64,
+    }
+
+    impl EvoIndividual<MockIndividualData> for MockIndividual {
+        fn new(_ind_data: &MockIndividualData) -> Self {
+            MockIndividual {
+                fitness: 0.0,
+                visuals: (0.0, 0.0),
+                value: 0.0,
+            }
+        }
+
+        fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut ThreadRng) -> Self {
+            MockIndividual {
+                fitness: 0.0,
+                visuals: (0.0, 0.0),
+                value: 0.0,
+            }
+        }
+
+        fn copy_to(&self, ind: &mut Self) {
+            ind.value = self.value;
+            ind.fitness = self.fitness;
+            ind.visuals = self.visuals;
+        }
+
+        fn mutate(
+            &mut self,
+            _ind_data: &MockIndividualData,
+            _rng: &mut ThreadRng,
+            _mut_prob: f32,
+            _mut_amount: f32,
+        ) {
+            self.value += 1.0;
+        }
+
+        fn crossover_to(
+            &self,
+            _another_ind: &Self,
+            dest_ind: &mut Self,
+            _ind_data: &MockIndividualData,
+            _rng: &mut ThreadRng,
+        ) {
+            dest_ind.value = (self.value + dest_ind.value) / 2.0;
+        }
+
+        fn count_fitness(&mut self, _ind_data: &MockIndividualData) {
+            self.fitness = self.value;
+        }
+
+        fn get_fitness(&self) -> f64 {
+            self.fitness
+        }
+
+        fn get_visuals(&self, _ind_data: &MockIndividualData) -> (f64, f64) {
+            self.visuals
+        }
+    }
+
+    type TestPopulation = Population<MockIndividual, MockIndividualData>;
 
     #[test]
     fn test_l5_selection() {
@@ -276,32 +356,198 @@ mod tests {
         // indices goes like [middle, left, right, up, down]
         // Test top-left corner
         let i = 0;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![0, 4, 1, 20, 5]);
 
         // Test top-right corner
         let i = 4;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![4, 3, 0, 24, 9]);
 
         // Test bottom-left corner
         let i = 20;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![20, 24, 21, 15, 0]);
 
         // Test bottom-right corner
         let i = 24;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![24, 23, 20, 19, 4]);
 
         // Test middle element
         let i = 12;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![12, 11, 13, 7, 17]);
 
         // Test bottom-middle element
         let i = 22;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![22, 21, 23, 17, 2]);
+    }
+
+    #[test]
+    fn test_single_tournament() {
+        let mut vec_ind = Vec::new();
+        for i in 0..6 {
+            vec_ind.push(MockIndividual {
+                fitness: i as f64,
+                visuals: (0.0, 0.0),
+                value: 0.0,
+            });
+        }
+
+        let res = TestPopulation::_single_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
+        assert_eq!(res, 3);
+
+        let res = TestPopulation::_single_tournament(&vec![3, 0, 2, 4], &mut vec_ind);
+        assert_eq!(res, 4);
+    }
+
+    #[test]
+    fn test_dual_tournament() {
+        let mut vec_ind = Vec::new();
+        for i in 0..6 {
+            vec_ind.push(MockIndividual {
+                fitness: i as f64,
+                visuals: (0.0, 0.0),
+                value: 0.0,
+            });
+        }
+
+        let res = TestPopulation::_dual_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
+        assert_eq!(res, (3, 2));
+
+        let res = TestPopulation::_dual_tournament(&vec![3, 0, 2, 4], &mut vec_ind);
+        assert_eq!(res, (4, 3));
+    }
+
+    #[test]
+    fn test_population() {
+        let pop_config = PopulationConfig {
+            pop_width: 3,
+            pop_height: 3,
+            mut_prob: 1.0,
+            mut_amount: 2.0,
+            crossover_prob: 0.0,
+            visualise: false,
+            json: Json::Null,
+        };
+
+        let mut pop = Population::new(&pop_config, MockIndividualData {});
+
+        // Fill the population with mock individuals
+        let mut vec_ind = Vec::new();
+        for i in 0..pop.curr_gen_inds.len() {
+            vec_ind.push(MockIndividual {
+                fitness: i as f64,
+                visuals: (i as f64, i as f64),
+                value: i as f64,
+            });
+        }
+        pop.curr_gen_inds = vec_ind.clone();
+
+        // Test get_best
+        let res = pop.get_best();
+        // Pop should return the best individual - the one with the highest fitness value (last in the vector)
+        assert_eq!(res.value, vec_ind[pop.curr_gen_inds.len() - 1].value);
+
+        // Test get_at
+        assert_eq!(pop.get_at(1, 2).value, 7.0);
+        assert_eq!(pop.get_at(2, 0).value, 2.0);
+
+        // Test next_gen
+        assert_eq!(pop.get_generation(), 0);
+        pop.next_gen();
+        assert_eq!(pop.curr_gen_inds[0].value, 7.0);
+        assert_eq!(pop.curr_gen_inds[1].value, 8.0);
+        assert_eq!(pop.curr_gen_inds[2].value, 9.0);
+
+        assert_eq!(pop.curr_gen_inds[3].value, 7.0);
+        assert_eq!(pop.curr_gen_inds[4].value, 8.0);
+        assert_eq!(pop.curr_gen_inds[5].value, 9.0);
+
+        assert_eq!(pop.curr_gen_inds[6].value, 9.0);
+        assert_eq!(pop.curr_gen_inds[7].value, 9.0);
+        assert_eq!(pop.curr_gen_inds[8].value, 9.0);
+
+        assert_eq!(pop.get_generation(), 1);
+
+        // Test _prepare_pop_lab_data
+        let lab_data = pop._prepare_pop_lab_data();
+        assert_eq!(lab_data.len(), 9);
+        assert_eq!(
+            lab_data[0].data,
+            LabData {
+                l: 7.0,
+                a: 6.0,
+                b: 6.0
+            }
+        );
+        assert_eq!(
+            lab_data[1].data,
+            LabData {
+                l: 8.0,
+                a: 7.0,
+                b: 7.0
+            }
+        );
+        assert_eq!(
+            lab_data[2].data,
+            LabData {
+                l: 9.0,
+                a: 8.0,
+                b: 8.0
+            }
+        );
+
+        assert_eq!(
+            lab_data[3].data,
+            LabData {
+                l: 7.0,
+                a: 6.0,
+                b: 6.0
+            }
+        );
+        assert_eq!(
+            lab_data[4].data,
+            LabData {
+                l: 8.0,
+                a: 7.0,
+                b: 7.0
+            }
+        );
+        assert_eq!(
+            lab_data[5].data,
+            LabData {
+                l: 9.0,
+                a: 8.0,
+                b: 8.0
+            }
+        );
+
+        assert_eq!(
+            lab_data[6].data,
+            LabData {
+                l: 9.0,
+                a: 8.0,
+                b: 8.0
+            }
+        );
+        assert_eq!(
+            lab_data[7].data,
+            LabData {
+                l: 9.0,
+                a: 8.0,
+                b: 8.0
+            }
+        );
+        assert_eq!(
+            lab_data[8].data,
+            LabData {
+                l: 9.0,
+                a: 8.0,
+                b: 8.0
+            }
+        );
     }
 }
