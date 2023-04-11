@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 revo = { path = "../revo", version = "*" }
+#revo = { git = "https://github.com/missingno7/revo" }
 rand = "0.8.4"
 image = "0.23.14"
 imageproc = "0.22.0"

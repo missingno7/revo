@@ -1,4 +1,4 @@
-use crate::evo_individual::EvoIndividual;
+use revo::evo_individual::EvoIndividual;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 

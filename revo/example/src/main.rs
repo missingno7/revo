@@ -1,11 +1,10 @@
 extern crate rand;
 extern crate revo;
-extern crate rustc_serialize;
 
-use revo::basic_individual::{BasicIndividual, BasicIndividualData};
-use revo::evo_individual::EvoIndividual;
+use example::basic_individual::{BasicIndividual, BasicIndividualData};
 use revo::pop_config::PopulationConfig;
 use revo::population::Population;
+use revo::evo_individual::EvoIndividual;
 
 fn main() {
     let pop_config = PopulationConfig::new("pop_config.json");

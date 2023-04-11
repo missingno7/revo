@@ -16,7 +16,7 @@ pub struct SalesmanIndividual {
 }
 
 impl SalesmanIndividual {
-    pub fn draw(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
+    pub fn visualise(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
         let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
 
         // Draw cities

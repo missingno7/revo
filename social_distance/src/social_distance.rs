@@ -21,7 +21,7 @@ pub struct DistanceIndividual {
 }
 
 impl DistanceIndividual {
-    pub fn draw(&self, output_filename: &str, ind_data: &DistanceIndividualData) {
+    pub fn visualise(&self, output_filename: &str, ind_data: &DistanceIndividualData) {
         let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
 
         // Draw points

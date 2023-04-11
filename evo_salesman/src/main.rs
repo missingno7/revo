@@ -22,7 +22,7 @@ fn main() {
 
     let mut all_best_ind = pop.get_best();
 
-    all_best_ind.draw(
+    all_best_ind.visualise(
         format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str(),
         &ind_data,
     );
@@ -42,7 +42,7 @@ fn main() {
                 best_ind.get_fitness()
             );
             all_best_ind = best_ind.clone();
-            all_best_ind.draw(
+            all_best_ind.visualise(
                 format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str(),
                 &ind_data,
             );
