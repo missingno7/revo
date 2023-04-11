@@ -268,9 +268,77 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::basic_individual::{BasicIndividual, BasicIndividualData};
+    use rand::rngs::ThreadRng;
 
-    type TestPopulation = Population<BasicIndividual, BasicIndividualData>;
+    #[derive(Clone)]
+    struct MockIndividualData {}
+
+    #[derive(Clone)]
+    struct MockIndividual {
+        fitness: f64,
+        visuals: (f64, f64),
+    }
+
+    impl EvoIndividual<MockIndividualData> for MockIndividual {
+        fn new(_ind_data: &MockIndividualData) -> Self {
+            MockIndividual {
+                fitness: 0.0,
+                visuals: (0.0, 0.0),
+            }
+        }
+
+        fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut ThreadRng) -> Self {
+            MockIndividual {
+                fitness: 0.0,
+                visuals: (0.0, 0.0),
+            }
+        }
+
+        fn copy_to(&self, ind: &mut Self) {
+            ind.fitness = self.fitness;
+            ind.visuals = self.visuals;
+        }
+
+        fn mutate(
+            &mut self,
+            _ind_data: &MockIndividualData,
+            _rng: &mut ThreadRng,
+            _mut_prob: f32,
+            _mut_amount: f32,
+        ) {
+            self.fitness += 1.0;
+            self.visuals = (self.visuals.0 + 1.0, self.visuals.1 + 1.0);
+        }
+
+        fn crossover_to(
+            &self,
+            _another_ind: &Self,
+            dest_ind: &mut Self,
+            _ind_data: &MockIndividualData,
+            _rng: &mut ThreadRng,
+        ) {
+            dest_ind.fitness = (self.fitness + dest_ind.fitness) / 2.0;
+            dest_ind.visuals = (
+                (self.visuals.0 + dest_ind.visuals.0) / 2.0,
+                (self.visuals.1 + dest_ind.visuals.1) / 2.0,
+            );
+        }
+
+        fn count_fitness(&mut self, _ind_data: &MockIndividualData) {
+            self.fitness = 1.0;
+            self.visuals = (1.0, 1.0);
+        }
+
+        fn get_fitness(&self) -> f64 {
+            self.fitness
+        }
+
+        fn get_visuals(&self, _ind_data: &MockIndividualData) -> (f64, f64) {
+            self.visuals
+        }
+    }
+
+    type TestPopulation = Population<MockIndividual, MockIndividualData>;
 
     #[test]
     fn test_l5_selection() {
@@ -280,32 +348,32 @@ mod tests {
         // indices goes like [middle, left, right, up, down]
         // Test top-left corner
         let i = 0;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![0, 4, 1, 20, 5]);
 
         // Test top-right corner
         let i = 4;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![4, 3, 0, 24, 9]);
 
         // Test bottom-left corner
         let i = 20;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![20, 24, 21, 15, 0]);
 
         // Test bottom-right corner
         let i = 24;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![24, 23, 20, 19, 4]);
 
         // Test middle element
         let i = 12;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![12, 11, 13, 7, 17]);
 
         // Test bottom-middle element
         let i = 22;
-        let neighbors = TestPopulation::l5_selection(i, pop_width, pop_height);
+        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
         assert_eq!(neighbors, vec![22, 21, 23, 17, 2]);
     }
 }

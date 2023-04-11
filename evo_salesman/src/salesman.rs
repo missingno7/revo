@@ -113,8 +113,8 @@ impl SalesmanIndividual {
 
         // Put stuff back
         let mut source_i = i_from;
-        for i in 0..slice_len {
-            self.genom[source_i] = tmp[i];
+        for item in tmp.iter().take(slice_len) {
+            self.genom[source_i] = *item;
 
             source_i += 1;
             if source_i >= len {
@@ -241,7 +241,7 @@ impl SalesmanIndividual {
             let city_last =
                 &ind_data.coords[paths[selected_path][paths[selected_path].len() - 1] as usize];
 
-            for i in 0..paths.len() {
+            for (i, _) in paths.iter().enumerate() {
                 if i == selected_path {
                     continue;
                 }
@@ -367,7 +367,8 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             if used[self.genom[i] as usize] {
                 if used[another_ind.genom[i] as usize] {
                     // Both on list
-                    for j in 0..self.genom.len() {
+
+                    for (j, _j_used) in used.iter().enumerate().take(self.genom.len()) {
                         if !used[j] {
                             dest_int.genom[i] = j as u16;
                             break;

@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Rust
-        uses: actions/setup-rust@v1
+        uses: actions-rs/cargo@v1
         with:
           rust-version: stable
       - name: Check lints, build, and test revo

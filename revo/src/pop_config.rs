@@ -60,7 +60,7 @@ impl PopulationConfig {
             mut_amount: DEFAULT_MUT_AMOUNT,
             crossover_prob: DEFAULT_CROSSOVER_PROB,
             visualise: DEFAULT_VISUALISE,
-            json: json,
+            json,
         };
 
         // Load pre-defined values from config file
