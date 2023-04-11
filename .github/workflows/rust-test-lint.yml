@@ -1,39 +1,34 @@
 name: Rust Test and Lint
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        example: [revo, revo/example, social_distance, evo_salesman]
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Rust
-        uses: actions-rs/cargo@v1
+
+      - name: Set up Rust stable
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
-      - name: Check lints, build, and test revo
+          profile: minimal
+          toolchain: stable
+
+      - name: Install Clippy
+        run: cargo install --version=latest --force clippy
+
+      - name: Build and test ${{ matrix.example }}
         run: |
-          cd revo
+          cd ${{ matrix.example }}
           cargo clippy -- -D warnings
           cargo build --verbose
           cargo test --verbose
-      - name: Check lints, build, and test revo example
-        run: |
-          cd revo/example
-          cargo clippy -- -D warnings
-          cargo build --verbose
-          cargo test --verbose
-      - name: Check lints, build, and test social_distance
-        run: |
-          cd social_distance
-          cargo clippy -- -D warnings
-          cargo build --verbose
-          cargo test --verbose
-      - name: Check lints, build, and test evo_salesman
-        run: |
-          cd evo_salesman
-          cargo clippy -- -D warnings
-          cargo build --verbose
-          cargo test --verbose
-        
