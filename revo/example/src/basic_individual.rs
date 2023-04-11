@@ -1,6 +1,6 @@
-use crate::evo_individual::EvoIndividual;
 use rand::prelude::ThreadRng;
 use rand::Rng;
+use revo::evo_individual::EvoIndividual;
 
 pub struct BasicIndividualData {
     value: f64,
@@ -12,35 +12,27 @@ impl Default for BasicIndividualData {
     }
 }
 
+#[derive(Clone)]
 pub struct BasicIndividual {
     fitness: f64,
-    value: f64,
+    foo: f64,
+    bar: f64,
 }
 
 impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     fn new(ind_data: &BasicIndividualData) -> Self {
         BasicIndividual {
             fitness: 0.0,
-            value: ind_data.value,
+            foo: ind_data.value,
+            bar: ind_data.value,
         }
     }
 
     fn new_randomised(ind_data: &BasicIndividualData, rng: &mut ThreadRng) -> Self {
         BasicIndividual {
             fitness: 0.0,
-            value: ind_data.value + rng.gen_range(0.0..10.0),
-        }
-    }
-
-    fn copy_to(&self, ind: &mut Self) {
-        ind.fitness = self.fitness;
-        ind.value = self.value
-    }
-
-    fn clone(&self) -> Self {
-        BasicIndividual {
-            fitness: self.fitness,
-            value: self.value,
+            foo: ind_data.value + rng.gen_range(0.0..10.0),
+            bar: ind_data.value + rng.gen_range(0.0..10.0),
         }
     }
 
@@ -52,7 +44,11 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         mut_amount: f32,
     ) {
         if rng.gen_range(0.0..1.0) < mut_prob {
-            self.value += rng.gen_range(-mut_amount as f64..mut_amount as f64);
+            self.foo += rng.gen_range(-mut_amount as f64..mut_amount as f64);
+        }
+
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            self.bar += rng.gen_range(-mut_amount as f64..mut_amount as f64);
         }
     }
 
@@ -65,17 +61,24 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     ) {
         let ratio = rng.gen_range(0.0..1.0);
 
-        dest_int.value = self.value * ratio + another_ind.value * (1.0 - ratio);
+        dest_int.foo = self.foo * ratio + another_ind.foo * (1.0 - ratio);
+        dest_int.bar = self.bar * ratio + another_ind.bar * (1.0 - ratio);
+    }
+
+    fn copy_to(&self, ind: &mut Self) {
+        ind.fitness = self.fitness;
+        ind.foo = self.foo;
+        ind.bar = self.bar;
     }
 
     fn count_fitness(&mut self, _ind_data: &BasicIndividualData) {
-        self.fitness = self.value;
+        self.fitness = (self.foo - self.bar).abs();
     }
     fn get_fitness(&self) -> f64 {
         self.fitness
     }
 
     fn get_visuals(&self, _ind_data: &BasicIndividualData) -> (f64, f64) {
-        (self.value, self.value)
+        (self.foo, self.bar)
     }
 }

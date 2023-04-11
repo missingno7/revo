@@ -1,11 +1,16 @@
 use rand::rngs::ThreadRng;
 
 pub trait EvoIndividual<IndividualData>: Send + Sync {
+    // Create a new individual with default values
     fn new(ind_data: &IndividualData) -> Self;
+
+    // Create a new individual with randomised values
     fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 
+    // Copy only genome of the individual to another individual
     fn copy_to(&self, ind: &mut Self);
-    fn clone(&self) -> Self;
+
+    // Mutate the genome of the individual
     fn mutate(
         &mut self,
         ind_data: &IndividualData,
@@ -14,6 +19,7 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
         mut_amount: f32,
     );
 
+    // Crossover the genome of the individual with another individual and store the result in dest_int
     fn crossover_to(
         &self,
         another_ind: &Self,
@@ -22,9 +28,12 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
         rng: &mut ThreadRng,
     );
 
+    // Count the fitness of the individual
     fn count_fitness(&mut self, ind_data: &IndividualData);
 
+    // Get the fitness of the individual
     fn get_fitness(&self) -> f64;
 
+    // Get the A and B values of the individual for visualisation
     fn get_visuals(&self, ind_data: &IndividualData) -> (f64, f64);
 }

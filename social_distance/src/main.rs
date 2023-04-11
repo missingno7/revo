@@ -15,8 +15,12 @@ fn main() {
     let pop_config = PopulationConfig::new("pop_config.json");
     let output_dir = "./out";
 
-    let ind_data =
-        DistanceIndividualData::new(n_points, screen_width, screen_height, required_distance);
+    let ind_data = DistanceIndividualData {
+        n_points,
+        screen_width,
+        screen_height,
+        required_distance,
+    };
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> =
         Population::new(&pop_config, ind_data.clone());
 
@@ -28,7 +32,7 @@ fn main() {
 
         if best_ind.get_fitness() > all_best_ind.get_fitness() {
             all_best_ind = best_ind.clone();
-            all_best_ind.draw(
+            all_best_ind.visualise(
                 format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str(),
                 &ind_data,
             );
@@ -46,7 +50,7 @@ fn main() {
         }
 
         if pop_config.visualise {
-            pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+            pop.visualise(format!("{}/pop_{:05}.png", output_dir, pop.get_generation()).as_str());
         }
 
         pop.next_gen();

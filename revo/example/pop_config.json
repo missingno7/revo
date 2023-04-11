@@ -1,0 +1,9 @@
+{
+ "pop_width": 100,
+ "pop_height": 100,
+ "mut_prob": 0.2,
+ "mut_amount": 2.0,
+ "crossover_prob": 0.2,
+
+ "visualise": true
+}

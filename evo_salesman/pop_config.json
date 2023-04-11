@@ -6,11 +6,11 @@
  "crossover_prob": 0.1,
  "visualise": false,
 
- "n_cities": 50,
- "screen_width": 1000,
- "screen_height":  1000,
+ "n_cities": 200,
+ "screen_width": 800,
+ "screen_height":  800,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
- "init_type": "greedy"
+ "init_type": "naive"
 
 }
