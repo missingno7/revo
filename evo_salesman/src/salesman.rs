@@ -126,30 +126,25 @@ impl SalesmanIndividual {
     fn new_random_naive(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
         let mut visited: Vec<bool> = vec![false; ind_data.coords.len()];
         let mut genom: Vec<u16> = (0_u16..ind_data.coords.len() as u16).collect();
-        let starting_city = rng.gen_range(0..ind_data.coords.len() - 1);
 
+        // Start from random city
+        let starting_city = rng.gen_range(0..ind_data.coords.len() - 1);
         genom[0] = starting_city as u16;
         visited[starting_city] = true;
 
         for i in 1..genom.len() {
-            let mut closest_dist = std::f64::MAX;
-            let mut closest_j = 0;
+            // Find closest city that is not visited yet
+            let (closest_j, _) = ind_data
+                .coords
+                .iter()
+                .enumerate()
+                .filter(|&(j, _)| i != j && !visited[j])
+                .min_by_key(|(_, coord)| {
+                    Coord::distance_euclid(coord, &ind_data.coords[genom[i - 1] as usize])
+                })
+                .unwrap();
 
-            for j in 0..ind_data.coords.len() {
-                if i == j || visited[j] {
-                    continue;
-                }
-
-                let distance = Coord::distance_euclid(
-                    &ind_data.coords[j],
-                    &ind_data.coords[genom[i - 1] as usize],
-                );
-
-                if distance < closest_dist {
-                    closest_j = j;
-                    closest_dist = distance;
-                }
-            }
+            // Mark city as visited and add it to genom
             visited[closest_j] = true;
             genom[i] = closest_j as u16;
         }
@@ -240,7 +235,7 @@ impl SalesmanIndividual {
 
             let mut insert_to_shortest: bool = false;
             let mut shortest: usize = 0;
-            let mut shortest_distance: f64 = f64::MAX;
+            let mut shortest_distance: i64 = i64::MAX;
 
             let city_first = &ind_data.coords[paths[selected_path][0] as usize];
             let city_last =
@@ -251,7 +246,7 @@ impl SalesmanIndividual {
                     continue;
                 }
 
-                // Insert to  shortest
+                // Insert to shortest
                 {
                     let city_i = &ind_data.coords[paths[i][paths[i].len() - 1] as usize];
                     let distance = Coord::distance_euclid(city_first, city_i);
@@ -411,13 +406,13 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             self.fitness -= Coord::distance_euclid(
                 &ind_data.coords[self.genom[i] as usize],
                 &ind_data.coords[self.genom[i + 1] as usize],
-            );
+            ) as f64;
         }
 
         self.fitness -= Coord::distance_euclid(
             &ind_data.coords[self.genom[0] as usize],
             &ind_data.coords[self.genom[self.genom.len() - 1] as usize],
-        );
+        ) as f64;
     }
 
     fn get_fitness(&self) -> f64 {
@@ -456,7 +451,7 @@ mod tests {
     fn test_shift_multiple() {
         let mut rng = rand::thread_rng();
         let ind_data =
-            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Noise);
 
         // 6 cities test
         // [0, 1, 2, 3, 4, 5]

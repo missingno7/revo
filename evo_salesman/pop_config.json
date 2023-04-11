@@ -1,16 +1,16 @@
 {
- "pop_width": 100,
- "pop_height": 100,
+ "pop_width": 200,
+ "pop_height": 200,
  "mut_prob": 0.02,
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
- "visualise": true,
+ "visualise": false,
 
- "n_cities": 100,
- "screen_width": 1000,
- "screen_height":  1000,
- "shift_prob": 0.6,
- "rev_prob": 0.1,
- "init_type": "greedy"
+ "n_cities": 200,
+ "screen_width": 800,
+ "screen_height":  800,
+ "shift_prob": 0.4,
+ "rev_prob": 0.4,
+ "init_type": "naive"
 
 }

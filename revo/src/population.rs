@@ -1,5 +1,6 @@
 use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
+use crate::utils::IndexedLabData;
 use image::RgbImage;
 use lab::Lab;
 use rand::{thread_rng, Rng};
@@ -85,13 +86,13 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                 let mut rng = thread_rng();
 
                 // Select 5 individuals
-                let indices = Self::l5_selection(i, self.pop_width, self.pop_height);
+                let indices = Self::_l5_selection(i, self.pop_width, self.pop_height);
 
                 // Decide whether to do crossover or mutation
                 if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     // Do crossover
                     let (first_ind, second_ind) =
-                        Self::dual_tournament(&indices, &self.curr_gen_inds);
+                        Self::_dual_tournament(&indices, &self.curr_gen_inds);
                     self.curr_gen_inds[first_ind].crossover_to(
                         &self.curr_gen_inds[second_ind],
                         res,
@@ -100,7 +101,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                     )
                 } else {
                     // Do mutation
-                    self.curr_gen_inds[Self::single_tournament(&indices, &self.curr_gen_inds)]
+                    self.curr_gen_inds[Self::_single_tournament(&indices, &self.curr_gen_inds)]
                         .copy_to(res);
                     res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
                 }
@@ -130,10 +131,22 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         self.i_generation
     }
 
+    // Function creates a visualization of the current generation in the form of an PNG image
+    // It maps the fitness (L) and visual attributes (A, B) of each individual
+    pub fn visualise(&self, filename: &str) {
+        let mut lab_data = self._prepare_pop_lab_data();
+
+        lab_data = self._normalize_lab_data_rank_based(lab_data);
+
+        let image = self._write_lab_data_to_image(&lab_data);
+
+        image.save(filename).unwrap();
+    }
+
     /// Private methods
 
     // Function returns the indices of 5 neighbours of i in a + shape
-    fn l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
+    fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
         // Get x and y coordinates of i
         let x: usize = i % pop_width;
         let y: usize = i / pop_width;
@@ -158,7 +171,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     }
 
     // Function returns the index of the best individual in the tournament
-    fn single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
+    fn _single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
@@ -171,7 +184,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     }
 
     // Function returns the indices of the two best individuals in the tournament
-    fn dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
+    fn _dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];
 
@@ -189,66 +202,62 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         (best_i, second_best_i)
     }
 
-    // Function creates a visualization of the current generation in the form of an PNG image
-    // It maps the fitness (L) and visual attributes (A, B) of each individual
-    pub fn visualise(&self, filename: &str) {
-        let mut lab_data = self._prepare_pop_lab_data();
-
-        self._normalize_lab_data_rank_based(&mut lab_data);
-
-        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
-        self._write_lab_data_to_image(&mut img, &lab_data);
-        img.save(filename).unwrap();
-    }
-
     // Function gets the L, A and B values of the current generation
-    fn _prepare_pop_lab_data(&self) -> Vec<(f64, f64, f64, usize)> {
+    fn _prepare_pop_lab_data(&self) -> Vec<IndexedLabData> {
         let len = self.curr_gen_inds.len();
-        let mut lab = Vec::with_capacity(len);
+        let mut lab_data: Vec<IndexedLabData> = Vec::with_capacity(len);
         for (i, ind) in self.curr_gen_inds.iter().enumerate() {
             let l = ind.get_fitness();
             let (a, b) = ind.get_visuals(&self.ind_data);
-            lab.push((l, a, b, i));
+            lab_data.push(IndexedLabData::new(l, a, b, i));
         }
-        lab
+        lab_data
     }
 
     // Function normalizes the L, A and B values of the population using the rank-based method
     // This method doesn't preserve the order of the values
-    fn _normalize_lab_data_rank_based(&self, lab: &mut [(f64, f64, f64, usize)]) {
-        let len = lab.len();
+    fn _normalize_lab_data_rank_based(
+        &self,
+        mut lab_data: Vec<IndexedLabData>,
+    ) -> Vec<IndexedLabData> {
+        let len = lab_data.len();
 
         // Sort and normalize L
-        lab.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        for (i, value) in lab.iter_mut().enumerate() {
-            value.0 = ((i as f64) * 100.0) / len as f64;
+        lab_data.sort_by(|a, b| a.data.l.partial_cmp(&b.data.l).unwrap());
+        for (i, value) in lab_data.iter_mut().enumerate() {
+            value.data.l = ((i as f64) * 100.0) / len as f64;
         }
         // Sort and normalize A
-        lab.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        for (i, value) in lab.iter_mut().enumerate() {
-            value.1 = ((i as f64) * 256.0) / len as f64 - 128.0;
+        lab_data.sort_by(|a, b| a.data.a.partial_cmp(&b.data.a).unwrap());
+        for (i, value) in lab_data.iter_mut().enumerate() {
+            value.data.a = ((i as f64) * 256.0) / len as f64 - 128.0;
         }
         // Sort and normalize B
-        lab.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
-        for (i, value) in lab.iter_mut().enumerate() {
-            value.2 = ((i as f64) * 256.0) / len as f64 - 128.0;
+        lab_data.sort_by(|a, b| a.data.b.partial_cmp(&b.data.b).unwrap());
+        for (i, value) in lab_data.iter_mut().enumerate() {
+            value.data.b = ((i as f64) * 256.0) / len as f64 - 128.0;
         }
+
+        lab_data
     }
 
     // Function writes the L, A and B values of the population to an RgbImage object
-    fn _write_lab_data_to_image(&self, img: &mut RgbImage, lab: &[(f64, f64, f64, usize)]) {
-        for (l, a, b, i) in lab {
-            let x = i % self.pop_width;
-            let y = i / self.pop_width;
+    fn _write_lab_data_to_image(&self, lab_data: &[IndexedLabData]) -> RgbImage {
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+
+        for lab in lab_data {
+            let x = lab.index % self.pop_width;
+            let y = lab.index / self.pop_width;
 
             let rgb = Lab {
-                l: *l as f32,
-                a: *a as f32,
-                b: *b as f32,
+                l: lab.data.l as f32,
+                a: lab.data.a as f32,
+                b: lab.data.b as f32,
             }
             .to_rgb();
             img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
         }
+        img
     }
 }
 
