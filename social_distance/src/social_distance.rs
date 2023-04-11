@@ -30,7 +30,7 @@ impl DistanceIndividual {
 
             draw_hollow_rect_mut(
                 &mut img,
-                Rect::at(self.coords[i].x as i32 - 5, self.coords[i].y as i32 - 5).of_size(10, 10),
+                Rect::at(self.coords[i].x - 5, self.coords[i].y - 5).of_size(10, 10),
                 point_color,
             );
         }
@@ -92,20 +92,16 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
                 let x_mut = rng.gen_range(-mut_amount..mut_amount) as i32;
                 let y_mut = rng.gen_range(-mut_amount..mut_amount) as i32;
 
-                if (coord.x as i32 + x_mut) < 0
-                    || (coord.x as i32 + x_mut) > ind_data.screen_width as i32
-                {
-                    coord.x = coord.x as i32 - x_mut;
+                if (coord.x + x_mut) < 0 || (coord.x + x_mut) > ind_data.screen_width as i32 {
+                    coord.x -= x_mut;
                 } else {
-                    coord.x = coord.x as i32 + x_mut;
+                    coord.x += x_mut;
                 }
 
-                if (coord.y as i32 + y_mut) < 0
-                    || (coord.y as i32 + y_mut) > ind_data.screen_height as i32
-                {
-                    coord.y = coord.y as i32 - y_mut;
+                if (coord.y + y_mut) < 0 || (coord.y + y_mut) > ind_data.screen_height as i32 {
+                    coord.y -= y_mut;
                 } else {
-                    coord.y = coord.y as i32 + y_mut;
+                    coord.y += y_mut;
                 }
             }
         }
