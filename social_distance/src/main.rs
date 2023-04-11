@@ -50,7 +50,7 @@ fn main() {
         }
 
         if pop_config.visualise {
-            pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+            pop.visualise(format!("{}/pop_{:05}.png", output_dir, pop.get_generation()).as_str());
         }
 
         pop.next_gen();

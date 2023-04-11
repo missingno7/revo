@@ -140,8 +140,10 @@ impl SalesmanIndividual {
                     continue;
                 }
 
-                let distance =
-                    Coord::distance(&ind_data.coords[j], &ind_data.coords[genom[i - 1] as usize]);
+                let distance = Coord::distance_euclid(
+                    &ind_data.coords[j],
+                    &ind_data.coords[genom[i - 1] as usize],
+                );
 
                 if distance < closest_dist {
                     closest_j = j;
@@ -201,13 +203,14 @@ impl SalesmanIndividual {
             let city_3 = &ind_data.coords[genom[genom.len() - 1] as usize];
 
             let mut shortest_dist =
-                Coord::distance(city_1, city_2) + Coord::distance(city_2, city_3);
+                Coord::distance_euclid(city_1, city_2) + Coord::distance_euclid(city_2, city_3);
             let mut shortest_j = genom.len();
 
             for j in 0..genom.len() - 1 {
                 let city_1 = &ind_data.coords[genom[j] as usize];
                 let city_3 = &ind_data.coords[genom[j + 1] as usize];
-                let distance = Coord::distance(city_1, city_2) + Coord::distance(city_2, city_3);
+                let distance =
+                    Coord::distance_euclid(city_1, city_2) + Coord::distance_euclid(city_2, city_3);
 
                 if distance < shortest_dist {
                     shortest_dist = distance;
@@ -251,7 +254,7 @@ impl SalesmanIndividual {
                 // Insert to  shortest
                 {
                     let city_i = &ind_data.coords[paths[i][paths[i].len() - 1] as usize];
-                    let distance = Coord::distance(city_first, city_i);
+                    let distance = Coord::distance_euclid(city_first, city_i);
 
                     if distance < shortest_distance {
                         shortest_distance = distance;
@@ -263,7 +266,7 @@ impl SalesmanIndividual {
                 // Insert from shortest
                 {
                     let city_i = &ind_data.coords[paths[i][0] as usize];
-                    let distance = Coord::distance(city_last, city_i);
+                    let distance = Coord::distance_euclid(city_last, city_i);
 
                     if distance < shortest_distance {
                         shortest_distance = distance;
@@ -405,13 +408,13 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         self.fitness = 0.0;
 
         for i in 0..ind_data.coords.len() - 1 {
-            self.fitness -= Coord::distance(
+            self.fitness -= Coord::distance_euclid(
                 &ind_data.coords[self.genom[i] as usize],
                 &ind_data.coords[self.genom[i + 1] as usize],
             );
         }
 
-        self.fitness -= Coord::distance(
+        self.fitness -= Coord::distance_euclid(
             &ind_data.coords[self.genom[0] as usize],
             &ind_data.coords[self.genom[self.genom.len() - 1] as usize],
         );
@@ -421,27 +424,25 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         self.fitness
     }
 
-    fn get_visuals(&self, _ind_data: &SalesmanIndividualData) -> (f64, f64) {
+    fn get_visuals(&self, ind_data: &SalesmanIndividualData) -> (f64, f64) {
         let mut a: f64 = 0.0;
         let mut b: f64 = 0.0;
 
-        for i in 0..self.genom.len() {
-            match i % 4 {
-                0 => {
-                    a += self.genom[i] as f64;
-                }
-                1 => {
-                    a -= self.genom[i] as f64;
-                }
-                2 => {
-                    b += self.genom[i] as f64;
-                }
-                3 => {
-                    b -= self.genom[i] as f64;
-                }
-                _ => {}
-            }
+        let len = self.genom.len();
+
+        for i in 0..len - 1 {
+            let city_1 = ind_data.coords[self.genom[i] as usize];
+            let city_2 = ind_data.coords[self.genom[i + 1] as usize];
+
+            a += (city_2.x - city_1.x) as f64;
+            b += (city_2.y - city_1.y) as f64;
         }
+
+        let city_1 = ind_data.coords[self.genom[0] as usize];
+        let city_2 = ind_data.coords[self.genom[len - 1] as usize];
+
+        a += ((city_2.x - city_1.x) as f64).abs();
+        b += ((city_2.y - city_1.y) as f64).abs();
 
         (a, b)
     }

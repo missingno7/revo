@@ -2,7 +2,7 @@
  "pop_width": 100,
  "pop_height": 100,
  "mut_prob": 0.1,
- "mut_amount": 2.0
+ "mut_amount": 2.0,
  
- 
+ "visualise": true
 }

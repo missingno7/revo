@@ -135,7 +135,13 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         let bottom_neighbour = ((y + 1) % pop_height) * pop_width + column_start_index;
 
         // Return indices of 5 neighbours in a + shape with i in the middle
-        vec![i, left_neighbour, right_neigbour, top_neighbour, bottom_neighbour]
+        vec![
+            i,
+            left_neighbour,
+            right_neigbour,
+            top_neighbour,
+            bottom_neighbour,
+        ]
     }
 
     // Function returns the index of the best individual in the tournament
@@ -173,6 +179,61 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     // Function creates a visualization of the current generation in the form of an PNG image
     // It maps the fitness (L) and visual attributes (A, B) of each individual
     pub fn visualise(&self, filename: &str) {
+        let len = self.curr_gen_inds.len();
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+        let mut lab: Vec<(f64, f64, f64, usize)> = Vec::with_capacity(len);
+
+        // Prepare LAB vector of representation for each individual
+        for (i, ind) in self.curr_gen_inds.iter().enumerate() {
+            let l = ind.get_fitness();
+            let (a, b) = ind.get_visuals(&self.ind_data);
+            lab.push((l, a, b, i));
+        }
+
+        // Sort by L
+        lab.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+        for (i, (l, _a, _b, _)) in lab.iter_mut().enumerate() {
+            *l = ((i as f64) * 100.0) / len as f64;
+        }
+
+        // Sort by A
+        lab.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        for (i, (_l, a, _b, _)) in lab.iter_mut().enumerate() {
+            *a = ((i as f64) * 256.0) / len as f64 - 128.0;
+        }
+
+        // Sort by B
+        lab.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
+        for (i, (_l, _a, b, _)) in lab.iter_mut().enumerate() {
+            *b = ((i as f64) * 256.0) / len as f64 - 128.0;
+        }
+
+        // Sort by index
+        lab.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap());
+
+        // Write normalized LAB data to RGB image
+        for i in 0..len {
+            // Get coordinates on image
+            let x: u32 = (i % self.pop_width) as u32;
+            let y: u32 = (i / self.pop_width) as u32;
+
+            // Convert LAB to RGB and put it to result image
+            let rgb: &[u8; 3] = &Lab {
+                l: lab[i].0 as f32,
+                a: lab[i].1 as f32,
+                b: lab[i].2 as f32,
+            }
+            .to_rgb();
+            img.put_pixel(x, y, image::Rgb(*rgb));
+        }
+
+        // Save image to file
+        img.save(filename).unwrap();
+    }
+
+    // Function creates a visualization of the current generation in the form of an PNG image
+    // It maps the fitness (L) and visual attributes (A, B) of each individual
+    pub fn normalized_visualise(&self, filename: &str) {
         let mut lab: Vec<(f64, f64, f64)> = Vec::with_capacity(self.curr_gen_inds.len());
         let mut max: (f64, f64, f64) = (f64::MIN, f64::MIN, f64::MIN);
         let mut min: (f64, f64, f64) = (f64::MAX, f64::MAX, f64::MAX);
