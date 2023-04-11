@@ -57,8 +57,8 @@ impl SalesmanIndividualData {
 
         for _ in 0..n_cities {
             coords.push(Coord {
-                x: rng.gen_range(5..screen_width - 5),
-                y: rng.gen_range(5..screen_height - 5),
+                x: rng.gen_range(5..screen_width - 5) as i32,
+                y: rng.gen_range(5..screen_height - 5) as i32,
             });
         }
 

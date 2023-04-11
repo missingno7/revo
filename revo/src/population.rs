@@ -130,6 +130,14 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         self.curr_gen_inds[y * self.pop_width + x].clone()
     }
 
+    pub fn get_width(&self) -> usize {
+        self.pop_width
+    }
+
+    pub fn get_height(&self) -> usize {
+        self.pop_height
+    }
+
     // Function returns the number of the current generation
     pub fn get_generation(&self) -> usize {
         self.i_generation
