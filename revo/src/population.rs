@@ -415,10 +415,10 @@ mod tests {
         }
 
         let res = TestPopulation::_dual_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
-        assert_eq!(res, (2, 3));
+        assert_eq!(res, (3, 2));
 
         let res = TestPopulation::_dual_tournament(&vec![3, 0, 2, 4], &mut vec_ind);
-        assert_eq!(res, (3, 4));
+        assert_eq!(res, (4, 3));
     }
 
     #[test]
