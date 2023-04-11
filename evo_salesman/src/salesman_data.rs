@@ -73,44 +73,14 @@ impl SalesmanIndividualData {
     }
 
     pub fn from_config(rng: &mut ThreadRng, config: &PopulationConfig) -> Self {
-        let n_cities: u32 = match config.json.find_path(&["n_cities"]) {
-            None => DEFAULT_N_CITIES,
-            Some(data) => data.as_u64().unwrap() as u32,
-        };
-
-        let screen_width: u32 = match config.json.find_path(&["screen_width"]) {
-            None => DEFAULT_SCREEN_WIDTH,
-            Some(data) => data.as_u64().unwrap() as u32,
-        };
-
-        let screen_height: u32 = match config.json.find_path(&["screen_height"]) {
-            None => DEFAULT_SCREEN_HEIGHT,
-            Some(data) => data.as_u64().unwrap() as u32,
-        };
-
-        let shift_prob: f64 = match config.json.find_path(&["shift_prob"]) {
-            None => DEFAULT_SHIFT_PROB,
-            Some(data) => data.as_f64().unwrap(),
-        };
-
-        let rev_prob: f64 = match config.json.find_path(&["rev_prob"]) {
-            None => DEFAULT_REV_PROB,
-            Some(data) => data.as_f64().unwrap(),
-        };
-
-        let init_type: SalesmanInitType = match config.json.find_path(&["init_type"]) {
-            None => DEFAULT_INIT_TYPE,
-            Some(data) => SalesmanInitType::from_str(data.as_string().unwrap()).unwrap(),
-        };
-
         Self::new(
             rng,
-            n_cities,
-            screen_width,
-            screen_height,
-            shift_prob,
-            rev_prob,
-            init_type,
+            config.get_num("n_cities", DEFAULT_N_CITIES as f64) as u32,
+            config.get_num("screen_width", DEFAULT_SCREEN_WIDTH as f64) as u32,
+            config.get_num("screen_height", DEFAULT_SCREEN_HEIGHT as f64) as u32,
+            config.get_num("shift_prob", DEFAULT_SHIFT_PROB),
+            config.get_num("rev_prob", DEFAULT_REV_PROB),
+            config.get_key("init_type", DEFAULT_INIT_TYPE),
         )
     }
 }

@@ -126,6 +126,10 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         best_ind.clone()
     }
 
+    pub fn get_at(&self, x: usize, y: usize) -> Individual {
+        self.curr_gen_inds[y * self.pop_width + x].clone()
+    }
+
     // Function returns the number of the current generation
     pub fn get_generation(&self) -> usize {
         self.i_generation
