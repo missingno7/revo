@@ -19,6 +19,7 @@ jobs:
       - name: Build and test ${{ matrix.example }}
         run: |
           cd ${{ matrix.example }}
+          cargo fmt -- --check
           cargo clippy -- -D warnings
           cargo build --verbose
           cargo test --verbose
