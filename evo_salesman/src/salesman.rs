@@ -26,7 +26,7 @@ impl SalesmanIndividual {
             let i_city = &ind_data.coords[i];
             draw_hollow_rect_mut(
                 &mut img,
-                Rect::at(i_city.x as i32 - 5, i_city.y as i32 - 5).of_size(10, 10),
+                Rect::at(i_city.x - 5, i_city.y - 5).of_size(10, 10),
                 city_color,
             );
         }

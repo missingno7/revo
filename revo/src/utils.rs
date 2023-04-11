@@ -12,8 +12,8 @@ impl Coord {
     }
 
     pub fn distance_manhattan(first: &Self, second: &Self) -> i32 {
-        let x = second.x as i32 - first.x as i32;
-        let y = second.y as i32 - first.y as i32;
+        let x = second.x - first.x;
+        let y = second.y - first.y;
         x.abs() + y.abs()
     }
 
