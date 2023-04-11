@@ -22,6 +22,7 @@ impl Coord {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct LabData {
     pub l: f64,
     pub a: f64,
