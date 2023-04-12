@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        example: [revo, revo/example, social_distance, evo_salesman, playground]
+        example: [revo, revo/example, social_distance, evo_salesman]
 
     steps:
       - uses: actions/checkout@v2
