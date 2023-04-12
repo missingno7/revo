@@ -430,15 +430,18 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             let city_1 = ind_data.coords[self.genom[i] as usize];
             let city_2 = ind_data.coords[self.genom[i + 1] as usize];
 
-            a += (city_2.x - city_1.x) as f64;
-            b += (city_2.y - city_1.y) as f64;
+            let (dx, dy) = Coord::normalized_distance_between_points(&city_1, &city_2);
+            a += dx.abs();
+            b += dy.abs();
         }
 
         let city_1 = ind_data.coords[self.genom[0] as usize];
         let city_2 = ind_data.coords[self.genom[len - 1] as usize];
 
-        a += ((city_2.x - city_1.x) as f64).abs();
-        b += ((city_2.y - city_1.y) as f64).abs();
+        let (dx, dy) = Coord::normalized_distance_between_points(&city_1, &city_2);
+
+        a += dx.abs();
+        b += dy.abs();
 
         (a, b)
     }
