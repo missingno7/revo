@@ -155,6 +155,11 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         image.save(filename).unwrap();
     }
 
+    // Function returns the data for individuals
+    pub fn get_individual_data(&self) -> &IndividualData {
+        &self.ind_data
+    }
+
     /// Private methods
 
     // Function returns the indices of 5 neighbours of i in a + shape

@@ -7,7 +7,7 @@ use std::fs;
 use std::rc::Rc;
 
 // use crate::social_distance_gas::{PlaygroundData, PlaygroundPopulation};
-use crate::evo_salesman_gas::{PlaygroundData, PlaygroundPopulation};
+use crate::evo_salesman_gas::PlaygroundPopulation;
 
 #[derive(Clone)]
 pub struct PopDisplay {
@@ -67,11 +67,7 @@ impl PopDisplay {
         fs::remove_file(&self.img_path).unwrap();
     }
 
-    pub fn get_widget(
-        self,
-        pop: Rc<RefCell<PlaygroundPopulation>>,
-        ind_data: Rc<RefCell<PlaygroundData>>,
-    ) -> Box {
+    pub fn get_widget(self, pop: Rc<RefCell<PlaygroundPopulation>>) -> Box {
         let box_ = Box::new(gtk::Orientation::Vertical, 0);
 
         let label = self.label.clone();
@@ -90,7 +86,7 @@ impl PopDisplay {
 
                 let ind = pop.borrow().get_at(x as usize, y as usize);
                 self.ind_display
-                    .display_individual(&ind, &ind_data.borrow());
+                    .display_individual(&ind, pop.borrow().get_individual_data());
 
                 label.set_text(&format!("({:.0}, {:.0}), {}", x, y, ind.get_fitness()));
 

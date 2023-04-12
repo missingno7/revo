@@ -123,6 +123,58 @@ impl SalesmanIndividual {
         }
     }
 
+    fn _impl_crossover_to(
+        &self,
+        another_ind: &SalesmanIndividual,
+        dest_ind: &mut SalesmanIndividual,
+        start_cross_point: usize,
+        end_cross_point: usize,
+        other_ind_start_cross_point: usize,
+    ) {
+        let mut used: Vec<bool> = vec![false; self.genom.len()];
+
+        let mut i = start_cross_point;
+
+        // Copy points from first parent
+        loop {
+            dest_ind.genom[i] = self.genom[i];
+            used[self.genom[i] as usize] = true;
+
+            if i == end_cross_point {
+                break;
+            }
+
+            i += 1;
+            if i >= self.genom.len() {
+                i = 0;
+            }
+        }
+
+        // Copy points from second parent
+        let mut other_i = other_ind_start_cross_point;
+        let mut i = end_cross_point + 1;
+        loop {
+            if !used[another_ind.genom[other_i] as usize] {
+                dest_ind.genom[i] = another_ind.genom[other_i];
+                used[another_ind.genom[other_i] as usize] = true;
+
+                i += 1;
+                if i >= self.genom.len() {
+                    i = 0;
+                }
+            }
+
+            if i == start_cross_point {
+                break;
+            }
+
+            other_i += 1;
+            if other_i >= self.genom.len() {
+                other_i = 0;
+            }
+        }
+    }
+
     fn new_random_naive(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
         let mut visited: Vec<bool> = vec![false; ind_data.coords.len()];
         let mut genom: Vec<u16> = (0_u16..ind_data.coords.len() as u16).collect();
@@ -355,49 +407,21 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
     fn crossover_to(
         &self,
         another_ind: &SalesmanIndividual,
-        dest_int: &mut SalesmanIndividual,
+        dest_ind: &mut SalesmanIndividual,
         _ind_data: &SalesmanIndividualData,
         rng: &mut ThreadRng,
     ) {
-        let mut used: Vec<bool> = vec![false; self.genom.len()];
-        let cross_point = rng.gen_range(0..self.genom.len() - 1);
-        let mut i = cross_point;
+        let start_cross_point = rng.gen_range(0..self.genom.len() - 1);
+        let end_cross_point = rng.gen_range(0..self.genom.len() - 1);
+        let other_i = rng.gen_range(0..self.genom.len() - 1);
 
-        loop {
-            if used[self.genom[i] as usize] {
-                if used[another_ind.genom[i] as usize] {
-                    // Both on list
-
-                    for (j, _j_used) in used.iter().enumerate().take(self.genom.len()) {
-                        if !used[j] {
-                            dest_int.genom[i] = j as u16;
-                            break;
-                        }
-                    }
-                } else {
-                    // second not used
-                    dest_int.genom[i] = another_ind.genom[i];
-                }
-            } else if used[another_ind.genom[i] as usize] {
-                // first not used
-                dest_int.genom[i] = self.genom[i];
-            } else {
-                // None used
-                if rng.gen_bool(0.5) {
-                    dest_int.genom[i] = self.genom[i];
-                } else {
-                    dest_int.genom[i] = another_ind.genom[i];
-                }
-            }
-
-            used[dest_int.genom[i] as usize] = true;
-
-            i = (i + 1) % self.genom.len();
-
-            if (i % self.genom.len()) == cross_point {
-                break;
-            }
-        }
+        self._impl_crossover_to(
+            another_ind,
+            dest_ind,
+            start_cross_point,
+            end_cross_point,
+            other_i,
+        );
     }
 
     fn count_fitness(&mut self, ind_data: &SalesmanIndividualData) {
@@ -523,5 +547,30 @@ mod tests {
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(2, 2);
         assert_eq!(ind.genom, vec![4, 3, 2, 1, 0, 5]);
+    }
+
+    #[test]
+    fn test_impl_crossover_to() {
+        let mut rng = rand::thread_rng();
+        let ind_data =
+            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+
+        let mut ind_1 = SalesmanIndividual::new(&ind_data);
+        let mut ind_2 = SalesmanIndividual::new(&ind_data);
+        let mut res_ind = SalesmanIndividual::new(&ind_data);
+
+        ind_1.genom = vec![0, 1, 2, 3, 4, 5];
+        ind_2.genom = vec![5, 4, 3, 2, 1, 0];
+
+        ind_1._impl_crossover_to(&ind_2, &mut res_ind, 0, 2, 0);
+        assert_eq!(res_ind.genom, vec![0, 1, 2, 5, 4, 3]);
+
+        ind_1._impl_crossover_to(&ind_2, &mut res_ind, 5, 0, 1);
+        assert_eq!(res_ind.genom, vec![0, 4, 3, 2, 1, 5]);
+
+        ind_1.genom = vec![4, 1, 3, 2, 5, 0];
+        ind_2.genom = vec![3, 5, 0, 1, 4, 2];
+        ind_1._impl_crossover_to(&ind_2, &mut res_ind, 1, 3, 2);
+        assert_eq!(res_ind.genom, vec![5, 1, 3, 2, 0, 4]);
     }
 }
