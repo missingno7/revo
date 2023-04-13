@@ -1,7 +1,6 @@
 use crate::ind_display::IndDisplay;
 use gtk::prelude::*;
 use gtk::{gdk_pixbuf, Box, EventBox, Image, Label};
-use revo::evo_individual::EvoIndividual;
 use std::cell::RefCell;
 use std::fs;
 use std::rc::Rc;
@@ -88,7 +87,7 @@ impl PopDisplay {
                 self.ind_display
                     .display_individual(&ind, pop.borrow().get_individual_data());
 
-                label.set_text(&format!("({:.0}, {:.0}), {}", x, y, ind.get_fitness()));
+                label.set_text(&format!("x: {:.0},y: {:.0}", x, y));
 
                 Inhibit(false)
             });
