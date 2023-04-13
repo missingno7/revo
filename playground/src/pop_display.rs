@@ -8,7 +8,6 @@ use std::rc::Rc;
 use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 
-#[derive(Clone)]
 pub struct PopDisplay {
     img_path: String,
     images_width: i32,
@@ -18,7 +17,7 @@ pub struct PopDisplay {
     image: Image,
     event_box: EventBox,
     label: Label,
-    ind_display: IndDisplay,
+    ind_display: Rc<RefCell<IndDisplay>>,
 }
 
 impl PopDisplay {
@@ -26,7 +25,7 @@ impl PopDisplay {
         img_path: &str,
         images_width: i32,
         images_height: i32,
-        ind_display: IndDisplay,
+        ind_display: Rc<RefCell<IndDisplay>>,
     ) -> Self {
         let image = Image::new();
         image.set_halign(gtk::Align::Start);
@@ -73,7 +72,7 @@ impl PopDisplay {
     }
 
     pub fn get_widget<Individual, IndividualData>(
-        self,
+        self_pointer: Rc<RefCell<Self>>,
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
     ) -> Box
     where
@@ -86,14 +85,19 @@ impl PopDisplay {
         IndividualData: Sync + 'static,
     {
         let box_ = Box::new(gtk::Orientation::Vertical, 0);
+        let self_ = self_pointer.borrow();
 
-        let label = self.label.clone();
-        self.event_box
+        // Move stuff into closure
+        let self_pointer_clone = self_pointer.clone();
+        self_pointer
+            .borrow()
+            .event_box
             .connect_button_press_event(move |_widget, event| {
                 let (mut x, mut y) = event.position();
+                let self_ = self_pointer_clone.borrow_mut();
 
-                x *= self.original_image_width as f64 / self.images_width as f64;
-                y *= self.original_image_height as f64 / self.images_height as f64;
+                x *= self_.original_image_width as f64 / self_.images_width as f64;
+                y *= self_.original_image_height as f64 / self_.images_height as f64;
 
                 if x as usize >= pop.borrow().get_width() || y as usize >= pop.borrow().get_height()
                 {
@@ -102,16 +106,18 @@ impl PopDisplay {
                 }
 
                 let ind = pop.borrow().get_at(x as usize, y as usize);
-                self.ind_display
+                self_
+                    .ind_display
+                    .borrow()
                     .display_individual(&ind, pop.borrow().get_individual_data());
 
-                label.set_text(&format!("x: {:.0},y: {:.0}", x, y));
+                self_.label.set_text(&format!("x: {:.0},y: {:.0}", x, y));
 
                 Inhibit(false)
             });
 
-        box_.add(&self.event_box);
-        box_.add(&self.label);
+        box_.add(&self_.event_box);
+        box_.add(&self_.label);
         box_
     }
 

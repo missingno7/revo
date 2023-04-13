@@ -3,7 +3,6 @@ use gtk::{gdk_pixbuf, Box, Image, Label};
 use revo::evo_individual::{EvoIndividual, Visualise};
 use std::fs;
 
-#[derive(Clone)]
 pub struct IndDisplay {
     img_path: String,
     images_width: i32,

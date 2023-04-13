@@ -11,8 +11,8 @@ use std::rc::Rc;
 
 pub struct MainWindow<Individual, IndividualData> {
     pop: Rc<RefCell<Population<Individual, IndividualData>>>,
-    ind_display: IndDisplay,
-    pop_display: PopDisplay,
+    ind_display: Rc<RefCell<IndDisplay>>,
+    pop_display: Rc<RefCell<PopDisplay>>,
 }
 
 impl<
@@ -28,17 +28,22 @@ impl<
         let images_width: i32 = 400;
         let images_height: i32 = 400;
 
-        let ind_display = IndDisplay::new(ind_img_path, images_width, images_height);
+        let ind_display = Rc::new(RefCell::new(IndDisplay::new(
+            ind_img_path,
+            images_width,
+            images_height,
+        )));
         ind_display
+            .borrow_mut()
             .display_individual(&pop.borrow().get_best(), pop.borrow().get_individual_data());
 
-        let mut pop_display = PopDisplay::new(
+        let pop_display = Rc::new(RefCell::new(PopDisplay::new(
             pop_img_path,
             images_width,
             images_height,
             ind_display.clone(),
-        );
-        pop_display.display_pop(&pop.borrow_mut());
+        )));
+        pop_display.borrow_mut().display_pop(&pop.borrow_mut());
 
         MainWindow {
             pop,
@@ -47,61 +52,69 @@ impl<
         }
     }
 
-    pub fn get_widget(self) -> Box {
+    pub fn get_widget(self_pointer: Rc<RefCell<Self>>) -> Box {
         // Add buttons next to each other
         let buttons_box = Box::new(gtk::Orientation::Horizontal, 0);
 
         // +1 gen button
-        let pop_clone = self.pop.clone();
-        let pop_display_clone = self.pop_display.clone();
-        let ind_display_clone = self.ind_display.clone();
+        let self_pointer_clone = self_pointer.clone();
         let button1 = Button::with_label("Next gen");
         buttons_box.add(&button1);
         button1.connect_clicked(move |_| {
-            pop_clone.borrow_mut().next_gen();
-            let mut pop_display_clone = pop_display_clone.clone();
-            pop_display_clone.display_pop(&pop_clone.borrow());
-            ind_display_clone.display_individual(
-                &pop_clone.borrow().get_best(),
-                pop_clone.borrow().get_individual_data(),
+            let self_ = self_pointer_clone.borrow_mut();
+
+            self_.pop.borrow_mut().next_gen();
+            self_
+                .pop_display
+                .borrow_mut()
+                .display_pop(&self_.pop.borrow());
+            self_.ind_display.borrow().display_individual(
+                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_individual_data(),
             );
         });
 
         // +10 gens button
-        let pop_clone = self.pop.clone();
-        let pop_display_clone = self.pop_display.clone();
-        let ind_display_clone = self.ind_display.clone();
+        let self_pointer_clone = self_pointer.clone();
         let button2 = Button::with_label("+10 gens");
         buttons_box.add(&button2);
         button2.connect_clicked(move |_| {
+            let self_ = self_pointer_clone.borrow_mut();
             for _ in 0..10 {
-                pop_clone.borrow_mut().next_gen();
+                self_.pop.borrow_mut().next_gen();
             }
 
-            let mut pop_display_clone = pop_display_clone.clone();
-            pop_display_clone.display_pop(&pop_clone.borrow());
-            ind_display_clone.display_individual(
-                &pop_clone.borrow().get_best(),
-                pop_clone.borrow().get_individual_data(),
+            self_
+                .pop_display
+                .borrow_mut()
+                .display_pop(&self_.pop.borrow());
+            self_.ind_display.borrow().display_individual(
+                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_individual_data(),
             );
         });
 
         // Show best button
-        let pop_clone = self.pop.clone();
-        let ind_display_clone = self.ind_display.clone();
+        let self_pointer_clone = self_pointer.clone();
         let button3 = Button::with_label("Show best");
         buttons_box.add(&button3);
         button3.connect_clicked(move |_| {
-            ind_display_clone.display_individual(
-                &pop_clone.borrow().get_best(),
-                pop_clone.borrow().get_individual_data(),
+            let self_ = self_pointer_clone.borrow_mut();
+            self_.ind_display.borrow().display_individual(
+                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_individual_data(),
             );
         });
 
+        let self_ = self_pointer.borrow_mut();
+
         // Layout - display images next to each other
         let displays_box = Box::new(gtk::Orientation::Horizontal, 0);
-        displays_box.add(&self.pop_display.get_widget(self.pop.clone()));
-        displays_box.add(&self.ind_display.get_widget());
+        displays_box.add(&PopDisplay::get_widget(
+            self_.pop_display.clone(),
+            self_.pop.clone(),
+        ));
+        displays_box.add(&self_.ind_display.borrow().get_widget());
 
         // Add everything to the main window - vertical layout
         let box_ = Box::new(gtk::Orientation::Vertical, 0);

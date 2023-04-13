@@ -29,13 +29,15 @@ impl MainApp {
         let app = Application::new(Some("com.example.image_box"), Default::default());
 
         app.connect_activate(move |app| {
-            let main_window = MainWindow::<Individual, IndividualData>::new(rc_pop.clone());
+            let main_window = Rc::new(RefCell::new(MainWindow::<Individual, IndividualData>::new(
+                rc_pop.clone(),
+            )));
 
             // Add everything to the main window and show it
             let window = ApplicationWindow::new(app);
             window.set_title("Evolutionary algorithm playground");
             window.set_resizable(false);
-            window.add(&main_window.get_widget());
+            window.add(&MainWindow::get_widget(main_window));
             window.show_all();
         });
 
