@@ -73,7 +73,7 @@ impl<
         // Add displays next to each other
         let displays_box = Box::new(gtk::Orientation::Horizontal, 0);
         displays_box.add(&PopDisplay::get_widget(
-            self_.pop_display.clone(),
+            &self_.pop_display,
             self_.pop.clone(),
         ));
         displays_box.add(&self_.ind_display.borrow().get_widget());

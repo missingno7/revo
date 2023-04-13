@@ -72,7 +72,7 @@ impl PopDisplay {
     }
 
     pub fn get_widget<Individual, IndividualData>(
-        self_pointer: Rc<RefCell<Self>>,
+        self_pointer: &Rc<RefCell<Self>>,
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
     ) -> Box
     where
