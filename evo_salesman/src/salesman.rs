@@ -5,7 +5,7 @@ use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::utils::Coord;
 use std::collections::HashSet;
 
@@ -16,41 +16,6 @@ pub struct SalesmanIndividual {
 }
 
 impl SalesmanIndividual {
-    pub fn visualise(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
-        let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
-
-        // Draw cities
-        for i in 0..ind_data.coords.len() {
-            let city_color = Rgb([255, 0, 0]);
-
-            let i_city = &ind_data.coords[i];
-            draw_hollow_rect_mut(
-                &mut img,
-                Rect::at(i_city.x - 5, i_city.y - 5).of_size(10, 10),
-                city_color,
-            );
-        }
-
-        // Draw roads
-        for i in 0..self.genom.len() - 1 {
-            let col = ((i * 255) / (self.genom.len())) as u8;
-            let road_color = Rgb([col, 255 - col, 0]);
-
-            let from_city = &ind_data.coords[self.genom[i] as usize];
-            let to_city = &ind_data.coords[self.genom[i + 1] as usize];
-
-            draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
-        }
-
-        let road_color = Rgb([0, 255, 0]);
-
-        let from_city = &ind_data.coords[self.genom[0] as usize];
-        let to_city = &ind_data.coords[self.genom[self.genom.len() - 1] as usize];
-        draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
-
-        img.save(output_filename).unwrap();
-    }
-
     fn reverse_part(&mut self, from: usize, to: usize) {
         let len = self.genom.len();
 
@@ -468,6 +433,43 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         b += dy.abs();
 
         (a, b)
+    }
+}
+
+impl Visualise<SalesmanIndividualData> for SalesmanIndividual {
+    fn visualise(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
+        let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
+
+        // Draw cities
+        for i in 0..ind_data.coords.len() {
+            let city_color = Rgb([255, 0, 0]);
+
+            let i_city = &ind_data.coords[i];
+            draw_hollow_rect_mut(
+                &mut img,
+                Rect::at(i_city.x - 5, i_city.y - 5).of_size(10, 10),
+                city_color,
+            );
+        }
+
+        // Draw roads
+        for i in 0..self.genom.len() - 1 {
+            let col = ((i * 255) / (self.genom.len())) as u8;
+            let road_color = Rgb([col, 255 - col, 0]);
+
+            let from_city = &ind_data.coords[self.genom[i] as usize];
+            let to_city = &ind_data.coords[self.genom[i + 1] as usize];
+
+            draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
+        }
+
+        let road_color = Rgb([0, 255, 0]);
+
+        let from_city = &ind_data.coords[self.genom[0] as usize];
+        let to_city = &ind_data.coords[self.genom[self.genom.len() - 1] as usize];
+        draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
+
+        img.save(output_filename).unwrap();
     }
 }
 

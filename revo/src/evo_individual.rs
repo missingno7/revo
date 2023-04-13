@@ -37,3 +37,7 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
     // Get the A and B values of the individual for visualisation
     fn get_visuals(&self, ind_data: &IndividualData) -> (f64, f64);
 }
+
+pub trait Visualise<IndividualData> {
+    fn visualise(&self, output_filename: &str, ind_data: &IndividualData);
+}

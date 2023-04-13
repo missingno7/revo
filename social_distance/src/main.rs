@@ -1,9 +1,10 @@
 extern crate revo;
 
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
+
 use std::fs;
 
 fn main() {

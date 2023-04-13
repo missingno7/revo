@@ -5,8 +5,8 @@ use std::cell::RefCell;
 use std::fs;
 use std::rc::Rc;
 
-// use crate::social_distance_gas::{PlaygroundData, PlaygroundPopulation};
-use crate::evo_salesman_gas::PlaygroundPopulation;
+use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::population::Population;
 
 #[derive(Clone)]
 pub struct PopDisplay {
@@ -37,14 +37,12 @@ impl PopDisplay {
 
         let label = Label::new(None);
 
-        let pixbuf = gdk_pixbuf::Pixbuf::from_file(img_path).unwrap();
-
         PopDisplay {
             img_path: img_path.to_string(),
             images_width,
             images_height,
-            original_image_width: pixbuf.width(),
-            original_image_height: pixbuf.height(),
+            original_image_width: 0,
+            original_image_height: 0,
             image,
             event_box,
             label,
@@ -52,9 +50,17 @@ impl PopDisplay {
         }
     }
 
-    pub fn display_pop(&self, pop: &PlaygroundPopulation) {
+    pub fn display_pop<Individual, IndividualData>(
+        &mut self,
+        pop: &Population<Individual, IndividualData>,
+    ) where
+        Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
+        IndividualData: Sync,
+    {
         pop.visualise(&self.img_path);
         let mut pixbuf = gdk_pixbuf::Pixbuf::from_file(&self.img_path).unwrap();
+        self.original_image_width = pixbuf.width();
+        self.original_image_height = pixbuf.height();
         pixbuf = pixbuf
             .scale_simple(
                 self.images_width,
@@ -66,7 +72,19 @@ impl PopDisplay {
         fs::remove_file(&self.img_path).unwrap();
     }
 
-    pub fn get_widget(self, pop: Rc<RefCell<PlaygroundPopulation>>) -> Box {
+    pub fn get_widget<Individual, IndividualData>(
+        self,
+        pop: Rc<RefCell<Population<Individual, IndividualData>>>,
+    ) -> Box
+    where
+        Individual: EvoIndividual<IndividualData>
+            + Visualise<IndividualData>
+            + Send
+            + Sync
+            + Clone
+            + 'static,
+        IndividualData: Sync + 'static,
+    {
         let box_ = Box::new(gtk::Orientation::Vertical, 0);
 
         let label = self.label.clone();

@@ -3,7 +3,7 @@ extern crate revo;
 
 use evo_salesman::salesman::SalesmanIndividual;
 use evo_salesman::salesman_data::SalesmanIndividualData;
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 use std::fs;

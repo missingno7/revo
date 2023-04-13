@@ -1,9 +1,7 @@
 use gtk::prelude::*;
 use gtk::{gdk_pixbuf, Box, Image, Label};
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use std::fs;
-
-use crate::evo_salesman_gas::{PlaygroundData, PlaygroundIndividual};
 
 #[derive(Clone)]
 pub struct IndDisplay {
@@ -33,7 +31,14 @@ impl IndDisplay {
         }
     }
 
-    pub fn display_individual(&self, ind: &PlaygroundIndividual, ind_data: &PlaygroundData) {
+    pub fn display_individual<Individual, IndividualData>(
+        &self,
+        ind: &Individual,
+        ind_data: &IndividualData,
+    ) where
+        Individual: EvoIndividual<IndividualData> + Visualise<IndividualData> + Send + Sync + Clone,
+        IndividualData: Sync,
+    {
         ind.visualise(&self.img_path, ind_data);
 
         let mut pixbuf = gdk_pixbuf::Pixbuf::from_file(&self.img_path).unwrap();

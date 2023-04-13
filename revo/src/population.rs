@@ -27,6 +27,131 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
+impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
+    pub fn get_at(&self, x: usize, y: usize) -> Individual {
+        self.curr_gen_inds[y * self.pop_width + x].clone()
+    }
+
+    pub fn get_width(&self) -> usize {
+        self.pop_width
+    }
+
+    pub fn get_height(&self) -> usize {
+        self.pop_height
+    }
+
+    // Function returns the number of the current generation
+    pub fn get_generation(&self) -> usize {
+        self.i_generation
+    }
+
+    // Function returns the indices of 5 neighbours of i in a + shape
+    fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
+        // Get x and y coordinates of i
+        let x: usize = i % pop_width;
+        let y: usize = i / pop_width;
+
+        // Get indices of left, right, up and down neighbours
+        let row_start_index = y * pop_width;
+        let left_neighbour = row_start_index + ((x + pop_width - 1) % pop_width);
+        let right_neigbour = row_start_index + ((x + 1) % pop_width);
+
+        let column_start_index = x % pop_width;
+        let top_neighbour = ((y + pop_height - 1) % pop_height) * pop_width + column_start_index;
+        let bottom_neighbour = ((y + 1) % pop_height) * pop_width + column_start_index;
+
+        // Return indices of 5 neighbours in a + shape with i in the middle
+        vec![
+            i,
+            left_neighbour,
+            right_neigbour,
+            top_neighbour,
+            bottom_neighbour,
+        ]
+    }
+
+    fn normalize_component(
+        data: &mut [IndexedLabData],
+        mut get_component: impl FnMut(&LabData) -> f64,
+        mut set_component: impl FnMut(&mut LabData, f64),
+        min_val: f64,
+        max_val: f64,
+    ) {
+        let len = data.len();
+        let eps = 1e-9;
+
+        data.sort_by(|a, b| {
+            get_component(&a.data)
+                .partial_cmp(&get_component(&b.data))
+                .unwrap()
+        });
+        let mut last_val = get_component(&data.last().unwrap().data);
+        let mut last_val_normalised = 0.0;
+
+        for (i, value) in data.iter_mut().enumerate() {
+            let current_val = get_component(&value.data);
+
+            if (current_val - last_val).abs() < eps {
+                set_component(&mut value.data, last_val_normalised);
+            } else {
+                last_val = current_val;
+                let normalised_val = ((i as f64) * (max_val - min_val)) / len as f64 + min_val;
+                set_component(&mut value.data, normalised_val);
+                last_val_normalised = normalised_val;
+            }
+        }
+    }
+
+    // Private methods
+
+    // Function normalizes the L, A and B values of the population using the rank-based method
+    // This method doesn't preserve the order of the values
+    fn _normalize_lab_data_rank_based(mut lab_data: Vec<IndexedLabData>) -> Vec<IndexedLabData> {
+        Self::normalize_component(
+            &mut lab_data,
+            |lab_data| lab_data.l,
+            |lab_data, val| lab_data.l = val,
+            10.0,
+            90.0,
+        );
+        Self::normalize_component(
+            &mut lab_data,
+            |lab_data| lab_data.a,
+            |lab_data, val| lab_data.a = val,
+            -128.0,
+            128.0,
+        );
+        Self::normalize_component(
+            &mut lab_data,
+            |lab_data| lab_data.b,
+            |lab_data, val| lab_data.b = val,
+            -128.0,
+            128.0,
+        );
+
+        lab_data
+    }
+
+    // Function writes the L, A and B values of the population to an RgbImage object
+    fn _write_lab_data_to_image(&self, lab_data: &[IndexedLabData]) -> RgbImage {
+        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
+
+        for lab in lab_data {
+            let x = lab.index % self.pop_width;
+            let y = lab.index / self.pop_width;
+
+            let rgb = Lab {
+                l: lab.data.l as f32,
+                a: lab.data.a as f32,
+                b: lab.data.b as f32,
+            }
+            .to_rgb();
+            img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
+        }
+        img
+    }
+}
+
 impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
     Population<Individual, IndividualData>
 {
@@ -126,23 +251,6 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         best_ind.clone()
     }
 
-    pub fn get_at(&self, x: usize, y: usize) -> Individual {
-        self.curr_gen_inds[y * self.pop_width + x].clone()
-    }
-
-    pub fn get_width(&self) -> usize {
-        self.pop_width
-    }
-
-    pub fn get_height(&self) -> usize {
-        self.pop_height
-    }
-
-    // Function returns the number of the current generation
-    pub fn get_generation(&self) -> usize {
-        self.i_generation
-    }
-
     // Function creates a visualization of the current generation in the form of an PNG image
     // It maps the fitness (L) and visual attributes (A, B) of each individual
     pub fn visualise(&self, filename: &str) {
@@ -161,31 +269,6 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     }
 
     /// Private methods
-
-    // Function returns the indices of 5 neighbours of i in a + shape
-    fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
-        // Get x and y coordinates of i
-        let x: usize = i % pop_width;
-        let y: usize = i / pop_width;
-
-        // Get indices of left, right, up and down neighbours
-        let row_start_index = y * pop_width;
-        let left_neighbour = row_start_index + ((x + pop_width - 1) % pop_width);
-        let right_neigbour = row_start_index + ((x + 1) % pop_width);
-
-        let column_start_index = x % pop_width;
-        let top_neighbour = ((y + pop_height - 1) % pop_height) * pop_width + column_start_index;
-        let bottom_neighbour = ((y + 1) % pop_height) * pop_width + column_start_index;
-
-        // Return indices of 5 neighbours in a + shape with i in the middle
-        vec![
-            i,
-            left_neighbour,
-            right_neigbour,
-            top_neighbour,
-            bottom_neighbour,
-        ]
-    }
 
     // Function returns the index of the best individual in the tournament
     fn _single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
@@ -230,161 +313,16 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         }
         lab_data
     }
-
-    fn normalize_component(
-        data: &mut [IndexedLabData],
-        mut get_component: impl FnMut(&LabData) -> f64,
-        mut set_component: impl FnMut(&mut LabData, f64),
-        min_val: f64,
-        max_val: f64,
-    ) {
-        let len = data.len();
-        let eps = 1e-9;
-
-        data.sort_by(|a, b| {
-            get_component(&a.data)
-                .partial_cmp(&get_component(&b.data))
-                .unwrap()
-        });
-        let mut last_val = get_component(&data.last().unwrap().data);
-        let mut last_val_normalised = 0.0;
-
-        for (i, value) in data.iter_mut().enumerate() {
-            let current_val = get_component(&value.data);
-
-            if (current_val - last_val).abs() < eps {
-                set_component(&mut value.data, last_val_normalised);
-            } else {
-                last_val = current_val;
-                let normalised_val = ((i as f64) * (max_val - min_val)) / len as f64 + min_val;
-                set_component(&mut value.data, normalised_val);
-                last_val_normalised = normalised_val;
-            }
-        }
-    }
-
-    // Function normalizes the L, A and B values of the population using the rank-based method
-    // This method doesn't preserve the order of the values
-    fn _normalize_lab_data_rank_based(mut lab_data: Vec<IndexedLabData>) -> Vec<IndexedLabData> {
-        Self::normalize_component(
-            &mut lab_data,
-            |lab_data| lab_data.l,
-            |lab_data, val| lab_data.l = val,
-            10.0,
-            90.0,
-        );
-        Self::normalize_component(
-            &mut lab_data,
-            |lab_data| lab_data.a,
-            |lab_data, val| lab_data.a = val,
-            -128.0,
-            128.0,
-        );
-        Self::normalize_component(
-            &mut lab_data,
-            |lab_data| lab_data.b,
-            |lab_data, val| lab_data.b = val,
-            -128.0,
-            128.0,
-        );
-
-        lab_data
-    }
-
-    // Function writes the L, A and B values of the population to an RgbImage object
-    fn _write_lab_data_to_image(&self, lab_data: &[IndexedLabData]) -> RgbImage {
-        let mut img = RgbImage::new(self.pop_width as u32, self.pop_height as u32);
-
-        for lab in lab_data {
-            let x = lab.index % self.pop_width;
-            let y = lab.index / self.pop_width;
-
-            let rgb = Lab {
-                l: lab.data.l as f32,
-                a: lab.data.a as f32,
-                b: lab.data.b as f32,
-            }
-            .to_rgb();
-            img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
-        }
-        img
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testing::{MockIndividual, MockIndividualData};
     use crate::utils::LabData;
-    use rand::rngs::ThreadRng;
     use rustc_serialize::json::Json;
 
-    #[derive(Clone)]
-    struct MockIndividualData {}
-
-    #[derive(Clone)]
-    struct MockIndividual {
-        fitness: f64,
-        visuals: (f64, f64),
-        value: f64,
-    }
-
-    impl EvoIndividual<MockIndividualData> for MockIndividual {
-        fn new(_ind_data: &MockIndividualData) -> Self {
-            MockIndividual {
-                fitness: 0.0,
-                visuals: (0.0, 0.0),
-                value: 0.0,
-            }
-        }
-
-        fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut ThreadRng) -> Self {
-            MockIndividual {
-                fitness: 0.0,
-                visuals: (0.0, 0.0),
-                value: 0.0,
-            }
-        }
-
-        fn copy_to(&self, ind: &mut Self) {
-            ind.value = self.value;
-            ind.fitness = self.fitness;
-            ind.visuals = self.visuals;
-        }
-
-        fn mutate(
-            &mut self,
-            _ind_data: &MockIndividualData,
-            _rng: &mut ThreadRng,
-            _mut_prob: f32,
-            _mut_amount: f32,
-        ) {
-            self.value += 1.0;
-        }
-
-        fn crossover_to(
-            &self,
-            _another_ind: &Self,
-            dest_ind: &mut Self,
-            _ind_data: &MockIndividualData,
-            _rng: &mut ThreadRng,
-        ) {
-            dest_ind.value = (self.value + dest_ind.value) / 2.0;
-        }
-
-        fn count_fitness(&mut self, _ind_data: &MockIndividualData) {
-            self.fitness = self.value;
-        }
-
-        fn get_fitness(&self) -> f64 {
-            self.fitness
-        }
-
-        fn get_visuals(&self, _ind_data: &MockIndividualData) -> (f64, f64) {
-            self.visuals
-        }
-    }
-
-    type TestPopulation = Population<MockIndividual, MockIndividualData>;
+    pub type TestPopulation = Population<MockIndividual, MockIndividualData>;
 
     #[test]
     fn test_l5_selection() {

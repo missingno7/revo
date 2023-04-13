@@ -7,6 +7,8 @@ use std::rc::Rc;
 pub type PlaygroundPopulation = Population<DistanceIndividual, DistanceIndividualData>;
 pub type PlaygroundData = DistanceIndividualData;
 
+use revo::evo_individual::Visualise;
+
 pub struct GasData {
     pub ind_data: Rc<RefCell<PlaygroundData>>,
     pub pop: Rc<RefCell<PlaygroundPopulation>>,
