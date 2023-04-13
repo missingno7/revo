@@ -5,10 +5,10 @@
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
 
- "n_cities": 100,
+ "n_cities": 50,
  "screen_width": 400,
  "screen_height":  400,
- "shift_prob": 0.1,
- "rev_prob": 0.1,
- "init_type": "greedy"
+ "shift_prob": 0.4,
+ "rev_prob": 0.4,
+ "init_type": "noise"
 }

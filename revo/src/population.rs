@@ -1,6 +1,6 @@
 use super::evo_individual::EvoIndividual;
 use crate::pop_config::PopulationConfig;
-use crate::utils::IndexedLabData;
+use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
 use rand::{thread_rng, Rng};
@@ -148,7 +148,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     pub fn visualise(&self, filename: &str) {
         let mut lab_data = self._prepare_pop_lab_data();
 
-        lab_data = self._normalize_lab_data_rank_based(lab_data);
+        lab_data = Self::_normalize_lab_data_rank_based(lab_data);
 
         let image = self._write_lab_data_to_image(&lab_data);
 
@@ -231,29 +231,62 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         lab_data
     }
 
+    fn normalize_component(
+        data: &mut [IndexedLabData],
+        mut get_component: impl FnMut(&LabData) -> f64,
+        mut set_component: impl FnMut(&mut LabData, f64),
+        min_val: f64,
+        max_val: f64,
+    ) {
+        let len = data.len();
+        let eps = 1e-9;
+
+        data.sort_by(|a, b| {
+            get_component(&a.data)
+                .partial_cmp(&get_component(&b.data))
+                .unwrap()
+        });
+        let mut last_val = get_component(&data.last().unwrap().data);
+        let mut last_val_normalised = 0.0;
+
+        for (i, value) in data.iter_mut().enumerate() {
+            let current_val = get_component(&value.data);
+
+            if (current_val - last_val).abs() < eps {
+                set_component(&mut value.data, last_val_normalised);
+            } else {
+                last_val = current_val;
+                let normalised_val = ((i as f64) * (max_val - min_val)) / len as f64 + min_val;
+                set_component(&mut value.data, normalised_val);
+                last_val_normalised = normalised_val;
+            }
+        }
+    }
+
     // Function normalizes the L, A and B values of the population using the rank-based method
     // This method doesn't preserve the order of the values
-    fn _normalize_lab_data_rank_based(
-        &self,
-        mut lab_data: Vec<IndexedLabData>,
-    ) -> Vec<IndexedLabData> {
-        let len = lab_data.len();
-
-        // Sort and normalize L
-        lab_data.sort_by(|a, b| a.data.l.partial_cmp(&b.data.l).unwrap());
-        for (i, value) in lab_data.iter_mut().enumerate() {
-            value.data.l = ((i as f64) * 100.0) / len as f64;
-        }
-        // Sort and normalize A
-        lab_data.sort_by(|a, b| a.data.a.partial_cmp(&b.data.a).unwrap());
-        for (i, value) in lab_data.iter_mut().enumerate() {
-            value.data.a = ((i as f64) * 256.0) / len as f64 - 128.0;
-        }
-        // Sort and normalize B
-        lab_data.sort_by(|a, b| a.data.b.partial_cmp(&b.data.b).unwrap());
-        for (i, value) in lab_data.iter_mut().enumerate() {
-            value.data.b = ((i as f64) * 256.0) / len as f64 - 128.0;
-        }
+    fn _normalize_lab_data_rank_based(mut lab_data: Vec<IndexedLabData>) -> Vec<IndexedLabData> {
+        Self::normalize_component(
+            &mut lab_data,
+            |lab_data| lab_data.l,
+            |lab_data, val| lab_data.l = val,
+            10.0,
+            90.0,
+        );
+        Self::normalize_component(
+            &mut lab_data,
+            |lab_data| lab_data.a,
+            |lab_data, val| lab_data.a = val,
+            -128.0,
+            128.0,
+        );
+        Self::normalize_component(
+            &mut lab_data,
+            |lab_data| lab_data.b,
+            |lab_data, val| lab_data.b = val,
+            -128.0,
+            128.0,
+        );
 
         lab_data
     }

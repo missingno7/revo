@@ -35,13 +35,14 @@ impl Coord {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LabData {
     pub l: f64,
     pub a: f64,
     pub b: f64,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct IndexedLabData {
     pub index: usize,
     pub data: LabData,
