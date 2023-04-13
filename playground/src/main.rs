@@ -37,7 +37,7 @@ impl MainApp {
             let window = ApplicationWindow::new(app);
             window.set_title("Evolutionary algorithm playground");
             window.set_resizable(false);
-            window.add(&MainWindow::get_widget(main_window));
+            window.add(&MainWindow::get_widget(&main_window));
             window.show_all();
         });
 
