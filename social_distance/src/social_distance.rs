@@ -3,7 +3,7 @@ use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::Rng;
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::utils::Coord;
 
 #[derive(Clone)]
@@ -20,8 +20,8 @@ pub struct DistanceIndividual {
     coords: Vec<Coord>,
 }
 
-impl DistanceIndividual {
-    pub fn visualise(&self, output_filename: &str, ind_data: &DistanceIndividualData) {
+impl Visualise<DistanceIndividualData> for DistanceIndividual {
+    fn visualise(&self, output_filename: &str, ind_data: &DistanceIndividualData) {
         let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
 
         // Draw points
@@ -36,12 +36,6 @@ impl DistanceIndividual {
         }
 
         img.save(output_filename).unwrap();
-    }
-
-    fn distance(x1: i32, y1: i32, x2: i32, y2: i32) -> i64 {
-        let x = x2 as i64 - x1 as i64;
-        let y = y2 as i64 - y1 as i64;
-        (x * x) + (y * y)
     }
 }
 
@@ -131,21 +125,20 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
 
         let center_x: i32 = (ind_data.screen_width / 2) as i32;
         let center_y: i32 = (ind_data.screen_height / 2) as i32;
+        let center: Coord = Coord {
+            x: center_x,
+            y: center_y,
+        };
 
         for i in 0..self.coords.len() {
             let mut closest_dist = std::i64::MAX;
-
-            let x1 = self.coords[i].x;
-            let y1 = self.coords[i].y;
 
             for j in 0..self.coords.len() {
                 if i == j {
                     continue;
                 }
 
-                let x2 = self.coords[j].x;
-                let y2 = self.coords[j].y;
-                let distance = DistanceIndividual::distance(x1, y1, x2, y2);
+                let distance = Coord::distance_euclid(&self.coords[i], &self.coords[j]);
 
                 if distance < closest_dist {
                     closest_dist = distance;
@@ -156,7 +149,7 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
                 closest_dist
                     - (ind_data.required_distance as i64 * ind_data.required_distance as i64),
             ) as f64;
-            self.fitness -= DistanceIndividual::distance(x1, y1, center_x, center_y) as f64
+            self.fitness -= Coord::distance_euclid(&self.coords[i], &center) as f64
                 / ((self.coords.len() as f64) * 1.0);
         }
     }

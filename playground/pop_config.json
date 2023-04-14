@@ -1,0 +1,14 @@
+{
+ "pop_width": 50,
+ "pop_height": 50,
+ "mut_prob": 0.02,
+ "mut_amount": 10.0,
+ "crossover_prob": 0.1,
+
+ "n_cities": 100,
+ "screen_width": 400,
+ "screen_height":  400,
+ "shift_prob": 0.4,
+ "rev_prob": 0.4,
+ "init_type": "insertion"
+}

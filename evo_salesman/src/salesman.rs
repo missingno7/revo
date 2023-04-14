@@ -5,7 +5,7 @@ use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::utils::Coord;
 use std::collections::HashSet;
 
@@ -16,41 +16,6 @@ pub struct SalesmanIndividual {
 }
 
 impl SalesmanIndividual {
-    pub fn visualise(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
-        let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
-
-        // Draw cities
-        for i in 0..ind_data.coords.len() {
-            let city_color = Rgb([255, 0, 0]);
-
-            let i_city = &ind_data.coords[i];
-            draw_hollow_rect_mut(
-                &mut img,
-                Rect::at(i_city.x - 5, i_city.y - 5).of_size(10, 10),
-                city_color,
-            );
-        }
-
-        // Draw roads
-        for i in 0..self.genom.len() - 1 {
-            let col = ((i * 255) / (self.genom.len())) as u8;
-            let road_color = Rgb([col, 255 - col, 0]);
-
-            let from_city = &ind_data.coords[self.genom[i] as usize];
-            let to_city = &ind_data.coords[self.genom[i + 1] as usize];
-
-            draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
-        }
-
-        let road_color = Rgb([0, 255, 0]);
-
-        let from_city = &ind_data.coords[self.genom[0] as usize];
-        let to_city = &ind_data.coords[self.genom[self.genom.len() - 1] as usize];
-        draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
-
-        img.save(output_filename).unwrap();
-    }
-
     fn reverse_part(&mut self, from: usize, to: usize) {
         let len = self.genom.len();
 
@@ -120,6 +85,58 @@ impl SalesmanIndividual {
             if source_i >= len {
                 source_i = 0
             };
+        }
+    }
+
+    fn _impl_crossover_to(
+        &self,
+        another_ind: &SalesmanIndividual,
+        dest_ind: &mut SalesmanIndividual,
+        start_cross_point: usize,
+        end_cross_point: usize,
+        other_ind_start_cross_point: usize,
+    ) {
+        let mut used: Vec<bool> = vec![false; self.genom.len()];
+
+        let mut i = start_cross_point;
+
+        // Copy points from first parent
+        loop {
+            dest_ind.genom[i] = self.genom[i];
+            used[self.genom[i] as usize] = true;
+
+            if i == end_cross_point {
+                break;
+            }
+
+            i += 1;
+            if i >= self.genom.len() {
+                i = 0;
+            }
+        }
+
+        // Copy points from second parent
+        let mut other_i = other_ind_start_cross_point;
+        let mut i = end_cross_point + 1;
+        loop {
+            if !used[another_ind.genom[other_i] as usize] {
+                dest_ind.genom[i] = another_ind.genom[other_i];
+                used[another_ind.genom[other_i] as usize] = true;
+
+                i += 1;
+                if i >= self.genom.len() {
+                    i = 0;
+                }
+            }
+
+            if i == start_cross_point {
+                break;
+            }
+
+            other_i += 1;
+            if other_i >= self.genom.len() {
+                other_i = 0;
+            }
         }
     }
 
@@ -355,49 +372,21 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
     fn crossover_to(
         &self,
         another_ind: &SalesmanIndividual,
-        dest_int: &mut SalesmanIndividual,
+        dest_ind: &mut SalesmanIndividual,
         _ind_data: &SalesmanIndividualData,
         rng: &mut ThreadRng,
     ) {
-        let mut used: Vec<bool> = vec![false; self.genom.len()];
-        let cross_point = rng.gen_range(0..self.genom.len() - 1);
-        let mut i = cross_point;
+        let start_cross_point = rng.gen_range(0..self.genom.len() - 1);
+        let end_cross_point = rng.gen_range(0..self.genom.len() - 1);
+        let other_i = rng.gen_range(0..self.genom.len() - 1);
 
-        loop {
-            if used[self.genom[i] as usize] {
-                if used[another_ind.genom[i] as usize] {
-                    // Both on list
-
-                    for (j, _j_used) in used.iter().enumerate().take(self.genom.len()) {
-                        if !used[j] {
-                            dest_int.genom[i] = j as u16;
-                            break;
-                        }
-                    }
-                } else {
-                    // second not used
-                    dest_int.genom[i] = another_ind.genom[i];
-                }
-            } else if used[another_ind.genom[i] as usize] {
-                // first not used
-                dest_int.genom[i] = self.genom[i];
-            } else {
-                // None used
-                if rng.gen_bool(0.5) {
-                    dest_int.genom[i] = self.genom[i];
-                } else {
-                    dest_int.genom[i] = another_ind.genom[i];
-                }
-            }
-
-            used[dest_int.genom[i] as usize] = true;
-
-            i = (i + 1) % self.genom.len();
-
-            if (i % self.genom.len()) == cross_point {
-                break;
-            }
-        }
+        self._impl_crossover_to(
+            another_ind,
+            dest_ind,
+            start_cross_point,
+            end_cross_point,
+            other_i,
+        );
     }
 
     fn count_fitness(&mut self, ind_data: &SalesmanIndividualData) {
@@ -430,17 +419,57 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             let city_1 = ind_data.coords[self.genom[i] as usize];
             let city_2 = ind_data.coords[self.genom[i + 1] as usize];
 
-            a += (city_2.x - city_1.x) as f64;
-            b += (city_2.y - city_1.y) as f64;
+            let (dx, dy) = Coord::normalized_distance_between_points(&city_1, &city_2);
+            a += dx.abs();
+            b += dy.abs();
         }
 
         let city_1 = ind_data.coords[self.genom[0] as usize];
         let city_2 = ind_data.coords[self.genom[len - 1] as usize];
 
-        a += ((city_2.x - city_1.x) as f64).abs();
-        b += ((city_2.y - city_1.y) as f64).abs();
+        let (dx, dy) = Coord::normalized_distance_between_points(&city_1, &city_2);
+
+        a += dx.abs();
+        b += dy.abs();
 
         (a, b)
+    }
+}
+
+impl Visualise<SalesmanIndividualData> for SalesmanIndividual {
+    fn visualise(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
+        let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
+
+        // Draw cities
+        for i in 0..ind_data.coords.len() {
+            let city_color = Rgb([255, 0, 0]);
+
+            let i_city = &ind_data.coords[i];
+            draw_hollow_rect_mut(
+                &mut img,
+                Rect::at(i_city.x - 5, i_city.y - 5).of_size(10, 10),
+                city_color,
+            );
+        }
+
+        // Draw roads
+        for i in 0..self.genom.len() - 1 {
+            let col = ((i * 255) / (self.genom.len())) as u8;
+            let road_color = Rgb([col, 255 - col, 0]);
+
+            let from_city = &ind_data.coords[self.genom[i] as usize];
+            let to_city = &ind_data.coords[self.genom[i + 1] as usize];
+
+            draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
+        }
+
+        let road_color = Rgb([0, 255, 0]);
+
+        let from_city = &ind_data.coords[self.genom[0] as usize];
+        let to_city = &ind_data.coords[self.genom[self.genom.len() - 1] as usize];
+        draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
+
+        img.save(output_filename).unwrap();
     }
 }
 
@@ -520,5 +549,30 @@ mod tests {
         let mut ind = SalesmanIndividual::new(&ind_data);
         ind.reverse_part(2, 2);
         assert_eq!(ind.genom, vec![4, 3, 2, 1, 0, 5]);
+    }
+
+    #[test]
+    fn test_impl_crossover_to() {
+        let mut rng = rand::thread_rng();
+        let ind_data =
+            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+
+        let mut ind_1 = SalesmanIndividual::new(&ind_data);
+        let mut ind_2 = SalesmanIndividual::new(&ind_data);
+        let mut res_ind = SalesmanIndividual::new(&ind_data);
+
+        ind_1.genom = vec![0, 1, 2, 3, 4, 5];
+        ind_2.genom = vec![5, 4, 3, 2, 1, 0];
+
+        ind_1._impl_crossover_to(&ind_2, &mut res_ind, 0, 2, 0);
+        assert_eq!(res_ind.genom, vec![0, 1, 2, 5, 4, 3]);
+
+        ind_1._impl_crossover_to(&ind_2, &mut res_ind, 5, 0, 1);
+        assert_eq!(res_ind.genom, vec![0, 4, 3, 2, 1, 5]);
+
+        ind_1.genom = vec![4, 1, 3, 2, 5, 0];
+        ind_2.genom = vec![3, 5, 0, 1, 4, 2];
+        ind_1._impl_crossover_to(&ind_2, &mut res_ind, 1, 3, 2);
+        assert_eq!(res_ind.genom, vec![5, 1, 3, 2, 0, 4]);
     }
 }

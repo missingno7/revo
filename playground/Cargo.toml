@@ -1,0 +1,15 @@
+[package]
+name = "playground"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+gtk = { version = "0.17.1" }
+rand = "0.8.4"
+
+revo = { path = "../revo", version = "*" }
+#revo = { git = "https://github.com/missingno7/revo" }
+social_distance =  { path = "../social_distance", version = "*" }
+evo_salesman = { path = "../evo_salesman", version = "*" }
