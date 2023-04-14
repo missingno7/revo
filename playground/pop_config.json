@@ -4,11 +4,15 @@
  "mut_prob": 0.02,
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
+ "selection_strategy": "tournament",
 
- "n_cities": 100,
+ "n_cities": 50,
  "screen_width": 400,
  "screen_height":  400,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
- "init_type": "insertion"
+ "init_type": "greedy",
+
+ "n_points": 50,
+ "required_distance": 20
 }

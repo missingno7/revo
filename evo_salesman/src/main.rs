@@ -11,15 +11,20 @@ use std::fs;
 fn main() {
     let mut rng = rand::thread_rng();
 
+    // Prepare output directory and remove old files if they exist
     let output_dir = "./out";
+    let _ = fs::remove_dir_all(output_dir);
     fs::create_dir(output_dir).unwrap();
 
+    // Load the population config and create the individual data
     let pop_config = PopulationConfig::new("pop_config.json");
     let ind_data = SalesmanIndividualData::from_config(&mut rng, &pop_config);
 
+    // Create the population
     let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> =
         Population::new(&pop_config, ind_data.clone());
 
+    // Get the best individual
     let mut all_best_ind = pop.get_best();
 
     // Run the evolution
