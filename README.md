@@ -3,9 +3,9 @@
 Revo is a Rust 2D cellular evolution library designed to provide a simple framework for creating and evolving populations of 2D cellular automata. It provides an implementation of common genetic algorithm components, such as selection, mutation, and crossover, and is highly customizable to accommodate various applications.
 
 ## Quick Start
-The implementation of the revo library is located in the [revo folder](https://github.com/missingno7/revo/tree/master/revo).
-
 Implementation of the Travelling Salesman Problem is located in the [evo_salesman folder](https://github.com/missingno7/revo/tree/master/evo_salesman).
+
+The example implementation of the revo library is located in the [revo folder](https://github.com/missingno7/revo/tree/master/revo). 
 
 ## Implementing Your Own Individual
 
@@ -83,7 +83,35 @@ pub trait Visualise<IndividualData> {
 `output_filename` is the name of the file to save the visualization to.
 
 
+## Evolution Process
+In Revo, the evolution process consists of the following steps:
+
+1. Create a new population of individuals with randomized values.
+2. Evaluate the fitness of each individual in the population using the count_fitness() method.
+3. Select the best individuals from the population for reproduction, using either the tournament or roulette selection strategy.
+4. Create new individuals through crossover and mutation of the selected individuals.
+5. Evaluate the fitness of the new individuals using the count_fitness() method.
+6. Replace the weakest individuals in the population with the new individuals.
+Repeat steps 3-6 until the desired number of generations is reached by calling next_gen() on the population.
+During the evolution process, the following methods are called on each individual:
+
+- `new()` or `new_randomised()`: Create a new individual.
+- `mutate()`: Mutate the individual's genome.
+- `copy_to()`: Copy the individual's genome to another individual.
+- `crossover_to()`: Combine the individual's genome with another individual's genome.
+- `count_fitness()`: Evaluate the fitness of the individual.
+- `get_fitness()`: Retrieve the fitness value of the individual.
+
+If `pop.visualise()` is called, the following method is called on each individual: 
+- `get_visuals()`: Retrieve the A and B values of the individual for visualisation.
+
+To run the evolution process you need to create a new population and call the `next_gen()` method on it.
+
+If you want to get the best individual from the current generation of the population, call the `get_best()` method on the population.
+
 
 ## Contributing
 Contributions are welcome! If you find a bug or have a feature request, please open an issue on GitHub.
+
+
 
