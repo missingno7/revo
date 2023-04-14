@@ -111,7 +111,9 @@ impl PopDisplay {
                     .borrow()
                     .display_individual(&ind, pop.borrow().get_individual_data());
 
-                self_.label.set_text(&format!("x: {:.0},y: {:.0}", x, y));
+                self_
+                    .label
+                    .set_text(&format!("x: {},y: {}", x as usize, y as usize));
 
                 Inhibit(false)
             });
