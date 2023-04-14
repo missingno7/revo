@@ -1,13 +1,13 @@
 {
- "pop_width": 400,
- "pop_height": 50,
+ "pop_width": 1000,
+ "pop_height": 10,
  "mut_prob": 0.02,
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
  "visualise": false,
  "selection_strategy": "tournament",
 
- "n_cities": 1000,
+ "n_cities": 300,
  "screen_width": 1000,
  "screen_height":  1000,
  "shift_prob": 0.4,
