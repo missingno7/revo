@@ -8,20 +8,10 @@ use social_distance::social_distance::{DistanceIndividual, DistanceIndividualDat
 use std::fs;
 
 fn main() {
-    let n_points: usize = 50;
-    let required_distance = 20;
-    let screen_width: u32 = 500;
-    let screen_height: u32 = 500;
-
     let pop_config = PopulationConfig::new("pop_config.json");
     let output_dir = "./out";
 
-    let ind_data = DistanceIndividualData {
-        n_points,
-        screen_width,
-        screen_height,
-        required_distance,
-    };
+    let ind_data = DistanceIndividualData::from_config(&pop_config);
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> =
         Population::new(&pop_config, ind_data.clone());
 

@@ -4,7 +4,13 @@ use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::pop_config::PopulationConfig;
 use revo::utils::Coord;
+
+const DEFAULT_SCREEN_WIDTH: u32 = 400;
+const DEFAULT_SCREEN_HEIGHT: u32 = 400;
+const DEFAULT_N_POINTS: u32 = 50;
+const DEFAULT_REQUIRED_DISTANCE: u32 = 20;
 
 #[derive(Clone)]
 pub struct DistanceIndividualData {
@@ -12,6 +18,31 @@ pub struct DistanceIndividualData {
     pub screen_height: u32,
     pub n_points: usize,
     pub required_distance: u32,
+}
+
+impl DistanceIndividualData {
+    pub fn new(
+        screen_width: u32,
+        screen_height: u32,
+        n_points: usize,
+        required_distance: u32,
+    ) -> Self {
+        DistanceIndividualData {
+            screen_width,
+            screen_height,
+            n_points,
+            required_distance,
+        }
+    }
+
+    pub fn from_config(config: &PopulationConfig) -> Self {
+        Self::new(
+            config.get_num("screen_width", DEFAULT_SCREEN_WIDTH as f64) as u32,
+            config.get_num("screen_height", DEFAULT_SCREEN_HEIGHT as f64) as u32,
+            config.get_num("n_points", DEFAULT_N_POINTS as f64) as usize,
+            config.get_num("required_distance", DEFAULT_REQUIRED_DISTANCE as f64) as u32,
+        )
+    }
 }
 
 #[derive(Clone)]

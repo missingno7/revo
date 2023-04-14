@@ -4,6 +4,22 @@ use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
 
+#[derive(Clone)]
+pub enum SelectionStrategyType {
+    Tournament,
+    Roulette,
+}
+impl FromStr for SelectionStrategyType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "tournament" => Ok(SelectionStrategyType::Tournament),
+            "roulette" => Ok(SelectionStrategyType::Roulette),
+            _ => Err(format!("{} is not a valid selection type", s)),
+        }
+    }
+}
+
 pub struct PopulationConfig {
     pub pop_width: usize,
     pub pop_height: usize,
@@ -11,6 +27,7 @@ pub struct PopulationConfig {
     pub mut_amount: f32,
     pub crossover_prob: f32,
     pub visualise: bool,
+    pub selection_strategy_type: SelectionStrategyType,
     pub json: Json,
 }
 
@@ -20,6 +37,7 @@ const DEFAULT_MUT_PROB: f32 = 0.1;
 const DEFAULT_MUT_AMOUNT: f32 = 1.0;
 const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
 const DEFAULT_VISUALISE: bool = false;
+const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
 
 impl PopulationConfig {
     pub fn get_num(&self, key: &str, default: f64) -> f64 {
@@ -60,6 +78,7 @@ impl PopulationConfig {
             mut_amount: DEFAULT_MUT_AMOUNT,
             crossover_prob: DEFAULT_CROSSOVER_PROB,
             visualise: DEFAULT_VISUALISE,
+            selection_strategy_type: DEFAULT_SELECTION_STRATEGY_TYPE,
             json,
         };
 
@@ -71,6 +90,8 @@ impl PopulationConfig {
         config.crossover_prob =
             config.get_num("crossover_prob", DEFAULT_CROSSOVER_PROB as f64) as f32;
         config.visualise = config.get_bool("visualise", DEFAULT_VISUALISE);
+        config.selection_strategy_type =
+            config.get_key("selection_strategy", DEFAULT_SELECTION_STRATEGY_TYPE);
 
         config
     }

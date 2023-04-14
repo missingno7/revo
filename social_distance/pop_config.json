@@ -1,8 +1,15 @@
 {
- "pop_width": 128,
- "pop_height": 128,
+ "pop_width": 100,
+ "pop_height": 100,
  "mut_prob": 0.1,
  "mut_amount": 5.0,
  "crossover_prob": 0.2,
- "visualise" : true
+ "visualise" : true,
+ "selection_strategy": "roulette",
+
+ "screen_width": 400,
+ "screen_height": 400,
+ "n_points": 50,
+ "required_distance": 20
+
 }

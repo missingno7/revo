@@ -5,6 +5,7 @@
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
  "visualise": false,
+ "selection_strategy": "tournament",
 
  "n_cities": 1000,
  "screen_width": 1000,

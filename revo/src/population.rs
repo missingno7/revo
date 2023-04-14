@@ -1,8 +1,9 @@
 use super::evo_individual::EvoIndividual;
-use crate::pop_config::PopulationConfig;
+use crate::pop_config::{PopulationConfig, SelectionStrategyType};
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
+use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
@@ -19,6 +20,7 @@ pub struct Population<Individual, IndividualData> {
     mut_prob: f32,
     mut_amount: f32,
     crossover_prob: f32,
+    selection_strategy_type: SelectionStrategyType,
 
     // Current generation number
     i_generation: usize,
@@ -194,6 +196,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
             mut_prob: pop_config.mut_prob,
             mut_amount: pop_config.mut_amount,
             crossover_prob: pop_config.crossover_prob,
+            selection_strategy_type: pop_config.selection_strategy_type.clone(),
             i_generation: 0,
             ind_data,
         }
@@ -216,8 +219,11 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                 // Decide whether to do crossover or mutation
                 if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     // Do crossover
+
+                    // Select two individuals
                     let (first_ind, second_ind) =
                         Self::_dual_tournament(&indices, &self.curr_gen_inds);
+
                     self.curr_gen_inds[first_ind].crossover_to(
                         &self.curr_gen_inds[second_ind],
                         res,
@@ -226,8 +232,18 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                     )
                 } else {
                     // Do mutation
-                    self.curr_gen_inds[Self::_single_tournament(&indices, &self.curr_gen_inds)]
-                        .copy_to(res);
+
+                    // Select one individual based on the selection type
+                    let selected_ind_index = match self.selection_strategy_type {
+                        SelectionStrategyType::Roulette => {
+                            Self::_roulette_selection(&mut rng, &indices, &self.curr_gen_inds)
+                        }
+                        SelectionStrategyType::Tournament => {
+                            Self::_single_tournament(&indices, &self.curr_gen_inds)
+                        }
+                    };
+
+                    self.curr_gen_inds[selected_ind_index].copy_to(res);
                     res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
                 }
                 res.count_fitness(&self.ind_data);
@@ -283,6 +299,72 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         best_i
     }
 
+    fn _roulette_selection(
+        rng: &mut ThreadRng,
+        indices: &[usize],
+        curr_gen_inds: &[Individual],
+    ) -> usize {
+        // Get min fitness
+        let mut min_fitness = curr_gen_inds[indices[0]].get_fitness();
+        for &index in indices.iter() {
+            let fitness = curr_gen_inds[index].get_fitness();
+            if fitness < min_fitness {
+                min_fitness = fitness;
+            }
+        }
+
+        // Calculate the sum of fitnesses
+        let mut fitness_sum = 0.0;
+        for &index in indices.iter() {
+            // subtract the min fitness to avoid negative values
+            fitness_sum += curr_gen_inds[index].get_fitness() - min_fitness;
+        }
+
+        // Calculate the probabilities of each individual
+        let mut probabilities = Vec::with_capacity(indices.len());
+        for &index in indices.iter() {
+            // subtract the min fitness to avoid negative values
+            let prob = (curr_gen_inds[index].get_fitness() - min_fitness) / fitness_sum;
+            probabilities.push(prob);
+        }
+
+        // Select an individual based on the probabilities
+        let rand_val = rng.gen_range(0.0..1.0);
+        let mut sum = 0.0;
+        for i in 0..indices.len() {
+            sum += probabilities[i];
+            if sum > rand_val {
+                return indices[i];
+            }
+        }
+
+        // If the loop didn't return, return the last index
+        *indices.last().unwrap()
+    }
+
+    // Function selects two individuals using roulette selection
+    fn _dual_rulette(
+        rng: &mut ThreadRng,
+        indices: &[usize],
+        curr_gen_inds: &[Individual],
+    ) -> (usize, usize) {
+        // Select the first individual
+        let first = Self::_roulette_selection(rng, indices, curr_gen_inds);
+
+        // Remove the first index from the indices vector to avoid selecting the same individual twice
+        let mut indices2 = Vec::with_capacity(indices.len() - 1);
+        for item in indices {
+            if item != &first {
+                indices2.push(*item);
+            }
+        }
+
+        // Select the second individual
+        let second = Self::_roulette_selection(rng, &indices2, curr_gen_inds);
+
+        (first, second)
+    }
+
     // Function returns the indices of the two best individuals in the tournament
     fn _dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
         let mut best_i = indices[0];
@@ -318,6 +400,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pop_config::SelectionStrategyType;
     use crate::testing::{MockIndividual, MockIndividualData};
     use crate::utils::LabData;
     use rustc_serialize::json::Json;
@@ -406,6 +489,7 @@ mod tests {
             mut_amount: 2.0,
             crossover_prob: 0.0,
             visualise: false,
+            selection_strategy_type: SelectionStrategyType::Tournament,
             json: Json::Null,
         };
 
