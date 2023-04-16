@@ -1,6 +1,6 @@
 use rand::prelude::ThreadRng;
 use rand::Rng;
-use revo::pop_config::PopulationConfig;
+use revo::config::Config;
 use revo::utils::Coord;
 use std::str::FromStr;
 
@@ -72,7 +72,7 @@ impl SalesmanIndividualData {
         }
     }
 
-    pub fn from_config(rng: &mut ThreadRng, config: &PopulationConfig) -> Self {
+    pub fn from_config(rng: &mut ThreadRng, config: &Config) -> Self {
         Self::new(
             rng,
             config.get_num("n_cities", DEFAULT_N_CITIES as f64) as u32,

@@ -6,9 +6,9 @@
  "crossover_prob": 0.1,
  "selection_strategy": "tournament",
 
- "n_cities": 50,
- "screen_width": 400,
- "screen_height":  400,
+ "n_cities": 200,
+ "screen_width": 1000,
+ "screen_height":  1000,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
  "init_type": "greedy",

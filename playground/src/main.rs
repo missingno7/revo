@@ -4,34 +4,32 @@ use evo_salesman::salesman_data::SalesmanIndividualData;
 use revo::population::Population;
 
 use playground::main_app::MainApp;
-use revo::pop_config::PopulationConfig;
+use revo::config::Config;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 
-pub fn prepare_population_salesman() -> Population<SalesmanIndividual, SalesmanIndividualData> {
+pub fn prepare_population_salesman( config: &Config) -> Population<SalesmanIndividual, SalesmanIndividualData> {
     let mut rng = rand::thread_rng();
 
     // Individual data
-    let pop_config = PopulationConfig::new("pop_config.json");
-
     let ind_data: SalesmanIndividualData =
-        SalesmanIndividualData::from_config(&mut rng, &pop_config);
+        SalesmanIndividualData::from_config(&mut rng, &config);
 
-    Population::new(&pop_config, ind_data)
+    Population::new(&config, ind_data)
 }
 
-pub fn prepare_population_social_distance() -> Population<DistanceIndividual, DistanceIndividualData>
+pub fn prepare_population_social_distance( config: &Config) -> Population<DistanceIndividual, DistanceIndividualData>
 {
     // Individual data
-    let pop_config = PopulationConfig::new("pop_config.json");
+    let ind_data: DistanceIndividualData = DistanceIndividualData::from_config(&config);
 
-    let ind_data: DistanceIndividualData = DistanceIndividualData::from_config(&pop_config);
-
-    Population::new(&pop_config, ind_data)
+    Population::new(&config, ind_data)
 }
 
 fn main() {
-    let pop = prepare_population_salesman();
+    let config = Config::new("config.json");
 
-    let main_app = MainApp::new(pop);
+    let pop = prepare_population_salesman(&config);
+
+    let main_app = MainApp::new(pop, &config);
     main_app.run();
 }
