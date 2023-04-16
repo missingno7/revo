@@ -1,18 +1,21 @@
 use crate::main_window::MainWindow;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow};
+use revo::config::Config;
 use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 use std::cell::RefCell;
 use std::rc::Rc;
-use revo::config::Config;
 
 pub struct MainApp {
     app: Application,
 }
 
 impl MainApp {
-    pub fn new<Individual, IndividualData>(pop: Population<Individual, IndividualData>, config: &Config) -> MainApp
+    pub fn new<Individual, IndividualData>(
+        pop: Population<Individual, IndividualData>,
+        config: &Config,
+    ) -> MainApp
     where
         Individual: EvoIndividual<IndividualData>
             + Visualise<IndividualData>
@@ -28,7 +31,8 @@ impl MainApp {
         let config: Config = config.clone();
         app.connect_activate(move |app| {
             let main_window = Rc::new(RefCell::new(MainWindow::<Individual, IndividualData>::new(
-                rc_pop.clone(), &config,
+                rc_pop.clone(),
+                &config,
             )));
 
             // Add everything to the main window and show it

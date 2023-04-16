@@ -3,8 +3,8 @@ use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::Rng;
-use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::config::Config;
+use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::utils::Coord;
 
 const DEFAULT_SCREEN_WIDTH: u32 = 400;

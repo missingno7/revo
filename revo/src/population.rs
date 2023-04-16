@@ -1,5 +1,5 @@
 use super::evo_individual::EvoIndividual;
-use crate::config::{Config};
+use crate::config::Config;
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
@@ -172,7 +172,7 @@ impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
                 a: lab.data.a as f32,
                 b: lab.data.b as f32,
             }
-                .to_rgb();
+            .to_rgb();
             img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
         }
         img
@@ -180,7 +180,7 @@ impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
 }
 
 impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
-Population<Individual, IndividualData>
+    Population<Individual, IndividualData>
 {
     // Function creates a new individual with randomised values and counts its fitness
     fn _new_random_individual(ind_data: &IndividualData) -> Individual {
@@ -224,7 +224,8 @@ Population<Individual, IndividualData>
             mut_prob: config.get_num("mut_prob", DEFAULT_MUT_PROB as f64) as f32,
             mut_amount: config.get_num("mut_amount", DEFAULT_MUT_AMOUNT as f64) as f32,
             crossover_prob: config.get_num("crossover_prob", DEFAULT_CROSSOVER_PROB as f64) as f32,
-            selection_strategy_type: config.get_key("selection_strategy", DEFAULT_SELECTION_STRATEGY_TYPE),
+            selection_strategy_type: config
+                .get_key("selection_strategy", DEFAULT_SELECTION_STRATEGY_TYPE),
             i_generation: 0,
             ind_data,
         }
