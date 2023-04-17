@@ -54,13 +54,10 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
         dest_ind.value = (self.value + dest_ind.value) / 2.0;
     }
 
-    fn count_fitness(&mut self, _ind_data: &MockIndividualData) {
-        self.fitness = self.value;
+    fn count_fitness(&mut self, _ind_data: &MockIndividualData) -> f64 {
+         self.value
     }
 
-    fn get_fitness(&self) -> f64 {
-        self.fitness
-    }
 
     fn get_visuals(&self, _ind_data: &MockIndividualData) -> (f64, f64) {
         self.visuals

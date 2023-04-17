@@ -389,24 +389,22 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         );
     }
 
-    fn count_fitness(&mut self, ind_data: &SalesmanIndividualData) {
-        self.fitness = 0.0;
+    fn count_fitness(&mut self, ind_data: &SalesmanIndividualData) -> f64 {
+        let mut fitness = 0.0;
 
         for i in 0..ind_data.coords.len() - 1 {
-            self.fitness -= Coord::distance_euclid(
+            fitness -= Coord::distance_euclid(
                 &ind_data.coords[self.genom[i] as usize],
                 &ind_data.coords[self.genom[i + 1] as usize],
             ) as f64;
         }
 
-        self.fitness -= Coord::distance_euclid(
+        fitness -= Coord::distance_euclid(
             &ind_data.coords[self.genom[0] as usize],
             &ind_data.coords[self.genom[self.genom.len() - 1] as usize],
         ) as f64;
-    }
 
-    fn get_fitness(&self) -> f64 {
-        self.fitness
+        fitness
     }
 
     fn get_visuals(&self, ind_data: &SalesmanIndividualData) -> (f64, f64) {

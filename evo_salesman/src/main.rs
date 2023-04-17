@@ -4,7 +4,6 @@ extern crate revo;
 use evo_salesman::salesman::SalesmanIndividual;
 use evo_salesman::salesman_data::SalesmanIndividualData;
 use revo::config::Config;
-use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 use std::fs;
 

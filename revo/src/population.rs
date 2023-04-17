@@ -7,6 +7,7 @@ use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use std::str::FromStr;
+use crate::evo_individual::Visualise;
 
 const DEFAULT_POP_WIDTH: usize = 128;
 const DEFAULT_POP_HEIGHT: usize = 128;
@@ -14,6 +15,95 @@ const DEFAULT_MUT_PROB: f32 = 0.1;
 const DEFAULT_MUT_AMOUNT: f32 = 1.0;
 const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
 const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
+
+#[derive(Clone)]
+pub struct PopIndividual<Individual: Clone + Send + Sync, IndividualData: Clone + Send>
+{
+    ind: Individual,
+    fitness: f64,
+    _phantom: std::marker::PhantomData<IndividualData>,
+}
+
+
+impl<Individual: EvoIndividual<IndividualData> + Clone, IndividualData: Clone + Send>
+PopIndividual<Individual, IndividualData>
+{
+    // Create a new individual with default values
+    pub fn new(ind_data: &IndividualData) -> Self
+    {
+        PopIndividual
+        {
+            ind: Individual::new(ind_data),
+            fitness: 0.0,
+            _phantom: Default::default(),
+        }
+    }
+
+
+    // Create a new individual with randomised values
+    pub fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self
+    {
+        PopIndividual
+        {
+            ind: Individual::new_randomised(ind_data, rng),
+            fitness: 0.0,
+            _phantom: Default::default(),
+        }
+    }
+
+    // Mutate the genome of the individual
+    pub fn mutate_to(
+        &self,
+        dest_ind: &mut Self,
+        ind_data: &IndividualData,
+        rng: &mut ThreadRng,
+        mut_prob: f32,
+        mut_amount: f32,
+    )
+    {
+        self.ind.copy_to(&mut dest_ind.ind);
+        dest_ind.ind.mutate(ind_data, rng, mut_prob, mut_amount)
+    }
+
+    // Crossover the genome of the individual with another individual and store the result in dest_int
+    pub fn crossover_to(
+        &self,
+        another_ind: &Self,
+        dest_int: &mut Self,
+        ind_data: &IndividualData,
+        rng: &mut ThreadRng,
+    )
+    {
+        self.ind.crossover_to(&another_ind.ind, &mut dest_int.ind, ind_data, rng)
+    }
+
+    // Count the fitness of the individual
+    pub fn count_fitness(&mut self, ind_data: &IndividualData)
+    {
+        self.fitness = self.ind.count_fitness(ind_data);
+    }
+
+    // Get the fitness of the individual
+    pub fn get_fitness(&self) -> f64
+    {
+        self.fitness
+    }
+
+    // Get the A and B values of the individual for visualisation
+    pub fn get_visuals(&self, ind_data: &IndividualData) -> (f64, f64)
+    {
+        self.ind.get_visuals(ind_data)
+    }
+}
+
+impl<Individual: Visualise<IndividualData> + Clone + Send + Sync, IndividualData: Clone + Send>
+PopIndividual<Individual, IndividualData>
+{
+    pub fn visualise(&self, output_filename: &str, ind_data: &IndividualData) {
+        self.ind.visualise(output_filename, ind_data);
+    }
+}
+
 
 #[derive(Clone)]
 pub enum SelectionStrategyType {
@@ -32,10 +122,10 @@ impl FromStr for SelectionStrategyType {
     }
 }
 
-pub struct Population<Individual, IndividualData> {
+pub struct Population<Individual: Clone + Send + Sync, IndividualData: Clone + Send> {
     // Current and next generation of individuals
-    curr_gen_inds: Vec<Individual>,
-    next_gen_inds: Vec<Individual>,
+    curr_gen_inds: Vec<PopIndividual<Individual, IndividualData>>,
+    next_gen_inds: Vec<PopIndividual<Individual, IndividualData>>,
 
     // Population size
     pop_width: usize,
@@ -54,9 +144,9 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
-impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
+impl<Individual: Clone + Send + Sync, IndividualData: Clone + Send> Population<Individual, IndividualData> {
     pub fn get_at(&self, x: usize, y: usize) -> Individual {
-        self.curr_gen_inds[y * self.pop_width + x].clone()
+        self.curr_gen_inds[y * self.pop_width + x].clone().ind
     }
 
     pub fn get_width(&self) -> usize {
@@ -181,20 +271,20 @@ impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
                 a: lab.data.a as f32,
                 b: lab.data.b as f32,
             }
-            .to_rgb();
+                .to_rgb();
             img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
         }
         img
     }
 }
 
-impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
-    Population<Individual, IndividualData>
+impl<Individual: Send + Sync + Clone + EvoIndividual<IndividualData>, IndividualData: Sync + Clone + Send>
+Population<Individual, IndividualData>
 {
     // Function creates a new individual with randomised values and counts its fitness
-    fn _new_random_individual(ind_data: &IndividualData) -> Individual {
+    fn _new_random_individual(ind_data: &IndividualData) -> PopIndividual<Individual, IndividualData> {
         let mut rng = rand::thread_rng();
-        let mut curr_gen_ind = Individual::new_randomised(ind_data, &mut rng);
+        let mut curr_gen_ind = PopIndividual::new_randomised(ind_data, &mut rng);
         curr_gen_ind.count_fitness(ind_data);
         curr_gen_ind
     }
@@ -212,21 +302,21 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
             .unwrap() as usize;
 
         let size = pop_width * pop_height;
-        let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
-        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
+        let mut curr_gen_inds: Vec<PopIndividual<Individual, IndividualData>> = Vec::with_capacity(size);
+        let mut next_gen_inds: Vec<PopIndividual<Individual, IndividualData>> = Vec::with_capacity(size);
 
         // Initialise population with randomised individuals and count their fitness in parallel
-        curr_gen_inds.par_extend(
+        curr_gen_inds.extend(
             (0..size)
-                .into_par_iter()
+                .into_iter()
                 .map(|_| Self::_new_random_individual(&ind_data)),
         );
 
         // Just fill next_gen with default values
-        next_gen_inds.par_extend(
+        next_gen_inds.extend(
             (0..size)
-                .into_par_iter()
-                .map(|_| Individual::new(&ind_data)),
+                .into_iter()
+                .map(|_| PopIndividual::new(&ind_data)),
         );
 
         Population {
@@ -292,8 +382,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                         }
                     };
 
-                    self.curr_gen_inds[selected_ind_index].copy_to(res);
-                    res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                    self.curr_gen_inds[selected_ind_index].mutate_to(res, &self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
                 }
                 res.count_fitness(&self.ind_data);
             });
@@ -304,7 +393,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     }
 
     // Function returns the best individual in the current generation
-    pub fn get_best(&self) -> Individual {
+    pub fn get_best(&self) -> PopIndividual<Individual, IndividualData> {
         let mut best_ind = &self.curr_gen_inds[0];
 
         for i in 1..self.curr_gen_inds.len() {
@@ -336,7 +425,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     /// Private methods
 
     // Function returns the index of the best individual in the tournament
-    fn _single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
+    fn _single_tournament(indices: &[usize], curr_gen_inds: &[PopIndividual<Individual, IndividualData>]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
@@ -351,7 +440,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     fn _roulette_selection(
         rng: &mut ThreadRng,
         indices: &[usize],
-        curr_gen_inds: &[Individual],
+        curr_gen_inds: &[PopIndividual<Individual, IndividualData>],
     ) -> usize {
         // Get min fitness
         let mut min_fitness = curr_gen_inds[indices[0]].get_fitness();
@@ -395,7 +484,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     fn _dual_rulette(
         rng: &mut ThreadRng,
         indices: &[usize],
-        curr_gen_inds: &[Individual],
+        curr_gen_inds: &[PopIndividual<Individual, IndividualData>],
     ) -> (usize, usize) {
         // Select the first individual
         let first = Self::_roulette_selection(rng, indices, curr_gen_inds);
@@ -415,7 +504,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     }
 
     // Function returns the indices of the two best individuals in the tournament
-    fn _dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
+    fn _dual_tournament(indices: &[usize], curr_gen_inds: &[PopIndividual<Individual, IndividualData>]) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];
 
@@ -496,10 +585,16 @@ mod tests {
     fn test_single_tournament() {
         let mut vec_ind = Vec::new();
         for i in 0..6 {
-            vec_ind.push(MockIndividual {
+            vec_ind.push(PopIndividual
+            {
+                ind: MockIndividual
+                {
+                    fitness: i as f64,
+                    visuals: (0.0, 0.0),
+                    value: 0.0,
+                },
                 fitness: i as f64,
-                visuals: (0.0, 0.0),
-                value: 0.0,
+                _phantom: Default::default(),
             });
         }
 
@@ -514,11 +609,18 @@ mod tests {
     fn test_dual_tournament() {
         let mut vec_ind = Vec::new();
         for i in 0..6 {
-            vec_ind.push(MockIndividual {
-                fitness: i as f64,
-                visuals: (0.0, 0.0),
-                value: 0.0,
-            });
+            vec_ind.push(
+                PopIndividual {
+                    ind:
+                    MockIndividual {
+                        fitness: i as f64,
+                        visuals: (0.0, 0.0),
+                        value: 0.0,
+                    },
+                    fitness: i as f64,
+                    _phantom: Default::default(),
+                }
+            );
         }
 
         let res = TestPopulation::_dual_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
@@ -538,19 +640,26 @@ mod tests {
 
         // Fill the population with mock individuals
         let mut vec_ind = Vec::new();
-        for i in 0..pop.curr_gen_inds.len() {
-            vec_ind.push(MockIndividual {
-                fitness: i as f64,
-                visuals: (i as f64, i as f64),
-                value: i as f64,
-            });
+        for i in 0..9 {
+            vec_ind.push(
+                PopIndividual {
+                    ind:
+                    MockIndividual {
+                        fitness: i as f64,
+                        visuals: (i as f64, i as f64),
+                        value: i as f64,
+                    },
+                    fitness: i as f64,
+                    _phantom: Default::default(),
+                }
+            );
         }
         pop.curr_gen_inds = vec_ind.clone();
 
         // Test get_best
         let res = pop.get_best();
         // Pop should return the best individual - the one with the highest fitness value (last in the vector)
-        assert_eq!(res.value, vec_ind[pop.curr_gen_inds.len() - 1].value);
+        assert_eq!(res.ind.value, vec_ind[pop.curr_gen_inds.len() - 1].ind.value);
 
         // Test get_at
         assert_eq!(pop.get_at(1, 2).value, 7.0);
@@ -559,17 +668,17 @@ mod tests {
         // Test next_gen
         assert_eq!(pop.get_generation(), 0);
         pop.next_gen();
-        assert_eq!(pop.curr_gen_inds[0].value, 7.0);
-        assert_eq!(pop.curr_gen_inds[1].value, 8.0);
-        assert_eq!(pop.curr_gen_inds[2].value, 9.0);
+        assert_eq!(pop.curr_gen_inds[0].ind.value, 7.0);
+        assert_eq!(pop.curr_gen_inds[1].ind.value, 8.0);
+        assert_eq!(pop.curr_gen_inds[2].ind.value, 9.0);
 
-        assert_eq!(pop.curr_gen_inds[3].value, 7.0);
-        assert_eq!(pop.curr_gen_inds[4].value, 8.0);
-        assert_eq!(pop.curr_gen_inds[5].value, 9.0);
+        assert_eq!(pop.curr_gen_inds[3].ind.value, 7.0);
+        assert_eq!(pop.curr_gen_inds[4].ind.value, 8.0);
+        assert_eq!(pop.curr_gen_inds[5].ind.value, 9.0);
 
-        assert_eq!(pop.curr_gen_inds[6].value, 9.0);
-        assert_eq!(pop.curr_gen_inds[7].value, 9.0);
-        assert_eq!(pop.curr_gen_inds[8].value, 9.0);
+        assert_eq!(pop.curr_gen_inds[6].ind.value, 9.0);
+        assert_eq!(pop.curr_gen_inds[7].ind.value, 9.0);
+        assert_eq!(pop.curr_gen_inds[8].ind.value, 9.0);
 
         assert_eq!(pop.get_generation(), 1);
 
