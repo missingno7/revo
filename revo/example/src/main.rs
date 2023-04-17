@@ -26,7 +26,9 @@ fn main() {
         );
 
         if visualise {
-            pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
+            let img = pop.visualise();
+            img.save(format!("pop_{}.png", pop.get_generation()).as_str())
+                .unwrap()
         }
 
         pop.next_gen();
