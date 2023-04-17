@@ -78,20 +78,29 @@ impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
         let x: usize = i % pop_width;
         let y: usize = i / pop_width;
 
-        // Get indices of left, right, up and down neighbours
-        let row_start_index = y * pop_width;
-        let left_neighbour = row_start_index + ((x + pop_width - 1) % pop_width);
-        let right_neigbour = row_start_index + ((x + 1) % pop_width);
-
-        let column_start_index = x % pop_width;
-        let top_neighbour = ((y + pop_height - 1) % pop_height) * pop_width + column_start_index;
-        let bottom_neighbour = ((y + 1) % pop_height) * pop_width + column_start_index;
+        // Compute indices of neighbors, using wrapping for out-of-bounds indices
+        let left_neighbour = if x > 0 { i - 1 } else { i + pop_width - 1 };
+        let right_neighbour = if x + 1 < pop_width {
+            i + 1
+        } else {
+            i + 1 - pop_width
+        };
+        let top_neighbour = if y > 0 {
+            i - pop_width
+        } else {
+            i + pop_width * (pop_height - 1)
+        };
+        let bottom_neighbour = if y + 1 < pop_height {
+            i + pop_width
+        } else {
+            i - pop_width * (pop_height - 1)
+        };
 
         // Return indices of 5 neighbours in a + shape with i in the middle
         vec![
             i,
             left_neighbour,
-            right_neigbour,
+            right_neighbour,
             top_neighbour,
             bottom_neighbour,
         ]
