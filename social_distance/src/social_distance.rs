@@ -3,8 +3,8 @@ use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
 use rand::Rng;
+use revo::config::Config;
 use revo::evo_individual::{EvoIndividual, Visualise};
-use revo::pop_config::PopulationConfig;
 use revo::utils::Coord;
 
 const DEFAULT_SCREEN_WIDTH: u32 = 400;
@@ -35,12 +35,20 @@ impl DistanceIndividualData {
         }
     }
 
-    pub fn from_config(config: &PopulationConfig) -> Self {
+    pub fn from_config(config: &Config) -> Self {
         Self::new(
-            config.get_num("screen_width", DEFAULT_SCREEN_WIDTH as f64) as u32,
-            config.get_num("screen_height", DEFAULT_SCREEN_HEIGHT as f64) as u32,
-            config.get_num("n_points", DEFAULT_N_POINTS as f64) as usize,
-            config.get_num("required_distance", DEFAULT_REQUIRED_DISTANCE as f64) as u32,
+            config
+                .get_num("screen_width", Some(DEFAULT_SCREEN_WIDTH as f64))
+                .unwrap() as u32,
+            config
+                .get_num("screen_height", Some(DEFAULT_SCREEN_HEIGHT as f64))
+                .unwrap() as u32,
+            config
+                .get_num("n_points", Some(DEFAULT_N_POINTS as f64))
+                .unwrap() as usize,
+            config
+                .get_num("required_distance", Some(DEFAULT_REQUIRED_DISTANCE as f64))
+                .unwrap() as u32,
         )
     }
 }

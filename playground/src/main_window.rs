@@ -3,6 +3,7 @@ use crate::pop_display::PopDisplay;
 use gtk::prelude::*;
 use gtk::Box;
 use gtk::Button;
+use revo::config::Config;
 use revo::evo_individual::EvoIndividual;
 use revo::evo_individual::Visualise;
 use revo::population::Population;
@@ -22,11 +23,12 @@ impl<
 {
     pub fn new(
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
+        config: &Config,
     ) -> MainWindow<Individual, IndividualData> {
         let pop_img_path: &str = "pop.png";
         let ind_img_path: &str = "ind.png";
-        let images_width: i32 = 400;
-        let images_height: i32 = 400;
+        let images_width: i32 = config.get_num("screen_width", Some(400.0)).unwrap() as i32;
+        let images_height: i32 = config.get_num("screen_height", Some(400.0)).unwrap() as i32;
 
         let ind_display = Rc::new(RefCell::new(IndDisplay::new(
             ind_img_path,

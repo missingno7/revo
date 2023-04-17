@@ -1,19 +1,20 @@
 extern crate revo;
 
 use revo::evo_individual::{EvoIndividual, Visualise};
-use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 
+use revo::config::Config;
 use std::fs;
 
 fn main() {
-    let pop_config = PopulationConfig::new("pop_config.json");
+    let config = Config::new("pop.json");
     let output_dir = "./out";
+    let visualise = config.get_bool("visualise", Some(false)).unwrap();
 
-    let ind_data = DistanceIndividualData::from_config(&pop_config);
+    let ind_data = DistanceIndividualData::from_config(&config);
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> =
-        Population::new(&pop_config, ind_data.clone());
+        Population::new(&config, ind_data.clone());
 
     fs::create_dir(output_dir).unwrap();
 
@@ -40,7 +41,7 @@ fn main() {
             );
         }
 
-        if pop_config.visualise {
+        if visualise {
             pop.visualise(format!("{}/pop_{:05}.png", output_dir, pop.get_generation()).as_str());
         }
 

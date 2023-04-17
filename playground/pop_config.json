@@ -11,7 +11,7 @@
  "screen_height":  400,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
- "init_type": "greedy",
+ "init_type": "noise",
 
  "n_points": 50,
  "required_distance": 20

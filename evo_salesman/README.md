@@ -3,7 +3,7 @@ This implementation solves the Travelling Salesman Problem.
 
 
 ## Configuration
-The configuration for the implementation is stored in the `pop_config.json` file. 
+The configuration for the implementation is stored in the `config.json` file. 
 This file contains the parameters for the evolutionary algorithm, such as the population size, the mutation rate, and the number of generations.
 
 The visualise parameter in the configuration file controls whether or not visualisations of the population at each generation is generated.
