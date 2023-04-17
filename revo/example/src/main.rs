@@ -11,6 +11,7 @@ fn main() {
     let num_rounds = 30;
 
     let config = Config::new(config_path);
+    let visualise = config.get_bool("visualise", Some(false)).unwrap();
     let ind_data = BasicIndividualData::default();
     let mut pop: Population<BasicIndividual, BasicIndividualData> =
         Population::new(&config, ind_data);
@@ -24,7 +25,7 @@ fn main() {
             pop_best.get_fitness()
         );
 
-        if config.visualise {
+        if visualise {
             pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
         }
 
