@@ -13,10 +13,12 @@ impl Config {
     // Get a number value from the JSON data by key
     pub fn get_num(&self, key: &str, default: Option<f64>) -> Result<f64, String> {
         match self.json.find_path(&[key]) {
+            // Value found in JSON
             Some(value) => match value.as_f64() {
                 Some(num) => Ok(num),
                 None => Err(format!("Value for key '{}' is not a number", key)),
             },
+            // Value not found in JSON - use default
             None => match default {
                 Some(num) => Ok(num),
                 None => Err(format!("Key '{}' not found in JSON", key)),
@@ -33,10 +35,12 @@ impl Config {
     // Get a boolean value from the JSON data by key
     pub fn get_bool(&self, key: &str, default: Option<bool>) -> Result<bool, String> {
         match self.json.find_path(&[key]) {
+            // Value found in JSON
             Some(value) => match value.as_boolean() {
                 Some(bool_value) => Ok(bool_value),
                 None => Err(format!("Value for key '{}' is not a boolean", key)),
             },
+            // Value not found in JSON - use default
             None => match default {
                 Some(bool_value) => Ok(bool_value),
                 None => Err(format!("Key '{}' not found in JSON", key)),
@@ -50,6 +54,7 @@ impl Config {
         Ok(())
     }
 
+    // Get a T value that implements FromStr from the JSON data by key
     pub fn get_val<T>(&self, key: &str, default: Option<T>) -> Result<T, String>
     where
         T: FromStr,
@@ -57,10 +62,12 @@ impl Config {
         <T as FromStr>::Err: std::fmt::Display,
     {
         match self.json.find_path(&[key]) {
+            // Value found in JSON
             Some(value) => match T::from_str(value.as_string().unwrap()) {
                 Ok(value) => Ok(value),
                 Err(err) => Err(format!("Converting value to T failed: '{}'", err)),
             },
+            // Value not found in JSON - use default
             None => match default {
                 Some(value) => Ok(value),
                 None => Err(format!("Key '{}' not found in JSON", key)),
@@ -68,6 +75,7 @@ impl Config {
         }
     }
 
+    // Update a T value that implements FromStr in the JSON data by key
     pub fn update_val<T>(&self, key: &str, value: &mut T) -> Result<(), String>
     where
         T: FromStr,
