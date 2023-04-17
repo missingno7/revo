@@ -10,89 +10,72 @@ pub struct Config {
 }
 
 impl Config {
+    // Get a number value from the JSON data by key
     pub fn get_num(&self, key: &str, default: Option<f64>) -> Result<f64, String> {
         match self.json.find_path(&[key]) {
-            None => match default {
-                Some(val) => Ok(val),
-                None => Err(format!(
-                    "Key '{}' not found and no default value provided",
-                    key
-                )),
+            Some(value) => match value.as_f64() {
+                Some(num) => Ok(num),
+                None => Err(format!("Value for key '{}' is not a number", key)),
             },
-            Some(data) => Ok(data.as_f64().unwrap()),
+            None => match default {
+                Some(num) => Ok(num),
+                None => Err(format!("Key '{}' not found in JSON", key)),
+            },
         }
     }
 
+    // Update a number value in the JSON data by key
     pub fn update_num<T: From<f64>>(&self, key: &str, value: &mut T) -> Result<(), String> {
-        if let Some(data) = self.json.find_path(&[key]) {
-            if let Some(num) = data.as_f64() {
-                *value = T::from(num);
-                Ok(())
-            } else {
-                Err(format!("Key '{}' not found", key))
-            }
-        } else {
-            Err(format!("Key '{}' not found", key))
-        }
+        *value = T::from(self.get_num(key, None)?);
+        Ok(())
     }
 
+    // Get a boolean value from the JSON data by key
     pub fn get_bool(&self, key: &str, default: Option<bool>) -> Result<bool, String> {
         match self.json.find_path(&[key]) {
-            None => match default {
-                Some(val) => Ok(val),
-                None => Err(format!(
-                    "Key '{}' not found and no default value provided",
-                    key
-                )),
+            Some(value) => match value.as_boolean() {
+                Some(bool_value) => Ok(bool_value),
+                None => Err(format!("Value for key '{}' is not a boolean", key)),
             },
-            Some(data) => Ok(data.as_boolean().unwrap()),
+            None => match default {
+                Some(bool_value) => Ok(bool_value),
+                None => Err(format!("Key '{}' not found in JSON", key)),
+            },
         }
     }
 
+    // Update a boolean value in the JSON data by key
     pub fn update_bool(&self, key: &str, value: &mut bool) -> Result<(), String> {
-        if let Some(data) = self.json.find_path(&[key]) {
-            if let Some(any) = data.as_boolean() {
-                *value = any;
-                Ok(())
-            } else {
-                Err(format!("Key '{}' not found", key))
-            }
-        } else {
-            Err(format!("Key '{}' not found", key))
-        }
+        *value = self.get_bool(key, None)?;
+        Ok(())
     }
 
-    pub fn get_key<Key>(&self, key: &str, default: Option<Key>) -> Result<Key, String>
+    pub fn get_val<T>(&self, key: &str, default: Option<T>) -> Result<T, String>
     where
-        Key: FromStr,
-        <Key as FromStr>::Err: Debug,
+        T: FromStr,
+        <T as FromStr>::Err: Debug,
+        <T as FromStr>::Err: std::fmt::Display,
     {
         match self.json.find_path(&[key]) {
-            None => match default {
-                Some(val) => Ok(val),
-                None => Err(format!(
-                    "Key '{}' not found and no default value provided",
-                    key
-                )),
+            Some(value) => match T::from_str(value.as_string().unwrap()) {
+                Ok(value) => Ok(value),
+                Err(err) => Err(format!("Converting value to T failed: '{}'", err)),
             },
-            Some(data) => Ok(Key::from_str(data.as_string().unwrap()).unwrap()),
+            None => match default {
+                Some(value) => Ok(value),
+                None => Err(format!("Key '{}' not found in JSON", key)),
+            },
         }
     }
 
-    pub fn update_key<Key: FromStr>(&self, key: &str, value: &mut Key) -> Result<(), String>
+    pub fn update_val<T>(&self, key: &str, value: &mut T) -> Result<(), String>
     where
-        <Key as FromStr>::Err: Debug,
+        T: FromStr,
+        <T as FromStr>::Err: Debug,
+        <T as FromStr>::Err: std::fmt::Display,
     {
-        if let Some(data) = self.json.find_path(&[key]) {
-            if let Some(any) = data.as_string() {
-                *value = Key::from_str(any).unwrap();
-                Ok(())
-            } else {
-                Err(format!("Key '{}' not found", key))
-            }
-        } else {
-            Err(format!("Key '{}' not found", key))
-        }
+        *value = self.get_val(key, None)?;
+        Ok(())
     }
 
     pub fn new(config_filename: &str) -> Self {
@@ -133,7 +116,7 @@ mod tests {
     #[test]
     fn test_num() {
         let config = Config {
-            json: Json::from_str("{\"pop_width\": 3, \"pop_height\": 4, \"test_enum\":\"bar\", \"another_test_enum\":\"foo\", \"test_bool\":\"true\", \"another_test_bool\":\"false\" }").unwrap(),
+            json: Json::from_str("{\"pop_width\": 3, \"pop_height\": 4, \"test_enum\":\"bar\", \"another_test_enum\":\"foo\", \"test_bool\":true, \"another_test_bool\":false }").unwrap(),
         };
 
         let mut num = config.get_num("pop_width", None).unwrap();
@@ -142,11 +125,11 @@ mod tests {
         assert!(config.update_num("pop_height", &mut num).is_ok());
         assert_eq!(num as u32, 4);
 
-        let mut test_enum: TestEnum = config.get_key("test_enum", None).unwrap();
+        let mut test_enum: TestEnum = config.get_val("test_enum", None).unwrap();
         assert_eq!(test_enum, TestEnum::Bar);
 
         assert!(config
-            .update_key("another_test_enum", &mut test_enum)
+            .update_val("another_test_enum", &mut test_enum)
             .is_ok());
         assert_eq!(test_enum, TestEnum::Foo);
 

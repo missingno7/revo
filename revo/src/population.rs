@@ -235,7 +235,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
                 .get_num("crossover_prob", Some(DEFAULT_CROSSOVER_PROB as f64))
                 .unwrap() as f32,
             selection_strategy_type: config
-                .get_key("selection_strategy", Some(DEFAULT_SELECTION_STRATEGY_TYPE))
+                .get_val("selection_strategy", Some(DEFAULT_SELECTION_STRATEGY_TYPE))
                 .unwrap(),
             i_generation: 0,
             ind_data,

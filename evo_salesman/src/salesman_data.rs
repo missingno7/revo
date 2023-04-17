@@ -89,7 +89,7 @@ impl SalesmanIndividualData {
                 .unwrap(),
             config.get_num("rev_prob", Some(DEFAULT_REV_PROB)).unwrap(),
             config
-                .get_key("init_type", Some(DEFAULT_INIT_TYPE))
+                .get_val("init_type", Some(DEFAULT_INIT_TYPE))
                 .unwrap(),
         )
     }
