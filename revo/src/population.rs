@@ -440,7 +440,6 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::SelectionStrategyType;
     use crate::testing::{MockIndividual, MockIndividualData};
     use crate::utils::LabData;
     use rustc_serialize::json::Json;
