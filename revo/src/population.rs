@@ -440,7 +440,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pop_config::SelectionStrategyType;
+    use crate::config::SelectionStrategyType;
     use crate::testing::{MockIndividual, MockIndividualData};
     use crate::utils::LabData;
     use rustc_serialize::json::Json;
@@ -522,11 +522,11 @@ mod tests {
 
     #[test]
     fn test_population() {
-        let pop_config = Config {
+        let config = Config {
             json: Json::from_str("{\"pop_width\": 3,  \"pop_height\": 3, \"mut_prob\":1.0, \"crossover_prob\":0.0, \"selection_strategy_type\":\"tournament\"  }").unwrap(),
         };
 
-        let mut pop = Population::new(&pop_config, MockIndividualData {});
+        let mut pop = Population::new(&config, MockIndividualData {});
 
         // Fill the population with mock individuals
         let mut vec_ind = Vec::new();

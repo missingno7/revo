@@ -20,7 +20,7 @@ impl FromStr for SelectionStrategyType {
     }
 }
 
-pub struct PopulationConfig {
+pub struct Config {
     pub pop_width: usize,
     pub pop_height: usize,
     pub mut_prob: f32,
@@ -39,7 +39,7 @@ const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
 const DEFAULT_VISUALISE: bool = false;
 const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
 
-impl PopulationConfig {
+impl Config {
     pub fn get_num(&self, key: &str, default: f64) -> f64 {
         match self.json.find_path(&[key]) {
             None => default,
@@ -71,7 +71,7 @@ impl PopulationConfig {
 
         let json = Json::from_str(&data).unwrap();
 
-        let mut config = PopulationConfig {
+        let mut config = Config {
             pop_width: DEFAULT_POP_WIDTH,
             pop_height: DEFAULT_POP_HEIGHT,
             mut_prob: DEFAULT_MUT_PROB,

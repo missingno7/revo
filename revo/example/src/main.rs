@@ -2,18 +2,18 @@ extern crate rand;
 extern crate revo;
 
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
+use revo::config::Config;
 use revo::evo_individual::EvoIndividual;
-use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 
 fn main() {
     let config_path = "config.json";
     let num_rounds = 30;
 
-    let pop_config = PopulationConfig::new(config_path);
+    let config = Config::new(config_path);
     let ind_data = BasicIndividualData::default();
     let mut pop: Population<BasicIndividual, BasicIndividualData> =
-        Population::new(&pop_config, ind_data);
+        Population::new(&config, ind_data);
 
     for _ in 0..num_rounds {
         let pop_best = pop.get_best();
@@ -24,7 +24,7 @@ fn main() {
             pop_best.get_fitness()
         );
 
-        if pop_config.visualise {
+        if config.visualise {
             pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
         }
 

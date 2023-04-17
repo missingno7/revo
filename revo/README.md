@@ -14,20 +14,20 @@ trait contains methods for mutating and crossing over the individual.
 
 ```rust
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
-use revo::pop_config::PopulationConfig;
+use revo::config::Config;
 use revo::population::Population;
 use revo::evo_individual::EvoIndividual;
 
 fn main() {
     // Load the population configuration
-    let pop_config = PopulationConfig::new("config.json");
+    let config = Config::new("config.json");
     
     // Prepare the individual data - The data is passed to the individual when it is created
     // Individual data contains things that are not specific to the individual, but are needed for the evolution
     let ind_data = BasicIndividualData::default();
     
     // Create the population
-    let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&pop_config, ind_data);
+    let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&config, ind_data);
 
     // Evolve the population 
     // This will apply the evolution rules to the population and create a new generation
@@ -44,9 +44,9 @@ fn main() {
 }
 ```
 
-### Population configuration
+### Configuration
 
-PopulationConfig struct contains the configuration for the population. The configuration can be loaded from a json file
+Config struct contains the configuration for the population. The configuration can be loaded from a json file
 using the `from_file` method. The configuration file contains the following parameters:
 
 #### Example of a configuration file:
