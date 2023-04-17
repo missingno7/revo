@@ -20,7 +20,7 @@ use revo::evo_individual::EvoIndividual;
 
 fn main() {
     // Load the population configuration
-    let pop_config = PopulationConfig::new("pop_config.json");
+    let pop_config = PopulationConfig::new("config.json");
     
     // Prepare the individual data - The data is passed to the individual when it is created
     // Individual data contains things that are not specific to the individual, but are needed for the evolution
@@ -51,7 +51,7 @@ using the `from_file` method. The configuration file contains the following para
 
 #### Example of a configuration file:
 
-If we want to use this configuration, we can create a json file named `pop_config.json` and put the following content in it:
+If we want to use this configuration, we can create a json file named `config.json` and put the following content in it:
 ```json
 {
   "pop_width": 200,

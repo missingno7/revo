@@ -1,6 +1,6 @@
 use rand::prelude::ThreadRng;
 use rand::Rng;
-use revo::pop_config::PopulationConfig;
+use revo::config::Config;
 use revo::utils::Coord;
 use std::str::FromStr;
 
@@ -72,15 +72,25 @@ impl SalesmanIndividualData {
         }
     }
 
-    pub fn from_config(rng: &mut ThreadRng, config: &PopulationConfig) -> Self {
+    pub fn from_config(rng: &mut ThreadRng, config: &Config) -> Self {
         Self::new(
             rng,
-            config.get_num("n_cities", DEFAULT_N_CITIES as f64) as u32,
-            config.get_num("screen_width", DEFAULT_SCREEN_WIDTH as f64) as u32,
-            config.get_num("screen_height", DEFAULT_SCREEN_HEIGHT as f64) as u32,
-            config.get_num("shift_prob", DEFAULT_SHIFT_PROB),
-            config.get_num("rev_prob", DEFAULT_REV_PROB),
-            config.get_key("init_type", DEFAULT_INIT_TYPE),
+            config
+                .get_num("n_cities", Some(DEFAULT_N_CITIES as f64))
+                .unwrap() as u32,
+            config
+                .get_num("screen_width", Some(DEFAULT_SCREEN_WIDTH as f64))
+                .unwrap() as u32,
+            config
+                .get_num("screen_height", Some(DEFAULT_SCREEN_HEIGHT as f64))
+                .unwrap() as u32,
+            config
+                .get_num("shift_prob", Some(DEFAULT_SHIFT_PROB))
+                .unwrap(),
+            config.get_num("rev_prob", Some(DEFAULT_REV_PROB)).unwrap(),
+            config
+                .get_key("init_type", Some(DEFAULT_INIT_TYPE))
+                .unwrap(),
         )
     }
 }

@@ -1,11 +1,36 @@
 use super::evo_individual::EvoIndividual;
-use crate::pop_config::{PopulationConfig, SelectionStrategyType};
+use crate::config::Config;
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
+use std::str::FromStr;
+
+const DEFAULT_POP_WIDTH: usize = 128;
+const DEFAULT_POP_HEIGHT: usize = 128;
+const DEFAULT_MUT_PROB: f32 = 0.1;
+const DEFAULT_MUT_AMOUNT: f32 = 1.0;
+const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
+const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
+
+#[derive(Clone)]
+pub enum SelectionStrategyType {
+    Tournament,
+    Roulette,
+}
+
+impl FromStr for SelectionStrategyType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "tournament" => Ok(SelectionStrategyType::Tournament),
+            "roulette" => Ok(SelectionStrategyType::Roulette),
+            _ => Err(format!("{} is not a valid selection type", s)),
+        }
+    }
+}
 
 pub struct Population<Individual, IndividualData> {
     // Current and next generation of individuals
@@ -167,10 +192,17 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 
     // Function creates a new population with randomised individuals and counts their fitness
     pub fn new(
-        pop_config: &PopulationConfig,
+        config: &Config,
         ind_data: IndividualData,
     ) -> Population<Individual, IndividualData> {
-        let size = pop_config.pop_width * pop_config.pop_height;
+        let pop_width = config
+            .get_num("pop_width", Some(DEFAULT_POP_WIDTH as f64))
+            .unwrap() as usize;
+        let pop_height = config
+            .get_num("pop_height", Some(DEFAULT_POP_HEIGHT as f64))
+            .unwrap() as usize;
+
+        let size = pop_width * pop_height;
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
 
@@ -191,12 +223,20 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         Population {
             curr_gen_inds,
             next_gen_inds,
-            pop_width: pop_config.pop_width,
-            pop_height: pop_config.pop_height,
-            mut_prob: pop_config.mut_prob,
-            mut_amount: pop_config.mut_amount,
-            crossover_prob: pop_config.crossover_prob,
-            selection_strategy_type: pop_config.selection_strategy_type.clone(),
+            pop_width,
+            pop_height,
+            mut_prob: config
+                .get_num("mut_prob", Some(DEFAULT_MUT_PROB as f64))
+                .unwrap() as f32,
+            mut_amount: config
+                .get_num("mut_amount", Some(DEFAULT_MUT_AMOUNT as f64))
+                .unwrap() as f32,
+            crossover_prob: config
+                .get_num("crossover_prob", Some(DEFAULT_CROSSOVER_PROB as f64))
+                .unwrap() as f32,
+            selection_strategy_type: config
+                .get_key("selection_strategy", Some(DEFAULT_SELECTION_STRATEGY_TYPE))
+                .unwrap(),
             i_generation: 0,
             ind_data,
         }
@@ -482,15 +522,8 @@ mod tests {
 
     #[test]
     fn test_population() {
-        let pop_config = PopulationConfig {
-            pop_width: 3,
-            pop_height: 3,
-            mut_prob: 1.0,
-            mut_amount: 2.0,
-            crossover_prob: 0.0,
-            visualise: false,
-            selection_strategy_type: SelectionStrategyType::Tournament,
-            json: Json::Null,
+        let pop_config = Config {
+            json: Json::from_str("{\"pop_width\": 3,  \"pop_height\": 3, \"mut_prob\":1.0, \"crossover_prob\":0.0, \"selection_strategy_type\":\"tournament\"  }").unwrap(),
         };
 
         let mut pop = Population::new(&pop_config, MockIndividualData {});
@@ -540,7 +573,7 @@ mod tests {
             LabData {
                 l: 7.0,
                 a: 6.0,
-                b: 6.0
+                b: 6.0,
             }
         );
         assert_eq!(
@@ -548,7 +581,7 @@ mod tests {
             LabData {
                 l: 8.0,
                 a: 7.0,
-                b: 7.0
+                b: 7.0,
             }
         );
         assert_eq!(
@@ -556,7 +589,7 @@ mod tests {
             LabData {
                 l: 9.0,
                 a: 8.0,
-                b: 8.0
+                b: 8.0,
             }
         );
 
@@ -565,7 +598,7 @@ mod tests {
             LabData {
                 l: 7.0,
                 a: 6.0,
-                b: 6.0
+                b: 6.0,
             }
         );
         assert_eq!(
@@ -573,7 +606,7 @@ mod tests {
             LabData {
                 l: 8.0,
                 a: 7.0,
-                b: 7.0
+                b: 7.0,
             }
         );
         assert_eq!(
@@ -581,7 +614,7 @@ mod tests {
             LabData {
                 l: 9.0,
                 a: 8.0,
-                b: 8.0
+                b: 8.0,
             }
         );
 
@@ -590,7 +623,7 @@ mod tests {
             LabData {
                 l: 9.0,
                 a: 8.0,
-                b: 8.0
+                b: 8.0,
             }
         );
         assert_eq!(
@@ -598,7 +631,7 @@ mod tests {
             LabData {
                 l: 9.0,
                 a: 8.0,
-                b: 8.0
+                b: 8.0,
             }
         );
         assert_eq!(
@@ -606,7 +639,7 @@ mod tests {
             LabData {
                 l: 9.0,
                 a: 8.0,
-                b: 8.0
+                b: 8.0,
             }
         );
     }

@@ -8,7 +8,7 @@ use social_distance::social_distance::{DistanceIndividual, DistanceIndividualDat
 use std::fs;
 
 fn main() {
-    let pop_config = PopulationConfig::new("pop_config.json");
+    let pop_config = PopulationConfig::new("pop.json");
     let output_dir = "./out";
 
     let ind_data = DistanceIndividualData::from_config(&pop_config);

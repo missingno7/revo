@@ -7,7 +7,7 @@ use revo::pop_config::PopulationConfig;
 use revo::population::Population;
 
 fn main() {
-    let config_path = "pop_config.json";
+    let config_path = "config.json";
     let num_rounds = 30;
 
     let pop_config = PopulationConfig::new(config_path);
