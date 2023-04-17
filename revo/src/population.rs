@@ -195,8 +195,12 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
         config: &Config,
         ind_data: IndividualData,
     ) -> Population<Individual, IndividualData> {
-        let pop_width = config.get_num("pop_width", DEFAULT_POP_WIDTH as f64) as usize;
-        let pop_height = config.get_num("pop_height", DEFAULT_POP_HEIGHT as f64) as usize;
+        let pop_width = config
+            .get_num("pop_width", Some(DEFAULT_POP_WIDTH as f64))
+            .unwrap() as usize;
+        let pop_height = config
+            .get_num("pop_height", Some(DEFAULT_POP_HEIGHT as f64))
+            .unwrap() as usize;
 
         let size = pop_width * pop_height;
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
@@ -221,11 +225,18 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
             next_gen_inds,
             pop_width,
             pop_height,
-            mut_prob: config.get_num("mut_prob", DEFAULT_MUT_PROB as f64) as f32,
-            mut_amount: config.get_num("mut_amount", DEFAULT_MUT_AMOUNT as f64) as f32,
-            crossover_prob: config.get_num("crossover_prob", DEFAULT_CROSSOVER_PROB as f64) as f32,
+            mut_prob: config
+                .get_num("mut_prob", Some(DEFAULT_MUT_PROB as f64))
+                .unwrap() as f32,
+            mut_amount: config
+                .get_num("mut_amount", Some(DEFAULT_MUT_AMOUNT as f64))
+                .unwrap() as f32,
+            crossover_prob: config
+                .get_num("crossover_prob", Some(DEFAULT_CROSSOVER_PROB as f64))
+                .unwrap() as f32,
             selection_strategy_type: config
-                .get_key("selection_strategy", DEFAULT_SELECTION_STRATEGY_TYPE),
+                .get_key("selection_strategy", Some(DEFAULT_SELECTION_STRATEGY_TYPE))
+                .unwrap(),
             i_generation: 0,
             ind_data,
         }

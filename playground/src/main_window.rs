@@ -27,8 +27,8 @@ impl<
     ) -> MainWindow<Individual, IndividualData> {
         let pop_img_path: &str = "pop.png";
         let ind_img_path: &str = "ind.png";
-        let images_width: i32 = config.get_num("screen_width", 400.0) as i32;
-        let images_height: i32 = config.get_num("screen_height", 400.0) as i32;
+        let images_width: i32 = config.get_num("screen_width", Some(400.0)).unwrap() as i32;
+        let images_height: i32 = config.get_num("screen_height", Some(400.0)).unwrap() as i32;
 
         let ind_display = Rc::new(RefCell::new(IndDisplay::new(
             ind_img_path,

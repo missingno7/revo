@@ -37,10 +37,18 @@ impl DistanceIndividualData {
 
     pub fn from_config(config: &Config) -> Self {
         Self::new(
-            config.get_num("screen_width", DEFAULT_SCREEN_WIDTH as f64) as u32,
-            config.get_num("screen_height", DEFAULT_SCREEN_HEIGHT as f64) as u32,
-            config.get_num("n_points", DEFAULT_N_POINTS as f64) as usize,
-            config.get_num("required_distance", DEFAULT_REQUIRED_DISTANCE as f64) as u32,
+            config
+                .get_num("screen_width", Some(DEFAULT_SCREEN_WIDTH as f64))
+                .unwrap() as u32,
+            config
+                .get_num("screen_height", Some(DEFAULT_SCREEN_HEIGHT as f64))
+                .unwrap() as u32,
+            config
+                .get_num("n_points", Some(DEFAULT_N_POINTS as f64))
+                .unwrap() as usize,
+            config
+                .get_num("required_distance", Some(DEFAULT_REQUIRED_DISTANCE as f64))
+                .unwrap() as u32,
         )
     }
 }
