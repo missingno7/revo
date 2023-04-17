@@ -1,15 +1,15 @@
 use crate::ind_display::IndDisplay;
 use gtk::prelude::*;
 use gtk::{gdk_pixbuf, Box, EventBox, Image, Label};
+use image::ImageOutputFormat;
 use std::cell::RefCell;
-use std::fs;
+use std::io::Cursor;
 use std::rc::Rc;
 
 use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 
 pub struct PopDisplay {
-    img_path: String,
     images_width: i32,
     images_height: i32,
     original_image_width: i32,
@@ -22,7 +22,6 @@ pub struct PopDisplay {
 
 impl PopDisplay {
     pub fn new(
-        img_path: &str,
         images_width: i32,
         images_height: i32,
         ind_display: Rc<RefCell<IndDisplay>>,
@@ -37,7 +36,6 @@ impl PopDisplay {
         let label = Label::new(None);
 
         PopDisplay {
-            img_path: img_path.to_string(),
             images_width,
             images_height,
             original_image_width: 0,
@@ -56,10 +54,19 @@ impl PopDisplay {
         Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
         IndividualData: Sync,
     {
-        pop.visualise(&self.img_path);
-        let mut pixbuf = gdk_pixbuf::Pixbuf::from_file(&self.img_path).unwrap();
-        self.original_image_width = pixbuf.width();
-        self.original_image_height = pixbuf.height();
+        let img = pop.visualise();
+        // Save the image to a vector in memory using a Cursor
+        let mut buffer = Vec::new();
+        let mut cursor = Cursor::new(&mut buffer);
+        img.write_to(&mut cursor, ImageOutputFormat::Png).unwrap();
+
+        // Create a PixbufLoader to load the image from the buffer
+        let loader = gdk_pixbuf::PixbufLoader::new();
+        loader.write(&buffer).unwrap();
+        loader.close().unwrap();
+
+        // Load the Pixbuf from the loader and scale it
+        let mut pixbuf = loader.pixbuf().unwrap();
         pixbuf = pixbuf
             .scale_simple(
                 self.images_width,
@@ -67,8 +74,9 @@ impl PopDisplay {
                 gdk_pixbuf::InterpType::Nearest,
             )
             .unwrap();
+
+        // Set the scaled pixbuf to the image widget
         self.image.set_from_pixbuf(Some(&pixbuf));
-        fs::remove_file(&self.img_path).unwrap();
     }
 
     pub fn get_widget<Individual, IndividualData>(
@@ -121,9 +129,5 @@ impl PopDisplay {
         box_.add(&self_.event_box);
         box_.add(&self_.label);
         box_
-    }
-
-    pub fn get_path(&self) -> String {
-        self.img_path.clone()
     }
 }

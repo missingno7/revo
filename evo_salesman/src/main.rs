@@ -40,14 +40,17 @@ fn main() {
                 pop.get_generation(),
                 all_best_ind.get_fitness()
             );
-            all_best_ind.visualise(
-                format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str(),
-                &ind_data,
-            );
+            let image = all_best_ind.visualise(&ind_data);
+            image
+                .save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
+                .unwrap();
         }
 
         if visualise {
-            pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+            let image = pop.visualise();
+            image
+                .save(format!("{}/pop_{}.png", output_dir, pop.get_generation()))
+                .unwrap();
         }
 
         // Advance to the next generation

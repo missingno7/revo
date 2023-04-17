@@ -318,14 +318,12 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
 
     // Function creates a visualization of the current generation in the form of an PNG image
     // It maps the fitness (L) and visual attributes (A, B) of each individual
-    pub fn visualise(&self, filename: &str) {
+    pub fn visualise(&self) -> RgbImage {
         let mut lab_data = self._prepare_pop_lab_data();
 
         lab_data = Self::_normalize_lab_data_rank_based(lab_data);
 
-        let image = self._write_lab_data_to_image(&lab_data);
-
-        image.save(filename).unwrap();
+        self._write_lab_data_to_image(&lab_data)
     }
 
     // Function returns the data for individuals

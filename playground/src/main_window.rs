@@ -25,22 +25,15 @@ impl<
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
         config: &Config,
     ) -> MainWindow<Individual, IndividualData> {
-        let pop_img_path: &str = "pop.png";
-        let ind_img_path: &str = "ind.png";
         let images_width: i32 = config.get_num("screen_width", Some(400.0)).unwrap() as i32;
         let images_height: i32 = config.get_num("screen_height", Some(400.0)).unwrap() as i32;
 
-        let ind_display = Rc::new(RefCell::new(IndDisplay::new(
-            ind_img_path,
-            images_width,
-            images_height,
-        )));
+        let ind_display = Rc::new(RefCell::new(IndDisplay::new(images_width, images_height)));
         ind_display
             .borrow_mut()
             .display_individual(&pop.borrow().get_best(), pop.borrow().get_individual_data());
 
         let pop_display = Rc::new(RefCell::new(PopDisplay::new(
-            pop_img_path,
             images_width,
             images_height,
             ind_display.clone(),

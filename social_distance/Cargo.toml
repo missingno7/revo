@@ -9,8 +9,8 @@ edition = "2021"
 revo = { path = "../revo", version = "*" }
 #revo = { git = "https://github.com/missingno7/revo" }
 rand = "0.8.4"
-image = "0.23.14"
-imageproc = "0.22.0"
+image = "0.24.6"
+imageproc = "0.23.0"
 
 [profile.dev]
 opt-level = 3               # Use slightly better optimizations.
