@@ -113,11 +113,10 @@ impl PopDisplay {
                     return Inhibit(false);
                 }
 
-                let ind = pop.borrow().get_at(x as usize, y as usize);
-                self_
+                                self_
                     .ind_display
                     .borrow()
-                    .display_individual(&ind, pop.borrow().get_individual_data());
+                    .display_individual(pop.borrow().get_at(x as usize, y as usize), pop.borrow().get_individual_data());
 
                 self_
                     .label

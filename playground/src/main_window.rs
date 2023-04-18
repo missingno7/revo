@@ -31,7 +31,7 @@ impl<
         let ind_display = Rc::new(RefCell::new(IndDisplay::new(images_width, images_height)));
         ind_display
             .borrow_mut()
-            .display_individual(&pop.borrow().get_best(), pop.borrow().get_individual_data());
+            .display_individual(pop.borrow().get_best(), pop.borrow().get_individual_data());
 
         let pop_display = Rc::new(RefCell::new(PopDisplay::new(
             images_width,
@@ -87,7 +87,7 @@ impl<
         button.connect_clicked(move |_| {
             let self_ = self_pointer_clone.borrow_mut();
             self_.ind_display.borrow().display_individual(
-                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_best(),
                 self_.pop.borrow().get_individual_data(),
             );
         });
@@ -109,7 +109,7 @@ impl<
                 .borrow_mut()
                 .display_pop(&self_.pop.borrow());
             self_.ind_display.borrow().display_individual(
-                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_best(),
                 self_.pop.borrow().get_individual_data(),
             );
         });

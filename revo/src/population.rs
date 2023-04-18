@@ -54,9 +54,10 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
-impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
-    pub fn get_at(&self, x: usize, y: usize) -> Individual {
-        self.curr_gen_inds[y * self.pop_width + x].clone()
+impl<Individual, IndividualData> Population<Individual, IndividualData>
+{
+    pub fn get_at(&self, x: usize, y: usize) -> &Individual {
+        &self.curr_gen_inds[y * self.pop_width + x]
     }
 
     pub fn get_width(&self) -> usize {
@@ -181,15 +182,19 @@ impl<Individual: Clone, IndividualData> Population<Individual, IndividualData> {
                 a: lab.data.a as f32,
                 b: lab.data.b as f32,
             }
-            .to_rgb();
+                .to_rgb();
             img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
         }
         img
     }
 }
 
-impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, IndividualData: Sync>
-    Population<Individual, IndividualData>
+impl<Individual, IndividualData>
+Population<Individual, IndividualData>
+    where
+        Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
+        IndividualData: Sync,
+
 {
     // Function creates a new individual with randomised values and counts its fitness
     fn _new_random_individual(ind_data: &IndividualData) -> Individual {
@@ -304,7 +309,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
     }
 
     // Function returns the best individual in the current generation
-    pub fn get_best(&self) -> Individual {
+    pub fn get_best(&self) -> &Individual {
         let mut best_ind = &self.curr_gen_inds[0];
 
         for i in 1..self.curr_gen_inds.len() {
@@ -313,7 +318,7 @@ impl<Individual: EvoIndividual<IndividualData> + Send + Sync + Clone, Individual
             }
         }
 
-        best_ind.clone()
+        best_ind
     }
 
     // Function creates a visualization of the current generation in the form of an PNG image

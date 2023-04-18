@@ -18,7 +18,7 @@ fn main() {
 
     fs::create_dir(output_dir).unwrap();
 
-    let mut all_best_ind = pop.get_best();
+    let mut all_best_ind = pop.get_best().clone();
     for _ in 0..1000000 {
         let best_ind = pop.get_best();
 

@@ -26,14 +26,14 @@ fn main() {
         Population::new(&config, ind_data.clone());
 
     // Get the best individual
-    let mut all_best_ind = pop.get_best();
+    let mut all_best_ind = pop.get_best().clone();
 
     // Run the evolution
     loop {
         let best_ind = pop.get_best();
 
         if best_ind.get_fitness() > all_best_ind.get_fitness() {
-            all_best_ind = best_ind;
+            all_best_ind = best_ind.clone();
 
             println!(
                 "Round {}, best fitness: {}",
