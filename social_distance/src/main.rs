@@ -18,16 +18,16 @@ fn main() {
 
     fs::create_dir(output_dir).unwrap();
 
-    let mut all_best_ind = pop.get_best();
+    let mut all_best_ind = pop.get_best().clone();
     for _ in 0..1000000 {
         let best_ind = pop.get_best();
 
         if best_ind.get_fitness() > all_best_ind.get_fitness() {
             all_best_ind = best_ind.clone();
-            all_best_ind.visualise(
-                format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str(),
-                &ind_data,
-            );
+            let img = all_best_ind.visualise(&ind_data);
+            img.save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
+                .unwrap();
+
             println!(
                 "Round {}, best fitness: {} - New record",
                 pop.get_generation(),
@@ -42,7 +42,9 @@ fn main() {
         }
 
         if visualise {
-            pop.visualise(format!("{}/pop_{:05}.png", output_dir, pop.get_generation()).as_str());
+            let img = pop.visualise();
+            img.save(format!("{}/pop_{:05}.png", output_dir, pop.get_generation()).as_str())
+                .unwrap();
         }
 
         pop.next_gen();

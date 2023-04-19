@@ -26,28 +26,31 @@ fn main() {
         Population::new(&config, ind_data.clone());
 
     // Get the best individual
-    let mut all_best_ind = pop.get_best();
+    let mut all_best_ind = pop.get_best().clone();
 
     // Run the evolution
     loop {
         let best_ind = pop.get_best();
 
         if best_ind.get_fitness() > all_best_ind.get_fitness() {
-            all_best_ind = best_ind;
+            all_best_ind = best_ind.clone();
 
             println!(
                 "Round {}, best fitness: {}",
                 pop.get_generation(),
                 all_best_ind.get_fitness()
             );
-            all_best_ind.visualise(
-                format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str(),
-                &ind_data,
-            );
+            let image = all_best_ind.visualise(&ind_data);
+            image
+                .save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
+                .unwrap();
         }
 
         if visualise {
-            pop.visualise(format!("{}/pop_{}.png", output_dir, pop.get_generation()).as_str());
+            let image = pop.visualise();
+            image
+                .save(format!("{}/pop_{}.png", output_dir, pop.get_generation()))
+                .unwrap();
         }
 
         // Advance to the next generation

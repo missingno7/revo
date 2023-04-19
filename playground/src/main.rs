@@ -13,18 +13,18 @@ pub fn prepare_population_salesman(
     let mut rng = rand::thread_rng();
 
     // Individual data
-    let ind_data: SalesmanIndividualData = SalesmanIndividualData::from_config(&mut rng, &config);
+    let ind_data: SalesmanIndividualData = SalesmanIndividualData::from_config(&mut rng, config);
 
-    Population::new(&config, ind_data)
+    Population::new(config, ind_data)
 }
 
 pub fn prepare_population_social_distance(
     config: &Config,
 ) -> Population<DistanceIndividual, DistanceIndividualData> {
     // Individual data
-    let ind_data: DistanceIndividualData = DistanceIndividualData::from_config(&config);
+    let ind_data: DistanceIndividualData = DistanceIndividualData::from_config(config);
 
-    Population::new(&config, ind_data)
+    Population::new(config, ind_data)
 }
 
 fn main() {

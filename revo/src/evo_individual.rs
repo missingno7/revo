@@ -1,3 +1,4 @@
+use image::RgbImage;
 use rand::rngs::ThreadRng;
 
 pub trait EvoIndividual<IndividualData>: Send + Sync {
@@ -39,5 +40,5 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
 }
 
 pub trait Visualise<IndividualData> {
-    fn visualise(&self, output_filename: &str, ind_data: &IndividualData);
+    fn visualise(&self, ind_data: &IndividualData) -> RgbImage;
 }

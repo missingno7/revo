@@ -25,24 +25,17 @@ impl<
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
         config: &Config,
     ) -> MainWindow<Individual, IndividualData> {
-        let pop_img_path: &str = "pop.png";
-        let ind_img_path: &str = "ind.png";
-        let images_width: i32 = config.get_num("screen_width", Some(400.0)).unwrap() as i32;
-        let images_height: i32 = config.get_num("screen_height", Some(400.0)).unwrap() as i32;
+        let display_width: i32 = config.get_num("display_width", Some(400.0)).unwrap() as i32;
+        let display_height: i32 = config.get_num("display_height", Some(400.0)).unwrap() as i32;
 
-        let ind_display = Rc::new(RefCell::new(IndDisplay::new(
-            ind_img_path,
-            images_width,
-            images_height,
-        )));
+        let ind_display = Rc::new(RefCell::new(IndDisplay::new(display_width, display_height)));
         ind_display
             .borrow_mut()
-            .display_individual(&pop.borrow().get_best(), pop.borrow().get_individual_data());
+            .display_individual(pop.borrow().get_best(), pop.borrow().get_individual_data());
 
         let pop_display = Rc::new(RefCell::new(PopDisplay::new(
-            pop_img_path,
-            images_width,
-            images_height,
+            display_width,
+            display_height,
             ind_display.clone(),
         )));
         pop_display.borrow_mut().display_pop(&pop.borrow_mut());
@@ -94,7 +87,7 @@ impl<
         button.connect_clicked(move |_| {
             let self_ = self_pointer_clone.borrow_mut();
             self_.ind_display.borrow().display_individual(
-                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_best(),
                 self_.pop.borrow().get_individual_data(),
             );
         });
@@ -116,7 +109,7 @@ impl<
                 .borrow_mut()
                 .display_pop(&self_.pop.borrow());
             self_.ind_display.borrow().display_individual(
-                &self_.pop.borrow().get_best(),
+                self_.pop.borrow().get_best(),
                 self_.pop.borrow().get_individual_data(),
             );
         });

@@ -1,5 +1,5 @@
 use crate::salesman_data::{SalesmanIndividualData, SalesmanInitType};
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_line_segment_mut};
 use imageproc::rect::Rect;
 use rand::prelude::ThreadRng;
@@ -437,8 +437,8 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
 }
 
 impl Visualise<SalesmanIndividualData> for SalesmanIndividual {
-    fn visualise(&self, output_filename: &str, ind_data: &SalesmanIndividualData) {
-        let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
+    fn visualise(&self, ind_data: &SalesmanIndividualData) -> RgbImage {
+        let mut img = RgbImage::new(ind_data.screen_width, ind_data.screen_height);
 
         // Draw cities
         for i in 0..ind_data.coords.len() {
@@ -469,7 +469,7 @@ impl Visualise<SalesmanIndividualData> for SalesmanIndividual {
         let to_city = &ind_data.coords[self.genom[self.genom.len() - 1] as usize];
         draw_line_segment_mut(&mut img, from_city.as_f32(), to_city.as_f32(), road_color);
 
-        img.save(output_filename).unwrap();
+        img
     }
 }
 

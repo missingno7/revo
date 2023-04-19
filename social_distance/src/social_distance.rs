@@ -60,7 +60,7 @@ pub struct DistanceIndividual {
 }
 
 impl Visualise<DistanceIndividualData> for DistanceIndividual {
-    fn visualise(&self, output_filename: &str, ind_data: &DistanceIndividualData) {
+    fn visualise(&self, ind_data: &DistanceIndividualData) -> RgbImage {
         let mut img: RgbImage = ImageBuffer::new(ind_data.screen_width, ind_data.screen_height);
 
         // Draw points
@@ -74,7 +74,7 @@ impl Visualise<DistanceIndividualData> for DistanceIndividual {
             );
         }
 
-        img.save(output_filename).unwrap();
+        img
     }
 }
 

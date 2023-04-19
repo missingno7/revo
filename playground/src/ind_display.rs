@@ -1,10 +1,10 @@
 use gtk::prelude::*;
 use gtk::{gdk_pixbuf, Box, Image, Label};
+use image::{ImageOutputFormat, RgbImage};
 use revo::evo_individual::{EvoIndividual, Visualise};
-use std::fs;
+use std::io::Cursor;
 
 pub struct IndDisplay {
-    img_path: String,
     images_width: i32,
     images_height: i32,
     image: Image,
@@ -13,7 +13,7 @@ pub struct IndDisplay {
 }
 
 impl IndDisplay {
-    pub fn new(img_path: &str, images_width: i32, images_height: i32) -> Self {
+    pub fn new(images_width: i32, images_height: i32) -> Self {
         let image = Image::new();
         image.set_halign(gtk::Align::Start);
         image.set_valign(gtk::Align::Start);
@@ -21,7 +21,6 @@ impl IndDisplay {
         let top_label = Label::new(None);
         let bottom_label = Label::new(None);
         IndDisplay {
-            img_path: img_path.to_string(),
             images_width,
             images_height,
             image,
@@ -38,9 +37,20 @@ impl IndDisplay {
         Individual: EvoIndividual<IndividualData> + Visualise<IndividualData> + Send + Sync + Clone,
         IndividualData: Sync,
     {
-        ind.visualise(&self.img_path, ind_data);
+        let img: RgbImage = ind.visualise(ind_data);
 
-        let mut pixbuf = gdk_pixbuf::Pixbuf::from_file(&self.img_path).unwrap();
+        // Save the image to a vector in memory using a Cursor
+        let mut buffer = Vec::new();
+        let mut cursor = Cursor::new(&mut buffer);
+        img.write_to(&mut cursor, ImageOutputFormat::Png).unwrap();
+
+        // Create a PixbufLoader to load the image from the buffer
+        let loader = gdk_pixbuf::PixbufLoader::new();
+        loader.write(&buffer).unwrap();
+        loader.close().unwrap();
+
+        // Load the Pixbuf from the loader and scale it
+        let mut pixbuf = loader.pixbuf().unwrap();
         pixbuf = pixbuf
             .scale_simple(
                 self.images_width,
@@ -48,8 +58,9 @@ impl IndDisplay {
                 gdk_pixbuf::InterpType::Bilinear,
             )
             .unwrap();
+
+        // Set the scaled pixbuf to the image widget
         self.image.set_from_pixbuf(Some(&pixbuf));
-        fs::remove_file(&self.img_path).unwrap();
 
         let ind_visuals = ind.get_visuals(ind_data);
         self.top_label
