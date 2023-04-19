@@ -67,6 +67,10 @@ impl PopDisplay {
 
         // Load the Pixbuf from the loader and scale it
         let mut pixbuf = loader.pixbuf().unwrap();
+
+        self.original_image_width = pixbuf.width();
+        self.original_image_height = pixbuf.height();
+
         pixbuf = pixbuf
             .scale_simple(
                 self.images_width,
