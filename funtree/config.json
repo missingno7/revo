@@ -1,0 +1,10 @@
+{
+  "pop_width": 50,
+  "pop_height": 50,
+  "mut_prob": 0.02,
+  "mut_amount": 10.0,
+  "crossover_prob": 0.1,
+  "selection_strategy": "tournament",
+
+  "values": "1.1, 2.0 ; 2.0, 3.0"
+  }
