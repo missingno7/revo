@@ -2,6 +2,7 @@ use crate::leaf::{Leaf, LeafType};
 use crate::operation::{Operation, OperationType};
 use std::fmt;
 
+use rand::rngs::ThreadRng;
 use rand::Rng;
 // Define a math expression enum
 
@@ -53,8 +54,8 @@ impl Expression {
     }
 
     // Generate a random expression
-    pub fn random(rng: &mut impl Rng) -> Self {
-        if rng.gen_bool(0.5) {
+    pub fn new_randomised(rng: &mut ThreadRng, max_depth: u16) -> Self {
+        if max_depth == 0 || rng.gen_bool(0.5) {
             // Generate a leaf node with a random value and type
             let value = rng.gen_range(-10.0..10.0);
             let leaf_type = if rng.gen_bool(0.5) {
@@ -65,8 +66,8 @@ impl Expression {
             Self::new_leaf(value, leaf_type)
         } else {
             // Generate an operation node with two random child expressions and a random operation type
-            let left = Self::random(rng);
-            let right = Self::random(rng);
+            let left = Self::new_randomised(rng, max_depth - 1);
+            let right = Self::new_randomised(rng, max_depth - 1);
             let operation_type = match rng.gen_range(0..1) {
                 0 => OperationType::Addition,
                 _ => OperationType::Multiplication,
@@ -75,17 +76,41 @@ impl Expression {
             Self::new_operation(left, right, operation_type, minus)
         }
     }
+
+    pub fn default() -> Self {
+        Self::new_leaf(0.0, LeafType::Constant)
+    }
+
+    pub fn as_string(&self) -> String {
+        let mut s = String::new();
+
+        if self.minus {
+            s.push('-');
+        }
+
+        match &self.expr {
+            Expr::Leaf(leaf) => s.push_str(&leaf.as_string()),
+            Expr::Op(op) => s.push_str(&op.as_string()),
+        }
+
+        s
+    }
+
+    pub fn get_visuals(&self) -> (f64, f64) {
+        let (mut a, mut b) = match &self.expr {
+            Expr::Leaf(leaf) => leaf.get_visuals(),
+            Expr::Op(op) => op.get_visuals(),
+        };
+        if self.minus {
+            a = -a;
+            b = -b;
+        }
+        (a, b)
+    }
 }
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.minus {
-            write!(f, "-")?;
-        }
-
-        match &self.expr {
-            Expr::Leaf(leaf) => write!(f, "{}", leaf),
-            Expr::Op(op) => write!(f, "{}", op),
-        }
+        write!(f, "{}", self.as_string())
     }
 }

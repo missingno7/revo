@@ -1,41 +1,54 @@
-use funtree::expression::Expression;
 use funtree::funtree_data::FuntreeIndividualData;
-use funtree::leaf::LeafType;
-use funtree::operation::OperationType;
-use funtree::val::ValVec;
-use revo::config::Config;
+use funtree::funtree_individual::FuntreeIndividual;
 
-/*
-// Implement the ToString trait for the Expr enum
-impl std::fmt::Display for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expr::Value(n) => write!(f, "{}", n),
-            Expr::Var() => write!(f, "x"),
-            Expr::Add(e1, e2) => write!(f, "({} + {})", e1, e2),
-            Expr::Sub(e1, e2) => write!(f, "({} - {})", e1, e2),
-            Expr::Mul(e1, e2) => write!(f, "({} * {})", e1, e2),
-            Expr::Div(e1, e2) => write!(f, "({} / {})", e1, e2),
-        }
-    }
-}
-*/
+use revo::config::Config;
+use revo::evo_individual::EvoIndividual;
+use revo::population::Population;
+use std::fs;
 
 fn main() {
-    // Create a math expression tree: -(1+2)
-    let expr = Expression::new_operation(
-        Expression::new_leaf(1.0, LeafType::Constant),
-        Expression::new_leaf(2.0, LeafType::Constant),
-        OperationType::Addition,
-        true,
-    );
+    // Prepare output directory and remove old files if they exist
+    let output_dir = "./out";
+    let _ = fs::remove_dir_all(output_dir);
+    fs::create_dir(output_dir).unwrap();
 
-    // Evaluate the expression and print the result
-    let result = expr.evaluate(10.0);
-    println!("{} = {}", expr, result); // Output: 49
-
+    // Load the population config and create the individual data
     let config = Config::new("config.json");
     let ind_data = FuntreeIndividualData::from_config(&config);
+    let visualise = config.get_bool("visualise", Some(false)).unwrap();
 
-    println!("{}", ValVec::from_vec(ind_data.vals));
+    // Create the population
+    let mut pop: Population<FuntreeIndividual, FuntreeIndividualData> =
+        Population::new(&config, ind_data.clone());
+
+    // Get the best individual
+    let mut all_best_ind = pop.get_best().clone();
+    println!("Best individual: {}", all_best_ind.as_string(&ind_data));
+
+    // Run the evolution
+    loop {
+        let best_ind = pop.get_best();
+
+        if best_ind.get_fitness() > all_best_ind.get_fitness() {
+            all_best_ind = best_ind.clone();
+
+            println!(
+                "Round {}, best fitness: {}",
+                pop.get_generation(),
+                all_best_ind.get_fitness()
+            );
+
+            println!("Best individual: {}", all_best_ind.as_string(&ind_data));
+        }
+
+        if visualise {
+            let image = pop.visualise();
+            image
+                .save(format!("{}/pop_{}.png", output_dir, pop.get_generation()))
+                .unwrap();
+        }
+
+        // Advance to the next generation
+        pop.next_gen();
+    }
 }

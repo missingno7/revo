@@ -33,14 +33,33 @@ impl Operation {
             operation_type,
         }
     }
-}
 
-impl fmt::Display for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn as_string(&self) -> String {
         let op_str = match self.operation_type {
             OperationType::Addition => "+",
             OperationType::Multiplication => "*",
         };
-        write!(f, "({} {} {})", self.left, op_str, self.right,)
+        format!(
+            "({} {} {})",
+            self.left.as_string(),
+            op_str,
+            self.right.as_string()
+        )
+    }
+
+    pub fn get_visuals(&self) -> (f64, f64) {
+        let (left_a, left_b) = self.left.get_visuals();
+        let (right_a, right_b) = self.right.get_visuals();
+
+        let a = left_a + right_a;
+        let b = left_b + right_b + self.operation_type.clone() as u32 as f64;
+
+        (a, b)
+    }
+}
+
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_string().fmt(f)
     }
 }

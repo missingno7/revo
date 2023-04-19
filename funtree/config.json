@@ -5,6 +5,7 @@
   "mut_amount": 10.0,
   "crossover_prob": 0.1,
   "selection_strategy": "tournament",
+  "visualise": true,
 
   "values": "1.1, 2.0 ; 2.0, 3.0"
   }

@@ -7,6 +7,12 @@ pub struct Val {
     y: f64,
 }
 
+impl Val {
+    pub fn as_tuple(&self) -> (f64, f64) {
+        (self.x, self.y)
+    }
+}
+
 impl fmt::Display for Val {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
