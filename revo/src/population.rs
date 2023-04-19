@@ -54,8 +54,7 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 }
 
-impl<Individual, IndividualData> Population<Individual, IndividualData>
-{
+impl<Individual, IndividualData> Population<Individual, IndividualData> {
     pub fn get_at(&self, x: usize, y: usize) -> &Individual {
         &self.curr_gen_inds[y * self.pop_width + x]
     }
@@ -182,19 +181,17 @@ impl<Individual, IndividualData> Population<Individual, IndividualData>
                 a: lab.data.a as f32,
                 b: lab.data.b as f32,
             }
-                .to_rgb();
+            .to_rgb();
             img.put_pixel(x as u32, y as u32, image::Rgb(rgb));
         }
         img
     }
 }
 
-impl<Individual, IndividualData>
-Population<Individual, IndividualData>
-    where
-        Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
-        IndividualData: Sync,
-
+impl<Individual, IndividualData> Population<Individual, IndividualData>
+where
+    Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
+    IndividualData: Sync,
 {
     // Function creates a new individual with randomised values and counts its fitness
     fn _new_random_individual(ind_data: &IndividualData) -> Individual {
