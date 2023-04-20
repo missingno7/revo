@@ -33,19 +33,6 @@ impl FuntreeIndividual {
 
         result
     }
-
-    fn unsafe_copy(source_expr: &Expression, dest_expr: &Expression) {
-        // Copy random node from source genom to random node in  destination genom
-        // I am using unsafe code because I can't get mutable reference to random node in destination genom
-        unsafe {
-            // Cast immutable reference to raw pointer
-            let ptr_x: *const Expression = dest_expr as *const Expression;
-            // Cast raw pointer to mutable pointer
-            let ptr_x_mut: *mut Expression = ptr_x as *mut Expression;
-            // Copy internal values from source expression to destination expression
-            (*ptr_x_mut).copy_from(source_expr);
-        }
-    }
 }
 
 impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
@@ -98,8 +85,8 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         source_genom_it = source_genom_it.choose_random_node(rng);
         dest_genom_it = dest_genom_it.choose_random_node(rng);
 
-        // Unsafe function that actually modifies destination genom even though it is immutable
-        Self::unsafe_copy(source_genom_it, dest_genom_it);
+        // Copy data from selected source node to selected destination node
+        unsafe { source_genom_it.copy_to(dest_genom_it.as_mut()) }
     }
 
     fn count_fitness(&mut self, ind_data: &FuntreeIndividualData) {
@@ -164,7 +151,9 @@ mod tests {
         let ind_2_nodes = ind_2.genom.get_nodes();
 
         // Perform crossover on nodes
-        FuntreeIndividual::unsafe_copy(&ind_1_nodes[0], &ind_2_nodes[1]);
+        unsafe {
+            ind_1_nodes[0].copy_to(ind_2_nodes[1].as_mut());
+        }
 
         // Copy root node from ind_1 to left child of ind_2
         assert_eq!(ind_2.genom.as_string(), "-(-(-1.00 + 2.00) * -x)");
@@ -190,10 +179,5 @@ mod tests {
             ind_1_nodes[0].evaluate(-10.0),
             ind_2_nodes[1].evaluate(-10.0)
         );
-
-        // Check if pointers are different even though node structure is the same
-        assert!(!std::ptr::eq(&ind_1_nodes[0].expr, &ind_2_nodes[1].expr));
-        assert!(!std::ptr::eq(&ind_1_nodes[1].expr, &ind_2_nodes[2].expr));
-        assert!(!std::ptr::eq(&ind_1_nodes[2].expr, &ind_2_nodes[3].expr));
     }
 }

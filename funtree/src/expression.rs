@@ -2,6 +2,7 @@ use crate::leaf::{Leaf, LeafType};
 use crate::operation::{Operation, OperationType};
 use rand::rngs::ThreadRng;
 use rand::Rng;
+use rand_distr::{Distribution, Normal};
 use std::default::Default;
 use std::fmt;
 
@@ -13,8 +14,8 @@ pub enum Expr {
 
 #[derive(Clone)]
 pub struct Expression {
-    pub minus: bool,
-    pub expr: Expr,
+    minus: bool,
+    expr: Expr,
 }
 
 impl Expression {
@@ -58,7 +59,9 @@ impl Expression {
 
         if max_depth == 0 || rng.gen_bool(0.5) {
             // Generate a leaf node with a random value and type
-            let value = rng.gen_range(-10.0..10.0);
+            let normal = Normal::new(0.0, 1.0).unwrap();
+            let value = normal.sample(rng);
+
             let leaf_type = LeafType::random(rng);
 
             Self::new_leaf(value, leaf_type, minus)
@@ -141,9 +144,23 @@ impl Expression {
         nodes
     }
 
-    pub fn copy_from(&mut self, other: &Expression) {
-        self.minus = other.minus;
-        self.expr = other.expr.clone();
+    pub fn copy_to(&self, other: &mut Expression) {
+        other.minus = self.minus;
+        other.expr = self.expr.clone();
+    }
+
+    /// # Safety
+    ///
+    /// This function dereferences a raw pointer obtained by casting `self` as a `*const`
+    /// pointer and then casting it to a `*mut` pointer. Calling this function with an invalid
+    /// `self` pointer or an already mutably borrowed reference can result in undefined behavior.
+    ///
+    /// The caller must ensure that there are no other mutable references to the same data,
+    /// otherwise this function can violate Rust's aliasing rules.
+    #[allow(clippy::mut_from_ref)]
+    pub unsafe fn as_mut(&self) -> &mut Expression {
+        #[allow(clippy::cast_ref_to_mut)]
+        &mut *(self as *const _ as *mut _)
     }
 }
 
