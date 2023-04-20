@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 rand = "0.8.5"
 rand_distr = "0.4.3"
+gnuplot = "0.0.37"
 revo = { path = "../revo", version = "*" }
