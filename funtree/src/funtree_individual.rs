@@ -58,11 +58,11 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
     fn mutate(
         &mut self,
         _ind_data: &FuntreeIndividualData,
-        _rng: &mut ThreadRng,
-        _mut_prob: f32,
+        rng: &mut ThreadRng,
+        mut_prob: f32,
         _mut_amount: f32,
     ) {
-        //self.genom.mutate(rng, mut_prob, mut_amount);
+        self.genom.mutate(rng, mut_prob);
     }
 
     fn crossover_to(
@@ -72,12 +72,29 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         _ind_data: &FuntreeIndividualData,
         rng: &mut ThreadRng,
     ) {
-        // Implement crossover
-
-        if rng.gen_bool(0.5) {
+        // Select random source genom and copy the other not selected genom to destination genom
+        let (mut source_genom_it, mut dest_genom_it) = if rng.gen_bool(0.5) {
             dest_ind.genom = self.genom.clone();
+            (&another_ind.genom, &dest_ind.genom)
         } else {
             dest_ind.genom = another_ind.genom.clone();
+            (&self.genom, &dest_ind.genom)
+        };
+
+        // Choose random node in source and destination genom
+        source_genom_it = source_genom_it.choose_random_node(rng);
+        dest_genom_it = dest_genom_it.choose_random_node(rng);
+
+        // Copy random node from source genom to random node in  destination genom
+        // I am using unsafe code because I can't get mutable reference to random node in destination genom
+        unsafe {
+            // Cast immutable reference to raw pointer
+            let ptr_x: *const Expression = dest_genom_it as *const Expression;
+            // Cast raw pointer to mutable pointer
+            let mut ptr_x_mut: *mut Expression = ptr_x as *mut Expression;
+            // Assign random node from source genom to random node in destination genom
+            (*ptr_x_mut).expr = source_genom_it.expr.clone();
+            (*ptr_x_mut).minus = source_genom_it.minus;
         }
     }
 
@@ -87,6 +104,13 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         for val in ind_data.vals.iter() {
             let (x, y) = val.as_tuple();
             let y_pred = self.genom.evaluate(x);
+
+            // Handling cases like division by zero
+            if y_pred.is_nan() {
+                self.fitness = -f64::INFINITY;
+                return;
+            }
+
             error += (y - y_pred).abs();
         }
 

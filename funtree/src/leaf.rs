@@ -1,9 +1,22 @@
+use rand::{rngs::ThreadRng, Rng};
+use rand_distr::{Distribution, Normal};
 use std::fmt;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum LeafType {
     Constant,
     Variable,
+}
+
+impl LeafType {
+    pub fn random(rng: &mut ThreadRng) -> Self {
+        if rng.gen_bool(0.5) {
+            LeafType::Constant
+        } else {
+            LeafType::Variable
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -33,9 +46,20 @@ impl Leaf {
 
     pub fn get_visuals(&self) -> (f64, f64) {
         let a = self.value;
-        let b = self.leaf_type.clone() as u32 as f64;
+        let b = self.leaf_type as u8 as f64;
 
         (a, b)
+    }
+
+    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            self.leaf_type = LeafType::random(rng);
+        }
+
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            let normal = Normal::new(0.0, 1.0).unwrap();
+            self.value += normal.sample(rng);
+        }
     }
 }
 

@@ -1,10 +1,29 @@
 use crate::expression::Expression;
+use rand::prelude::SliceRandom;
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use std::fmt;
+use std::mem::swap;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum OperationType {
     Addition,
     Multiplication,
+    Division,
+    Power,
+}
+
+impl OperationType {
+    pub fn random(rng: &mut ThreadRng) -> Self {
+        let operations = [
+            OperationType::Addition,
+            OperationType::Multiplication,
+            OperationType::Division,
+            OperationType::Power,
+        ];
+        *operations.choose(rng).unwrap()
+    }
 }
 
 #[derive(Clone)]
@@ -19,6 +38,8 @@ impl Operation {
         match self.operation_type {
             OperationType::Addition => self.left.evaluate(x) + self.right.evaluate(x),
             OperationType::Multiplication => self.left.evaluate(x) * self.right.evaluate(x),
+            OperationType::Division => self.left.evaluate(x) / self.right.evaluate(x),
+            OperationType::Power => self.left.evaluate(x).powf(self.right.evaluate(x)),
         }
     }
 
@@ -38,6 +59,8 @@ impl Operation {
         let op_str = match self.operation_type {
             OperationType::Addition => "+",
             OperationType::Multiplication => "*",
+            OperationType::Division => "/",
+            OperationType::Power => "^",
         };
         format!(
             "({} {} {})",
@@ -52,9 +75,30 @@ impl Operation {
         let (right_a, right_b) = self.right.get_visuals();
 
         let a = left_a + right_a;
-        let b = left_b + right_b + self.operation_type.clone() as u32 as f64;
+        let b = left_b + right_b + self.operation_type as u8 as f64;
 
         (a, b)
+    }
+
+    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            self.operation_type = OperationType::random(rng);
+        }
+
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            swap(&mut self.left, &mut self.right);
+        }
+
+        self.left.mutate(rng, mut_prob);
+        self.right.mutate(rng, mut_prob);
+    }
+
+    pub fn choose_random_node(&self, rng: &mut ThreadRng) -> &Expression {
+        if rng.gen_bool(0.5) {
+            self.left.choose_random_node(rng)
+        } else {
+            self.right.choose_random_node(rng)
+        }
     }
 }
 

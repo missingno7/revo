@@ -4,18 +4,17 @@ use std::fmt;
 
 use rand::rngs::ThreadRng;
 use rand::Rng;
-// Define a math expression enum
 
 #[derive(Clone)]
-enum Expr {
+pub enum Expr {
     Leaf(Leaf),
     Op(Operation),
 }
 
 #[derive(Clone)]
 pub struct Expression {
-    minus: bool,
-    expr: Expr,
+    pub minus: bool,
+    pub expr: Expr,
 }
 
 impl Expression {
@@ -58,20 +57,15 @@ impl Expression {
         if max_depth == 0 || rng.gen_bool(0.5) {
             // Generate a leaf node with a random value and type
             let value = rng.gen_range(-10.0..10.0);
-            let leaf_type = if rng.gen_bool(0.5) {
-                LeafType::Constant
-            } else {
-                LeafType::Variable
-            };
+            let leaf_type = LeafType::random(rng);
+
             Self::new_leaf(value, leaf_type)
         } else {
             // Generate an operation node with two random child expressions and a random operation type
             let left = Self::new_randomised(rng, max_depth - 1);
             let right = Self::new_randomised(rng, max_depth - 1);
-            let operation_type = match rng.gen_range(0..1) {
-                0 => OperationType::Addition,
-                _ => OperationType::Multiplication,
-            };
+
+            let operation_type = OperationType::random(rng);
             let minus = rng.gen_bool(0.5);
             Self::new_operation(left, right, operation_type, minus)
         }
@@ -106,6 +100,32 @@ impl Expression {
             b = -b;
         }
         (a, b)
+    }
+
+    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            self.minus = !self.minus;
+        }
+
+        if rng.gen_range(0.0..1.0) < mut_prob {
+            self.expr = Self::new_randomised(rng, 3).expr;
+        }
+
+        match &mut self.expr {
+            Expr::Leaf(leaf) => leaf.mutate(rng, mut_prob),
+            Expr::Op(op) => op.mutate(rng, mut_prob),
+        }
+    }
+
+    pub fn choose_random_node(&self, rng: &mut ThreadRng) -> &Expression {
+        if rng.gen_bool(0.5) {
+            return self;
+        }
+
+        match &self.expr {
+            Expr::Leaf(_) => self,
+            Expr::Op(op) => op.choose_random_node(rng),
+        }
     }
 }
 

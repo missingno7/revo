@@ -1,6 +1,9 @@
 use std::fmt;
 use std::str::FromStr;
 
+const VAL_DELIMITER: char = ':';
+const VAL_SEPARATOR: char = ',';
+
 #[derive(Clone)]
 pub struct Val {
     x: f64,
@@ -23,7 +26,7 @@ impl FromStr for Val {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let values: Vec<&str> = s.split(',').map(|s| s.trim()).collect();
+        let values: Vec<&str> = s.split(VAL_DELIMITER).map(|s| s.trim()).collect();
 
         if values.len() != 2 {
             return Err("Invalid number of values");
@@ -56,7 +59,7 @@ impl FromStr for ValVec {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let values: Vec<&str> = s.split(';').collect();
+        let values: Vec<&str> = s.split(VAL_SEPARATOR).collect();
 
         let mut vec = Vec::with_capacity(values.len());
 
