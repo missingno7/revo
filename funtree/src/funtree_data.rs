@@ -20,3 +20,12 @@ impl FuntreeIndividualData {
         }
     }
 }
+
+impl Default for FuntreeIndividualData {
+    fn default() -> Self {
+        FuntreeIndividualData {
+            vals: Vec::new(),
+            max_depth: DEFAULT_MAX_DEPTH,
+        }
+    }
+}

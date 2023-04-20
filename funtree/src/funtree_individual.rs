@@ -33,6 +33,19 @@ impl FuntreeIndividual {
 
         result
     }
+
+    fn unsafe_copy(source_expr: &Expression, dest_expr: &Expression) {
+        // Copy random node from source genom to random node in  destination genom
+        // I am using unsafe code because I can't get mutable reference to random node in destination genom
+        unsafe {
+            // Cast immutable reference to raw pointer
+            let ptr_x: *const Expression = dest_expr as *const Expression;
+            // Cast raw pointer to mutable pointer
+            let ptr_x_mut: *mut Expression = ptr_x as *mut Expression;
+            // Copy internal values from source expression to destination expression
+            (*ptr_x_mut).copy_from(source_expr);
+        }
+    }
 }
 
 impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
@@ -85,17 +98,8 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         source_genom_it = source_genom_it.choose_random_node(rng);
         dest_genom_it = dest_genom_it.choose_random_node(rng);
 
-        // Copy random node from source genom to random node in  destination genom
-        // I am using unsafe code because I can't get mutable reference to random node in destination genom
-        unsafe {
-            // Cast immutable reference to raw pointer
-            let ptr_x: *const Expression = dest_genom_it as *const Expression;
-            // Cast raw pointer to mutable pointer
-            let mut ptr_x_mut: *mut Expression = ptr_x as *mut Expression;
-            // Assign random node from source genom to random node in destination genom
-            (*ptr_x_mut).expr = source_genom_it.expr.clone();
-            (*ptr_x_mut).minus = source_genom_it.minus;
-        }
+        // Unsafe function that actually modifies destination genom even though it is immutable
+        Self::unsafe_copy(source_genom_it, dest_genom_it);
     }
 
     fn count_fitness(&mut self, ind_data: &FuntreeIndividualData) {
@@ -123,5 +127,73 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
 
     fn get_visuals(&self, _ind_data: &FuntreeIndividualData) -> (f64, f64) {
         self.genom.get_visuals()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::leaf::LeafType;
+    use crate::operation::OperationType;
+
+    #[test]
+    fn crossover() {
+        let ind_data = FuntreeIndividualData::default();
+
+        // Create individuals
+        let mut ind_1 = FuntreeIndividual::new(&ind_data);
+        let left_add_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
+        let right_add_1 = Expression::new_leaf(2.0, LeafType::Constant, false);
+        let add_1 =
+            Expression::new_operation(left_add_1, right_add_1, OperationType::Addition, true);
+        ind_1.genom = add_1;
+
+        let mut ind_2 = FuntreeIndividual::new(&ind_data);
+        let left_mul_1 = Expression::new_leaf(3.0, LeafType::Variable, false);
+        let right_mul_1 = Expression::new_leaf(4.0, LeafType::Variable, true);
+        let mul_1 =
+            Expression::new_operation(left_mul_1, right_mul_1, OperationType::Multiplication, true);
+        ind_2.genom = mul_1;
+
+        // Check if nodes are correct
+        assert_eq!(ind_1.genom.as_string(), "-(-1.00 + 2.00)");
+        assert_eq!(ind_2.genom.as_string(), "-(x * -x)");
+
+        // Get references to nodes
+        let ind_1_nodes = ind_1.genom.get_nodes();
+        let ind_2_nodes = ind_2.genom.get_nodes();
+
+        // Perform crossover on nodes
+        FuntreeIndividual::unsafe_copy(&ind_1_nodes[0], &ind_2_nodes[1]);
+
+        // Copy root node from ind_1 to left child of ind_2
+        assert_eq!(ind_2.genom.as_string(), "-(-(-1.00 + 2.00) * -x)");
+        assert_eq!(ind_2.genom.evaluate(11.0), -11.0);
+
+        // Genom of ind_1 should not change
+        assert_eq!(ind_1.genom.as_string(), "-(-1.00 + 2.00)");
+        assert_eq!(ind_1.genom.evaluate(10.0), -1.0);
+
+        // Get references to nodes
+        let ind_1_nodes = ind_1.genom.get_nodes();
+        let ind_2_nodes = ind_2.genom.get_nodes();
+
+        assert_eq!(ind_1_nodes.len(), 3);
+        assert_eq!(ind_2_nodes.len(), 5);
+
+        // Check that structure of nodes is the same
+        assert_eq!(ind_1_nodes[0].as_string(), ind_2_nodes[1].as_string());
+        assert_eq!(ind_1_nodes[1].as_string(), ind_2_nodes[2].as_string());
+        assert_eq!(ind_1_nodes[2].as_string(), ind_2_nodes[3].as_string());
+
+        assert_eq!(
+            ind_1_nodes[0].evaluate(-10.0),
+            ind_2_nodes[1].evaluate(-10.0)
+        );
+
+        // Check if pointers are different even though node structure is the same
+        assert!(!std::ptr::eq(&ind_1_nodes[0].expr, &ind_2_nodes[1].expr));
+        assert!(!std::ptr::eq(&ind_1_nodes[1].expr, &ind_2_nodes[2].expr));
+        assert!(!std::ptr::eq(&ind_1_nodes[2].expr, &ind_2_nodes[3].expr));
     }
 }

@@ -45,28 +45,30 @@ impl Expression {
         }
     }
 
-    pub fn new_leaf(value: f64, leaf_type: LeafType) -> Self {
+    pub fn new_leaf(value: f64, leaf_type: LeafType, minus: bool) -> Self {
         Expression {
-            minus: false,
+            minus,
             expr: Expr::Leaf(Leaf::new_leaf(value, leaf_type)),
         }
     }
 
     // Generate a random expression
     pub fn new_randomised(rng: &mut ThreadRng, max_depth: u16) -> Self {
+        let minus = rng.gen_bool(0.5);
+
         if max_depth == 0 || rng.gen_bool(0.5) {
             // Generate a leaf node with a random value and type
             let value = rng.gen_range(-10.0..10.0);
             let leaf_type = LeafType::random(rng);
 
-            Self::new_leaf(value, leaf_type)
+            Self::new_leaf(value, leaf_type, minus)
         } else {
             // Generate an operation node with two random child expressions and a random operation type
             let left = Self::new_randomised(rng, max_depth - 1);
             let right = Self::new_randomised(rng, max_depth - 1);
 
             let operation_type = OperationType::random(rng);
-            let minus = rng.gen_bool(0.5);
+
             Self::new_operation(left, right, operation_type, minus)
         }
     }
@@ -99,14 +101,17 @@ impl Expression {
     }
 
     pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+        // Change the sign of the expression
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.minus = !self.minus;
         }
 
+        // Replace the expression with a random expression
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.expr = Self::new_randomised(rng, 3).expr;
         }
 
+        // Call mutate on the child expressions
         match &mut self.expr {
             Expr::Leaf(leaf) => leaf.mutate(rng, mut_prob),
             Expr::Op(op) => op.mutate(rng, mut_prob),
@@ -114,14 +119,31 @@ impl Expression {
     }
 
     pub fn choose_random_node(&self, rng: &mut ThreadRng) -> &Expression {
-        if rng.gen_bool(0.5) {
-            return self;
-        }
+        // Get all nodes in the expression
+        let nodes = self.get_nodes();
 
+        // Return a random node
+        nodes[rng.gen_range(0..nodes.len())]
+    }
+
+    // Append all nodes in the expression to the given vector
+    pub fn append_nodes<'a>(&'a self, nodes: &mut Vec<&'a Expression>) {
+        nodes.push(self);
         match &self.expr {
-            Expr::Leaf(_) => self,
-            Expr::Op(op) => op.choose_random_node(rng),
+            Expr::Leaf(_) => (),
+            Expr::Op(op) => op.append_nodes(nodes),
         }
+    }
+
+    pub fn get_nodes(&self) -> Vec<&Expression> {
+        let mut nodes = Vec::new();
+        self.append_nodes(&mut nodes);
+        nodes
+    }
+
+    pub fn copy_from(&mut self, other: &Expression) {
+        self.minus = other.minus;
+        self.expr = other.expr.clone();
     }
 }
 
@@ -133,6 +155,28 @@ impl fmt::Display for Expression {
 
 impl Default for Expression {
     fn default() -> Self {
-        Self::new_leaf(0.0, LeafType::Constant)
+        Self::new_leaf(0.0, LeafType::Constant, false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_nodes() {
+        let leaf_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
+        let leaf_2 = Expression::new_leaf(2.0, LeafType::Constant, false);
+        let add_1 = Expression::new_operation(leaf_1, leaf_2, OperationType::Addition, true);
+
+        // Check the expression is correct
+        assert_eq!(add_1.as_string(), "-(-1.00 + 2.00)");
+
+        // Get all nodes in the expression
+        let nodes = add_1.get_nodes();
+        assert_eq!(nodes.len(), 3);
+        assert_eq!(nodes[0].as_string(), "-(-1.00 + 2.00)");
+        assert_eq!(nodes[1].as_string(), "-1.00");
+        assert_eq!(nodes[2].as_string(), "2.00");
     }
 }

@@ -93,12 +93,9 @@ impl Operation {
         self.right.mutate(rng, mut_prob);
     }
 
-    pub fn choose_random_node(&self, rng: &mut ThreadRng) -> &Expression {
-        if rng.gen_bool(0.5) {
-            self.left.choose_random_node(rng)
-        } else {
-            self.right.choose_random_node(rng)
-        }
+    pub fn append_nodes<'a>(&'a self, nodes: &mut Vec<&'a Expression>) {
+        self.left.append_nodes(nodes);
+        self.right.append_nodes(nodes);
     }
 }
 
