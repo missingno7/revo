@@ -1,9 +1,9 @@
 use crate::leaf::{Leaf, LeafType};
 use crate::operation::{Operation, OperationType};
-use std::fmt;
-
 use rand::rngs::ThreadRng;
 use rand::Rng;
+use std::default::Default;
+use std::fmt;
 
 #[derive(Clone)]
 pub enum Expr {
@@ -71,10 +71,6 @@ impl Expression {
         }
     }
 
-    pub fn default() -> Self {
-        Self::new_leaf(0.0, LeafType::Constant)
-    }
-
     pub fn as_string(&self) -> String {
         let mut s = String::new();
 
@@ -132,5 +128,11 @@ impl Expression {
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_string())
+    }
+}
+
+impl Default for Expression {
+    fn default() -> Self {
+        Self::new_leaf(0.0, LeafType::Constant)
     }
 }
