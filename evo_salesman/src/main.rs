@@ -19,7 +19,7 @@ fn main() {
     // Load the population config and create the individual data
     let config = Config::new("config.json");
     let ind_data = SalesmanIndividualData::from_config(&mut rng, &config);
-    let visualise = config.get_bool("visualise", Some(false)).unwrap();
+    let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
     // Create the population
     let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> =

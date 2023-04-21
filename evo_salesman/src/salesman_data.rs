@@ -76,21 +76,29 @@ impl SalesmanIndividualData {
         Self::new(
             rng,
             config
-                .get_num("n_cities", Some(DEFAULT_N_CITIES as f64))
-                .unwrap() as u32,
+                .get_int("n_cities")
+                .unwrap()
+                .unwrap_or(DEFAULT_N_CITIES),
             config
-                .get_num("screen_width", Some(DEFAULT_SCREEN_WIDTH as f64))
-                .unwrap() as u32,
+                .get_int("screen_width")
+                .unwrap()
+                .unwrap_or(DEFAULT_SCREEN_WIDTH),
             config
-                .get_num("screen_height", Some(DEFAULT_SCREEN_HEIGHT as f64))
-                .unwrap() as u32,
+                .get_int("screen_height")
+                .unwrap()
+                .unwrap_or(DEFAULT_SCREEN_HEIGHT),
             config
-                .get_num("shift_prob", Some(DEFAULT_SHIFT_PROB))
-                .unwrap(),
-            config.get_num("rev_prob", Some(DEFAULT_REV_PROB)).unwrap(),
+                .get_float("shift_prob")
+                .unwrap()
+                .unwrap_or(DEFAULT_SHIFT_PROB),
             config
-                .get_val("init_type", Some(DEFAULT_INIT_TYPE))
-                .unwrap(),
+                .get_float("rev_prob")
+                .unwrap()
+                .unwrap_or(DEFAULT_REV_PROB),
+            config
+                .get_val("init_type")
+                .unwrap()
+                .unwrap_or(DEFAULT_INIT_TYPE),
         )
     }
 }

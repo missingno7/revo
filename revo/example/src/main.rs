@@ -11,7 +11,7 @@ fn main() {
     let num_rounds = 30;
 
     let config = Config::new(config_path);
-    let visualise = config.get_bool("visualise", Some(false)).unwrap();
+    let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
     let ind_data = BasicIndividualData::default();
     let mut pop: Population<BasicIndividual, BasicIndividualData> =
         Population::new(&config, ind_data);

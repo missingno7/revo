@@ -207,11 +207,13 @@ where
         ind_data: IndividualData,
     ) -> Population<Individual, IndividualData> {
         let pop_width = config
-            .get_num("pop_width", Some(DEFAULT_POP_WIDTH as f64))
-            .unwrap() as usize;
+            .get_uint("pop_width")
+            .unwrap()
+            .unwrap_or(DEFAULT_POP_WIDTH);
         let pop_height = config
-            .get_num("pop_height", Some(DEFAULT_POP_HEIGHT as f64))
-            .unwrap() as usize;
+            .get_uint("pop_height")
+            .unwrap()
+            .unwrap_or(DEFAULT_POP_HEIGHT);
 
         let size = pop_width * pop_height;
         let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
@@ -237,17 +239,21 @@ where
             pop_width,
             pop_height,
             mut_prob: config
-                .get_num("mut_prob", Some(DEFAULT_MUT_PROB as f64))
-                .unwrap() as f32,
+                .get_float("mut_prob")
+                .unwrap()
+                .unwrap_or(DEFAULT_MUT_PROB),
             mut_amount: config
-                .get_num("mut_amount", Some(DEFAULT_MUT_AMOUNT as f64))
-                .unwrap() as f32,
+                .get_float("mut_amount")
+                .unwrap()
+                .unwrap_or(DEFAULT_MUT_AMOUNT),
             crossover_prob: config
-                .get_num("crossover_prob", Some(DEFAULT_CROSSOVER_PROB as f64))
-                .unwrap() as f32,
+                .get_float("crossover_prob")
+                .unwrap()
+                .unwrap_or(DEFAULT_CROSSOVER_PROB),
             selection_strategy_type: config
-                .get_val("selection_strategy", Some(DEFAULT_SELECTION_STRATEGY_TYPE))
-                .unwrap(),
+                .get_val("selection_strategy")
+                .unwrap()
+                .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE),
             i_generation: 0,
             ind_data,
         }

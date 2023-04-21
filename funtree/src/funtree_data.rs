@@ -13,10 +13,11 @@ pub struct FuntreeIndividualData {
 impl FuntreeIndividualData {
     pub fn from_config(config: &Config) -> Self {
         FuntreeIndividualData {
-            vals: config.get_val::<ValVec>("values", None).unwrap().into(),
+            vals: config.get_val::<ValVec>("values").unwrap().unwrap().into(),
             max_depth: config
-                .get_num("max_depth", Some(DEFAULT_MAX_DEPTH.into()))
-                .unwrap() as u32,
+                .get_int("max_depth")
+                .unwrap()
+                .unwrap_or(DEFAULT_MAX_DEPTH),
         }
     }
 }

@@ -10,7 +10,7 @@ use std::fs;
 fn main() {
     let config = Config::new("pop.json");
     let output_dir = "./out";
-    let visualise = config.get_bool("visualise", Some(false)).unwrap();
+    let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
     let ind_data = DistanceIndividualData::from_config(&config);
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> =

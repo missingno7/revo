@@ -25,8 +25,8 @@ impl<
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
         config: &Config,
     ) -> MainWindow<Individual, IndividualData> {
-        let display_width: i32 = config.get_num("display_width", Some(400.0)).unwrap() as i32;
-        let display_height: i32 = config.get_num("display_height", Some(400.0)).unwrap() as i32;
+        let display_width: u32 = config.get_uint("display_width").unwrap().unwrap_or(400) ;
+        let display_height: u32 = config.get_uint("display_height").unwrap().unwrap_or(400);
 
         let ind_display = Rc::new(RefCell::new(IndDisplay::new(display_width, display_height)));
         ind_display

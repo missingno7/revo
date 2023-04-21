@@ -10,10 +10,10 @@ use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 
 pub struct PopDisplay {
-    images_width: i32,
-    images_height: i32,
-    original_image_width: i32,
-    original_image_height: i32,
+    images_width: u32,
+    images_height: u32,
+    original_image_width: u32,
+    original_image_height: u32,
     image: Image,
     event_box: EventBox,
     label: Label,
@@ -22,8 +22,8 @@ pub struct PopDisplay {
 
 impl PopDisplay {
     pub fn new(
-        images_width: i32,
-        images_height: i32,
+        images_width: u32,
+        images_height: u32,
         ind_display: Rc<RefCell<IndDisplay>>,
     ) -> Self {
         let image = Image::new();
@@ -68,13 +68,13 @@ impl PopDisplay {
         // Load the Pixbuf from the loader and scale it
         let mut pixbuf = loader.pixbuf().unwrap();
 
-        self.original_image_width = pixbuf.width();
-        self.original_image_height = pixbuf.height();
+        self.original_image_width = pixbuf.width() as u32;
+        self.original_image_height = pixbuf.height()as u32;
 
         pixbuf = pixbuf
             .scale_simple(
-                self.images_width,
-                self.images_height,
+                self.images_width as i32,
+                self.images_height as i32,
                 gdk_pixbuf::InterpType::Nearest,
             )
             .unwrap();

@@ -9,7 +9,7 @@ use revo::utils::Coord;
 
 const DEFAULT_SCREEN_WIDTH: u32 = 400;
 const DEFAULT_SCREEN_HEIGHT: u32 = 400;
-const DEFAULT_N_POINTS: u32 = 50;
+const DEFAULT_N_POINTS: usize = 50;
 const DEFAULT_REQUIRED_DISTANCE: u32 = 20;
 
 #[derive(Clone)]
@@ -38,17 +38,15 @@ impl DistanceIndividualData {
     pub fn from_config(config: &Config) -> Self {
         Self::new(
             config
-                .get_num("screen_width", Some(DEFAULT_SCREEN_WIDTH as f64))
-                .unwrap() as u32,
+                .get_int("screen_width",)
+                .unwrap().unwrap_or(DEFAULT_SCREEN_WIDTH),
             config
-                .get_num("screen_height", Some(DEFAULT_SCREEN_HEIGHT as f64))
-                .unwrap() as u32,
+                .get_int("screen_height")
+                .unwrap().unwrap_or(DEFAULT_SCREEN_HEIGHT),
+            config.get_int("n_points").unwrap().unwrap_or(DEFAULT_N_POINTS),
             config
-                .get_num("n_points", Some(DEFAULT_N_POINTS as f64))
-                .unwrap() as usize,
-            config
-                .get_num("required_distance", Some(DEFAULT_REQUIRED_DISTANCE as f64))
-                .unwrap() as u32,
+                .get_int("required_distance")
+                .unwrap().unwrap_or(DEFAULT_REQUIRED_DISTANCE),
         )
     }
 }
