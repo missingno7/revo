@@ -47,7 +47,10 @@ fn main() {
 
     // Get the best individual
     let mut all_best_ind = pop.get_best().clone();
-    println!("Best individual: {}", all_best_ind.as_string(&ind_data));
+    println!(
+        "Best individual: {}",
+        all_best_ind.simplify().as_string(&ind_data)
+    );
 
     // Run the evolution
     loop {
@@ -62,7 +65,10 @@ fn main() {
                 all_best_ind.get_fitness()
             );
 
-            println!("Best individual: {}", all_best_ind.as_string(&ind_data));
+            println!(
+                "Best individual: {}",
+                all_best_ind.simplify().as_string(&ind_data)
+            );
         }
 
         if visualise {

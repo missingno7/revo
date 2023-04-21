@@ -151,6 +151,21 @@ impl Expression {
         other.expr = self.expr.clone();
     }
 
+    pub fn simplify(&self) -> Expression {
+        if let Expr::Op(op) = &self.expr {
+            op.simplify(self.minus)
+        } else {
+            self.clone()
+        }
+    }
+
+    pub fn is_constant(&self) -> bool {
+        match &self.expr {
+            Expr::Leaf(leaf) => leaf.get_leaf_type() == LeafType::Constant,
+            Expr::Op(op) => op.is_constant(),
+        }
+    }
+
     /// # Safety
     ///
     /// This function dereferences a raw pointer obtained by casting `self` as a `*const`
@@ -197,5 +212,45 @@ mod tests {
         assert_eq!(nodes[0].as_string(), "-(-1.00 + 2.00)");
         assert_eq!(nodes[1].as_string(), "-1.00");
         assert_eq!(nodes[2].as_string(), "2.00");
+    }
+
+    #[test]
+    fn test_simplify() {
+        let leaf_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
+        let leaf_2 = Expression::new_leaf(2.0, LeafType::Constant, false);
+        // -(-1.00 + 2.00)
+        let add_1 = Expression::new_operation(leaf_1, leaf_2, OperationType::Addition, true);
+
+        let leaf_3 = Expression::new_leaf(3.0, LeafType::Constant, false);
+        // -(-(-1.00 + 2.00) * 3.00)
+        let multiply_1 =
+            Expression::new_operation(add_1, leaf_3, OperationType::Multiplication, true);
+
+        let leaf_4 = Expression::new_leaf(4.0, LeafType::Constant, true);
+        // -(-(-(-1.00 + 2.00) * 3.00) + -4.00)
+        let add_2 = Expression::new_operation(multiply_1, leaf_4, OperationType::Addition, true);
+
+        // Check the expression is correct
+        assert_eq!(add_2.as_string(), "-(-(-(-1.00 + 2.00) * 3.00) + -4.00)");
+
+        // Simplify the expression
+        add_2.simplify();
+
+        // Check the simplified expression is correct
+        assert_eq!(add_2.simplify().as_string(), "1.00");
+
+        // Add *x to expression
+        let leaf_5 = Expression::new_leaf(0.0, LeafType::Variable, true);
+        let multiply_2 =
+            Expression::new_operation(leaf_5, add_2, OperationType::Multiplication, true);
+
+        // Check the expression is correct
+        assert_eq!(
+            multiply_2.as_string(),
+            "-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))"
+        );
+
+        // Check the simplified expression is correct
+        assert_eq!(multiply_2.simplify().as_string(), "-(-x * 1.00)");
     }
 }

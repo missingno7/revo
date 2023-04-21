@@ -1,4 +1,5 @@
 use crate::expression::Expression;
+use crate::leaf::LeafType;
 use rand::prelude::SliceRandom;
 use rand::rngs::ThreadRng;
 use rand::Rng;
@@ -96,6 +97,25 @@ impl Operation {
     pub fn append_nodes<'a>(&'a self, nodes: &mut Vec<&'a Expression>) {
         self.left.append_nodes(nodes);
         self.right.append_nodes(nodes);
+    }
+
+    // Get if the operation is a constant only operation
+    pub fn is_constant(&self) -> bool {
+        if self.left.is_constant() && self.right.is_constant() {
+            return true;
+        }
+        false
+    }
+
+    pub fn simplify(&self, minus: bool) -> Expression {
+        let left = self.left.simplify();
+        let right = self.right.simplify();
+
+        if left.is_constant() && right.is_constant() {
+            Expression::new_leaf(self.evaluate(0.0), LeafType::Constant, minus)
+        } else {
+            Expression::new_operation(left, right, self.operation_type, minus)
+        }
     }
 }
 

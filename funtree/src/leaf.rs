@@ -1,7 +1,7 @@
 use rand::{rngs::ThreadRng, Rng};
 use rand_distr::{Distribution, Normal};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LeafType {
     Constant,
@@ -65,5 +65,9 @@ impl Leaf {
             let normal = Normal::new(0.0, mut_amount as f64).unwrap();
             self.value += normal.sample(rng);
         }
+    }
+
+    pub fn get_leaf_type(&self) -> LeafType {
+        self.leaf_type
     }
 }

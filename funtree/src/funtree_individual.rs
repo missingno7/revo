@@ -33,6 +33,13 @@ impl FuntreeIndividual {
 
         result
     }
+
+    pub fn simplify(&self) -> Self {
+        FuntreeIndividual {
+            fitness: self.fitness,
+            genom: self.genom.simplify(),
+        }
+    }
 }
 
 impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
