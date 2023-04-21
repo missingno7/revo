@@ -83,19 +83,6 @@ impl Visualise<DistanceIndividualData> for DistanceIndividual {
 }
 
 impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
-    fn new(ind_data: &DistanceIndividualData) -> Self {
-        let mut coords: Vec<Coord> = Vec::new();
-
-        for _ in 0..ind_data.n_points {
-            coords.push(Coord { x: 100, y: 100 });
-        }
-
-        DistanceIndividual {
-            coords,
-            fitness: 0.0,
-        }
-    }
-
     fn new_randomised(ind_data: &DistanceIndividualData, rng: &mut ThreadRng) -> Self {
         let mut coords: Vec<Coord> = Vec::new();
         for _ in 0..ind_data.n_points {
@@ -108,12 +95,6 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         DistanceIndividual {
             coords,
             fitness: 0.0,
-        }
-    }
-
-    fn copy_to(&self, ind: &mut Self) {
-        for i in 0..self.coords.len() {
-            ind.coords[i] = self.coords[i];
         }
     }
 
@@ -144,23 +125,24 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         }
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &DistanceIndividual,
-        dest_int: &mut DistanceIndividual,
         _ind_data: &DistanceIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> DistanceIndividual {
+        let mut dest_ind = self.clone();
         for i in 0..self.coords.len() {
             let ratio: f32 = rng.gen_range(0.0..1.0);
-            dest_int.coords[i].x = ((self.coords[i].x as f32 * ratio)
+            dest_ind.coords[i].x = ((self.coords[i].x as f32 * ratio)
                 + (another_ind.coords[i].x as f32 * (1.0 - ratio)))
                 as i32;
 
-            dest_int.coords[i].y = ((self.coords[i].y as f32 * ratio)
+            dest_ind.coords[i].y = ((self.coords[i].y as f32 * ratio)
                 + (another_ind.coords[i].y as f32 * (1.0 - ratio)))
                 as i32;
         }
+        dest_ind
     }
 
     fn count_fitness(&mut self, ind_data: &DistanceIndividualData) {

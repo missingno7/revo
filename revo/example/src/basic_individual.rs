@@ -1,6 +1,7 @@
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
+use std::fmt;
 
 pub struct BasicIndividualData {
     value: f64,
@@ -20,14 +21,6 @@ pub struct BasicIndividual {
 }
 
 impl EvoIndividual<BasicIndividualData> for BasicIndividual {
-    fn new(ind_data: &BasicIndividualData) -> Self {
-        BasicIndividual {
-            fitness: 0.0,
-            foo: ind_data.value,
-            bar: ind_data.value,
-        }
-    }
-
     fn new_randomised(ind_data: &BasicIndividualData, rng: &mut ThreadRng) -> Self {
         BasicIndividual {
             fitness: 0.0,
@@ -52,23 +45,19 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         }
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &BasicIndividual,
-        dest_int: &mut BasicIndividual,
         _ind_data: &BasicIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> BasicIndividual {
         let ratio = rng.gen_range(0.0..1.0);
 
-        dest_int.foo = self.foo * ratio + another_ind.foo * (1.0 - ratio);
-        dest_int.bar = self.bar * ratio + another_ind.bar * (1.0 - ratio);
-    }
-
-    fn copy_to(&self, ind: &mut Self) {
-        ind.fitness = self.fitness;
-        ind.foo = self.foo;
-        ind.bar = self.bar;
+        BasicIndividual {
+            fitness: 0.0,
+            foo: self.foo * ratio + another_ind.foo * (1.0 - ratio),
+            bar: self.bar * ratio + another_ind.bar * (1.0 - ratio),
+        }
     }
 
     fn count_fitness(&mut self, _ind_data: &BasicIndividualData) {
@@ -80,5 +69,11 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
 
     fn get_visuals(&self, _ind_data: &BasicIndividualData) -> (f64, f64) {
         (self.foo, self.bar)
+    }
+}
+
+impl fmt::Display for BasicIndividual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "foo: {}, bar: {}", self.foo, self.bar)
     }
 }

@@ -312,25 +312,12 @@ impl SalesmanIndividual {
 }
 
 impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
-    fn new(ind_data: &SalesmanIndividualData) -> Self {
-        SalesmanIndividual {
-            genom: (0_u16..ind_data.coords.len() as u16).collect(),
-            fitness: 0.0,
-        }
-    }
-
     fn new_randomised(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
         match ind_data.init_type {
             SalesmanInitType::Naive => Self::new_random_naive(ind_data, rng),
             SalesmanInitType::Noise => Self::new_random_noise(ind_data, rng),
             SalesmanInitType::Insertion => Self::new_random_insertion(ind_data, rng),
             SalesmanInitType::GreedyJoining => Self::new_random_greedy_joining(ind_data, rng),
-        }
-    }
-
-    fn copy_to(&self, ind: &mut Self) {
-        for i in 0..self.genom.len() {
-            ind.genom[i] = self.genom[i];
         }
     }
 
@@ -369,24 +356,27 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         }
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &SalesmanIndividual,
-        dest_ind: &mut SalesmanIndividual,
         _ind_data: &SalesmanIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> SalesmanIndividual {
         let start_cross_point = rng.gen_range(0..self.genom.len() - 1);
         let end_cross_point = rng.gen_range(0..self.genom.len() - 1);
         let other_i = rng.gen_range(0..self.genom.len() - 1);
 
+        let mut dest_ind = self.clone();
+
         self._impl_crossover_to(
             another_ind,
-            dest_ind,
+            &mut dest_ind,
             start_cross_point,
             end_cross_point,
             other_i,
         );
+
+        dest_ind
     }
 
     fn count_fitness(&mut self, ind_data: &SalesmanIndividualData) {
@@ -479,87 +469,95 @@ mod tests {
 
     #[test]
     fn test_shift_multiple() {
-        let mut rng = rand::thread_rng();
-        let ind_data =
-            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Noise);
-
         // 6 cities test
         // [0, 1, 2, 3, 4, 5]
-        let mut ind = SalesmanIndividual::new(&ind_data);
+        let ind_6 = SalesmanIndividual {
+            fitness: 0.0,
+            genom: vec![0, 1, 2, 3, 4, 5],
+        };
+
+        let mut ind = ind_6.clone();
         ind.shift_multiple(0, 2, 3);
         assert_eq!(ind.genom, vec![3, 4, 5, 0, 1, 2]);
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_6.clone();
         ind.shift_multiple(0, 2, 1);
         assert_eq!(ind.genom, vec![3, 0, 1, 2, 4, 5]);
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_6.clone();
         ind.shift_multiple(0, 2, 6);
         assert_eq!(ind.genom, vec![0, 1, 2, 3, 4, 5]);
 
         // 7 cities test
         // [0, 1, 2, 3, 4, 5, 6]
-        let ind_data =
-            SalesmanIndividualData::new(&mut rng, 7, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+        let ind_7 = SalesmanIndividual {
+            fitness: 0.0,
+            genom: vec![0, 1, 2, 3, 4, 5, 6],
+        };
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_7.clone();
         ind.shift_multiple(1, 3, 7);
         assert_eq!(ind.genom, vec![6, 1, 2, 3, 0, 4, 5]);
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_7.clone();
         ind.shift_multiple(1, 3, 13);
         assert_eq!(ind.genom, vec![1, 2, 3, 5, 6, 0, 4]);
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_7.clone();
         ind.shift_multiple(1, 3, 0);
         assert_eq!(ind.genom, vec![0, 1, 2, 3, 4, 5, 6]);
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_7.clone();
         ind.shift_multiple(3, 3, 5);
         assert_eq!(ind.genom, vec![1, 3, 2, 4, 5, 6, 0]);
 
-        ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_7.clone();
         ind.shift_multiple(3, 3, 6);
         assert_eq!(ind.genom, vec![1, 2, 3, 4, 5, 6, 0]);
     }
 
     #[test]
     fn test_reverse_part() {
-        let mut rng = rand::thread_rng();
-        let ind_data =
-            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
-
         // [0, 1, 2, 3, 4, 5]
-        let mut ind = SalesmanIndividual::new(&ind_data);
+        let ind_6 = SalesmanIndividual {
+            fitness: 0.0,
+            genom: vec![0, 1, 2, 3, 4, 5],
+        };
+
+        let mut ind = ind_6.clone();
         ind.reverse_part(0, 2);
         assert_eq!(ind.genom, vec![2, 1, 0, 3, 4, 5]);
 
-        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_6.clone();
         ind.reverse_part(5, 0);
         assert_eq!(ind.genom, vec![5, 1, 2, 3, 4, 0]);
 
-        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_6.clone();
         ind.reverse_part(5, 1);
         assert_eq!(ind.genom, vec![0, 5, 2, 3, 4, 1]);
 
-        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_6.clone();
         ind.reverse_part(5, 2);
         assert_eq!(ind.genom, vec![1, 0, 5, 3, 4, 2]);
 
-        let mut ind = SalesmanIndividual::new(&ind_data);
+        ind = ind_6.clone();
         ind.reverse_part(2, 2);
         assert_eq!(ind.genom, vec![4, 3, 2, 1, 0, 5]);
     }
 
     #[test]
     fn test_impl_crossover_to() {
-        let mut rng = rand::thread_rng();
-        let ind_data =
-            SalesmanIndividualData::new(&mut rng, 6, 100, 100, 0.0, 0.0, SalesmanInitType::Naive);
+        let mut ind_1 = SalesmanIndividual {
+            fitness: 0.0,
+            genom: vec![0, 1, 2, 3, 4, 5],
+        };
 
-        let mut ind_1 = SalesmanIndividual::new(&ind_data);
-        let mut ind_2 = SalesmanIndividual::new(&ind_data);
-        let mut res_ind = SalesmanIndividual::new(&ind_data);
+        let mut ind_2 = SalesmanIndividual {
+            fitness: 0.0,
+            genom: vec![5, 4, 3, 2, 1, 0],
+        };
+
+        let mut res_ind = ind_1.clone();
 
         ind_1.genom = vec![0, 1, 2, 3, 4, 5];
         ind_2.genom = vec![5, 4, 3, 2, 1, 0];

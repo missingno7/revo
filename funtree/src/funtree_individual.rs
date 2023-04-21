@@ -36,23 +36,11 @@ impl FuntreeIndividual {
 }
 
 impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
-    fn new(_ind_data: &FuntreeIndividualData) -> Self {
-        FuntreeIndividual {
-            fitness: 0.0,
-            genom: Expression::default(),
-        }
-    }
-
     fn new_randomised(_ind_data: &FuntreeIndividualData, rng: &mut ThreadRng) -> Self {
         FuntreeIndividual {
             fitness: 0.0,
             genom: Expression::new_randomised(rng, 5),
         }
-    }
-
-    fn copy_to(&self, ind: &mut Self) {
-        ind.genom = self.genom.clone();
-        ind.fitness = self.fitness;
     }
 
     fn mutate(
@@ -65,28 +53,27 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         self.genom.mutate(rng, mut_prob, mut_amount);
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &FuntreeIndividual,
-        dest_ind: &mut FuntreeIndividual,
         _ind_data: &FuntreeIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> FuntreeIndividual {
         // Select random source genom and copy the other not selected genom to destination genom
-        let (mut source_genom_it, mut dest_genom_it) = if rng.gen_bool(0.5) {
-            dest_ind.genom = self.genom.clone();
-            (&another_ind.genom, &dest_ind.genom)
+        let (source_genom, dest_ind) = if rng.gen_bool(0.5) {
+            (&another_ind, self.clone())
         } else {
-            dest_ind.genom = another_ind.genom.clone();
-            (&self.genom, &dest_ind.genom)
+            (&self, another_ind.clone())
         };
 
         // Choose random node in source and destination genom
-        source_genom_it = source_genom_it.choose_random_node(rng);
-        dest_genom_it = dest_genom_it.choose_random_node(rng);
+        let source_genom_it = source_genom.genom.choose_random_node(rng);
+        let dest_genom_it = dest_ind.genom.choose_random_node(rng);
 
         // Copy data from selected source node to selected destination node
         unsafe { source_genom_it.copy_to(dest_genom_it.as_mut()) }
+
+        dest_ind
     }
 
     fn count_fitness(&mut self, ind_data: &FuntreeIndividualData) {
@@ -127,22 +114,24 @@ mod tests {
 
     #[test]
     fn crossover() {
-        let ind_data = FuntreeIndividualData::default();
-
         // Create individuals
-        let mut ind_1 = FuntreeIndividual::new(&ind_data);
         let left_add_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
         let right_add_1 = Expression::new_leaf(2.0, LeafType::Constant, false);
         let add_1 =
             Expression::new_operation(left_add_1, right_add_1, OperationType::Addition, true);
-        ind_1.genom = add_1;
+        let ind_1 = FuntreeIndividual {
+            fitness: 0.0,
+            genom: add_1,
+        };
 
-        let mut ind_2 = FuntreeIndividual::new(&ind_data);
         let left_mul_1 = Expression::new_leaf(3.0, LeafType::Variable, false);
         let right_mul_1 = Expression::new_leaf(4.0, LeafType::Variable, true);
         let mul_1 =
             Expression::new_operation(left_mul_1, right_mul_1, OperationType::Multiplication, true);
-        ind_2.genom = mul_1;
+        let ind_2 = FuntreeIndividual {
+            fitness: 0.0,
+            genom: mul_1,
+        };
 
         // Check if nodes are correct
         assert_eq!(ind_1.genom.as_string(), "-(-1.00 + 2.00)");
