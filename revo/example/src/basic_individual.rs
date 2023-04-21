@@ -1,6 +1,7 @@
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::evo_individual::EvoIndividual;
+use std::fmt;
 
 pub struct BasicIndividualData {
     value: f64,
@@ -80,5 +81,11 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
 
     fn get_visuals(&self, _ind_data: &BasicIndividualData) -> (f64, f64) {
         (self.foo, self.bar)
+    }
+}
+
+impl fmt::Display for BasicIndividual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "foo: {}, bar: {}", self.foo, self.bar)
     }
 }

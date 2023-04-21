@@ -7,51 +7,71 @@ and visualizing the population.
 
 # Quick Start
 
-- Example of full implementation using the revo library can be found in the example folder.
-
-If you want to implement your own individual, you need to implement the Individual trait for your individual struct. The
-trait contains methods for mutating and crossing over the individual.
+- Example of full implementation using the revo library can be found in the [example](example) folder.
 
 ```rust
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
 use revo::config::Config;
 use revo::population::Population;
-use revo::evo_individual::EvoIndividual;
 
 fn main() {
-    // Load the population configuration
-    let config = Config::new("config.json");
-    
-    // Prepare the individual data - The data is passed to the individual when it is created
-    // Individual data contains things that are not specific to the individual, but are needed for the evolution
-    let ind_data = BasicIndividualData::default();
-    
-    // Create the population
-    let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&config, ind_data);
+   // Load the configuration from the config.json file
+   let config = Config::new("config.json");
+   let output_dir = "./";
 
-    // Evolve the population 
-    // This will apply the evolution rules to the population and create a new generation
-    pop.next_gen();
+   // Prepare the individual data - The data is passed to the individual when it is created
+   // Individual data contains things that are not specific to the individual, but are needed for the evolution
+   // These can contain things like coordinates of cities in the Travelling Salesman Problem, or the target values in the Math Function Approximation Problem
+   let ind_data = BasicIndividualData::default();
 
-    // Get the best individual from the population
-    let pop_best = pop.get_best();
+   // Create the population
+   let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&config, ind_data);
 
-    // Visualize the population
-    pop.visualise(format!("pop_{}.png", pop.get_generation()).as_str());
+   // Evolve the population 
+   // This will apply the evolution rules to the population and create a new generation
+   // You can run next_gen() in a loop to evolve the population
+   pop.next_gen();
 
-    // Print the best individual from the population
-    dbg!(pop_best)
+   // Get the best individual from the population
+   let pop_best = pop.get_best();
+
+   // Get visualise flag from the configuration 
+   let visualise: bool = config.get_bool("visualise").unwrap().unwrap_or(false);
+
+   // Visualize the population
+   if visualise
+   {
+      pop.visualise().save(format!("{}/pop_{}.png", output_dir, pop.get_generation())).unwrap();
+   }
+
+   // Print the best individual from the population - if the individual implements the Display trait
+   println!("{}", pop_best);
 }
 ```
 
 ### Configuration
 
-Config struct contains the configuration for the population. The configuration can be loaded from a json file
-using the `from_file` method. The configuration file contains the following parameters:
+Config struct contains the json wrapper and methods for retrieving values from the json file. The config can be loaded from a json file
+using the `from_file` method.
+
+#### Methods for retrieving values from the json file:
+
+Each `get_*` method returns `Result<Option<T>, String>` where T is the type of the value that is being retrieved.
+
+`get_int()` - Retrieve an integer value from the json file up to i64.
+
+`get_uint()` - Retrieve an unsigned integer value from the json file up to u64. Fails if the value is negative.
+
+`get_float()` - Retrieve a float value from the json file up to f64.
+
+`get_bool()` - Retrieve a boolean value from the json file.
+
+`get_val()` - Retrieve any type of value that implements `FromStr` from the json file. It can be for example used to retrieve a values of enum types.
 
 #### Example of a configuration file:
 
 If we want to use this configuration, we can create a json file named `config.json` and put the following content in it:
+
 ```json
 {
   "pop_width": 200,
@@ -63,39 +83,46 @@ If we want to use this configuration, we can create a json file named `config.js
 }
 ```
 
-
 ## Evolution Process
+
 In Revo, the evolution process consists of the following steps:
 
-1. Create a new population of individuals with randomized values.
-2. Evaluate the fitness of each individual in the population using the count_fitness() method.
-3. Select the best individuals from the population for reproduction, using either the tournament or roulette selection strategy.
-4. Create new individuals through crossover and mutation of the selected individuals.
-5. Evaluate the fitness of the new individuals using the count_fitness() method.
-6. Replace the weakest individuals in the population with the new individuals.
-   Repeat steps 3-6 until the desired number of generations is reached by calling next_gen() on the population.
-   During the evolution process, the following methods are called on each individual:
+1. Create a new population of individuals with randomized values using `new()` and `new_randomised()`.
+2. Evaluate the fitness of each individual in the population using the `count_fitness()` method.
+3. Select the best individuals from the current population for reproduction, using either the tournament or roulette selection
+   strategy using `get_fitness()`.
+4. Create new individuals through `crossover_to()` and `copy_to()` with `mutate()` from the selected individuals in the new population.
+5. Evaluate the fitness of the new individuals using the `count_fitness()` method.
+6. Swap the old population with the new population.
+- Replace the weakest individuals in the population with the new individuals by performing steps 3-6 until the desired number of generations is reached by calling `next_gen()` on the population.
 
-- `new()` or `new_randomised()`: Create a new individual.
-- `mutate()`: Mutate the individual's genome.
-- `copy_to()`: Copy the individual's genome to another individual.
-- `crossover_to()`: Combine the individual's genome with another individual's genome.
-- `count_fitness()`: Evaluate the fitness of the individual.
-- `get_fitness()`: Retrieve the fitness value of the individual.
+During the evolution process, the following methods are called on each individual:
+
+`new()` or `new_randomised()`: Create a new individual.
+ 
+`mutate()`: Mutate the individual's genome.
+
+`copy_to()`: Copy the individual's genome to another individual.
+
+`crossover_to()`: Combine the individual's genome with another individual's genome.
+
+`count_fitness()`: Evaluate the fitness of the individual.
+
+`get_fitness()`: Retrieve the fitness value of the individual.
 
 If `pop.visualise()` is called, the following method is called on each individual:
-- `get_visuals()`: Retrieve the A and B values of the individual for visualisation.
+
+`get_visuals()`: Retrieve the A and B values of the individual for visualisation.
 
 To run the evolution process you need to create a new population and call the `next_gen()` method on it.
 
-If you want to get the best individual from the current generation of the population, call the `get_best()` method on the population.
-
-
-
+If you want to get the best individual from the current generation of the population, call the `get_best()` method on
+the population.
 
 # Implementing Your Own Individual
 
-To use Revo, you need to implement the `EvoIndividual` trait for your own individual. This trait provides methods for creating, mutating, and evaluating individuals in the population.
+To use Revo, you need to implement the `EvoIndividual` trait for your own individual. This trait provides methods for
+creating, mutating, and evaluating individuals in the population.
 
 Here are the methods that need to be implemented:
 
@@ -141,7 +168,8 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
 }
 ```
 
-`IndividualData` is the type of the data needed for creating and evaluating individuals. This can be any type that you define.
+`IndividualData` is the type of the data needed for creating and evaluating individuals. This can be any type that you
+define.
 
 `new()` method creates a new individual with default values.
 
@@ -151,15 +179,18 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
 
 `mutate()` method mutates the genome of the individual.
 
-`crossover_to()` method combines the genome of the self individual with another individual and copies the result to the destination individual.
+`crossover_to()` method combines the genome of the self individual with another individual and copies the result to the
+destination individual.
 
 `count_fitness()` method counts the fitness of the individual and stores it in the individual.
 
 `get_fitness()` method returns the fitness of the individual stored in the individual.
 
-`get_visuals()` method returns the A and B values of the individual for generating color value for visualisation of the genom.
+`get_visuals()` method returns the A and B values of the individual for generating color value for visualisation of the
+genom.
 
-The Visualise trait is optional and provides a method for visualizing the individual. Here's the method that needs to be implemented:
+The Visualise trait is optional and provides a method for visualizing the individual. Here's the method that needs to be
+implemented:
 
 ```rust
 pub trait Visualise<IndividualData> {
@@ -167,5 +198,6 @@ pub trait Visualise<IndividualData> {
 }
 ```
 
-`visualise()` method returns an image of the individual for visualisation. E.g. the path of the travelling salesman problem.
+`visualise()` method returns an image of the individual for visualisation. E.g. the path of the travelling salesman
+problem.
 
