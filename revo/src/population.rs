@@ -106,7 +106,7 @@ impl<Individual, IndividualData> Population<Individual, IndividualData> {
         ]
     }
 
-    fn normalize_component(
+    fn _normalize_component(
         data: &mut [IndexedLabData],
         mut get_component: impl FnMut(&LabData) -> f64,
         mut set_component: impl FnMut(&mut LabData, f64),
@@ -143,21 +143,21 @@ impl<Individual, IndividualData> Population<Individual, IndividualData> {
     // Function normalizes the L, A and B values of the population using the rank-based method
     // This method doesn't preserve the order of the values
     fn _normalize_lab_data_rank_based(mut lab_data: Vec<IndexedLabData>) -> Vec<IndexedLabData> {
-        Self::normalize_component(
+        Self::_normalize_component(
             &mut lab_data,
             |lab_data| lab_data.l,
             |lab_data, val| lab_data.l = val,
             10.0,
             90.0,
         );
-        Self::normalize_component(
+        Self::_normalize_component(
             &mut lab_data,
             |lab_data| lab_data.a,
             |lab_data, val| lab_data.a = val,
             -128.0,
             128.0,
         );
-        Self::normalize_component(
+        Self::_normalize_component(
             &mut lab_data,
             |lab_data| lab_data.b,
             |lab_data, val| lab_data.b = val,

@@ -49,75 +49,47 @@ fn main() {
 }
 ```
 
-### Configuration
-
-Config struct contains the json wrapper and methods for retrieving values from the json file. The config can be loaded from a json file
-using the `from_file` method.
-
-#### Methods for retrieving values from the json file:
-
-Each `get_*` method returns `Result<Option<T>, String>` where T is the type of the value that is being retrieved.
-
-`get_int()` - Retrieve an integer value from the json file up to i64.
-
-`get_uint()` - Retrieve an unsigned integer value from the json file up to u64. Fails if the value is negative.
-
-`get_float()` - Retrieve a float value from the json file up to f64.
-
-`get_bool()` - Retrieve a boolean value from the json file.
-
-`get_val()` - Retrieve any type of value that implements `FromStr` from the json file. It can be for example used to retrieve a values of enum types.
-
-#### Example of a configuration file:
-
-If we want to use this configuration, we can create a json file named `config.json` and put the following content in it:
-
-```json
-{
-  "pop_width": 200,
-  "pop_height": 200,
-  "mut_prob": 0.02,
-  "mut_amount": 10.0,
-  "crossover_prob": 0.1,
-  "visualise": false
-}
-```
 
 ## Evolution Process
 
 In Revo, the evolution process consists of the following steps:
 
-1. Create a new population of individuals with randomized values using `new()` and `new_randomised()`.
-2. Evaluate the fitness of each individual in the population using the `count_fitness()` method.
+1. Create a new population of individuals with randomized values using `new` and `new_randomised`.
+2. Evaluate the fitness of each individual in the population using the `count_fitness` method.
 3. Select the best individuals from the current population for reproduction, using either the tournament or roulette selection
-   strategy using `get_fitness()`.
-4. Create new individuals through `crossover_to()` and `copy_to()` with `mutate()` from the selected individuals in the new population.
-5. Evaluate the fitness of the new individuals using the `count_fitness()` method.
+   strategy using `get_fitness`.
+4. Create new individuals through `crossover_to` and `copy_to` with `mutate` from the selected individuals in the new population.
+5. Evaluate the fitness of the new individuals using the `count_fitness` method.
 6. Swap the old population with the new population.
 - Replace the weakest individuals in the population with the new individuals by performing steps 3-6 until the desired number of generations is reached by calling `next_gen()` on the population.
 
-During the evolution process, the following methods are called on each individual:
 
-`new()` or `new_randomised()`: Create a new individual.
- 
-`mutate()`: Mutate the individual's genome.
 
-`copy_to()`: Copy the individual's genome to another individual.
+# The Population struct
 
-`crossover_to()`: Combine the individual's genome with another individual's genome.
+The population struct is used for storing the individuals and performing the evolution process. It provides methods for creating, evaluating, and visualising the population.
 
-`count_fitness()`: Evaluate the fitness of the individual.
+Population struct contains the following public methods:
 
-`get_fitness()`: Retrieve the fitness value of the individual.
+`new(config: &Config, ind_data: IndividualData) -> Population`: Create a new population with the given configuration and individual data. Individual data are stored in the population and are used for creating and evaluating individuals.
 
-If `pop.visualise()` is called, the following method is called on each individual:
+`next_gen(&mut self)`: Evolve the population by creating a new generation.
 
-`get_visuals()`: Retrieve the A and B values of the individual for visualisation.
+`get_best(&self) -> &Individual`: Get the best individual from the population.
 
-To run the evolution process you need to create a new population and call the `next_gen()` method on it.
+`visualise(&self) -> RgbImage`: Visualize the population to a `RgbImage`.
 
-If you want to get the best individual from the current generation of the population, call the `get_best()` method on
-the population.
+`get_at(&self, x: usize, y: usize) -> &Individual`: Get the individual at the given coordinates.
+
+`get_width(&self) -> usize`: Get the width of the population.
+
+`get_height(&self) -> usize`: Get the height of the population.
+
+`get_generation(&self) -> usize`: Get the number of current generation of the population.
+
+`get_individual_data(&self) -> &IndividualData`: Get the individual data from the population.
+
+
 
 # Implementing Your Own Individual
 
@@ -171,23 +143,23 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
 `IndividualData` is the type of the data needed for creating and evaluating individuals. This can be any type that you
 define.
 
-`new()` method creates a new individual with default values.
+`new(ind_data: &IndividualData) -> Self` method creates a new individual with default values.
 
-`new_randomised()` method creates a new individual with randomized values.
+`new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self` method creates a new individual with randomized values.
 
-`copy_to()` method copies the genome of the self individual to another individual.
+`copy_to(&self, ind: &mut Self)` method copies the genome of the self individual to another individual.
 
-`mutate()` method mutates the genome of the individual.
+`mutate(&mut self, ind_data: &IndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32)` method mutates the genome of the individual by a given probability and amount.
 
-`crossover_to()` method combines the genome of the self individual with another individual and copies the result to the
+`crossover_to(&self, another_ind: &Self, dest_int: &mut Self, ind_data: &IndividualData, rng: &mut ThreadRng)` method combines the genome of the self individual with another individual and copies the result to the
 destination individual.
 
-`count_fitness()` method counts the fitness of the individual and stores it in the individual.
+`count_fitness(&self, ind_data: &IndividualData)` method counts the fitness of the individual and stores it in the individual.
 
-`get_fitness()` method returns the fitness of the individual stored in the individual.
+`get_fitness(&self) -> f64` method returns the fitness of the individual stored in the individual.
 
-`get_visuals()` method returns the A and B values of the individual for generating color value for visualisation of the
-genom.
+`get_visuals(&self, ind_data: &IndividualData) -> (f64, f64)` method returns the A and B values of the individual for generating color value for visualisation of the
+population. It is used in the `visualise` method of the population.
 
 The Visualise trait is optional and provides a method for visualizing the individual. Here's the method that needs to be
 implemented:
@@ -198,6 +170,42 @@ pub trait Visualise<IndividualData> {
 }
 ```
 
-`visualise()` method returns an image of the individual for visualisation. E.g. the path of the travelling salesman
-problem.
+`visualise(&IndividualData) -> RgbImage` method returns an image of the individual for visualisation. 
+In case of travelling salesman problem this method returns an image of the path that the salesman takes. It requires the individual data to get the coordinates of the cities and genom of the individual to get the order of the cities.
 
+
+
+### Configuration
+
+Config struct contains the json wrapper and methods for retrieving values from the json file. The config can be loaded from a json file
+using the `from_file` method.
+
+#### Methods for retrieving values from the json file:
+
+Each `get_*` method returns `Result<Option<T>, String>` where `T` is the type of the value that is being retrieved.
+Method takes a string as an argument, which is the key of the value in the json file.
+
+`get_int(&str) -> Result<Option<T>, String>`: Retrieve an integer value from the json file up to `i64`.
+
+`get_uint(&str) -> Result<Option<T>, String>`: Retrieve an unsigned integer value from the json file up to `u64`. Fails if the value is negative.
+
+`get_float(&str) -> Result<Option<T>, String>`: Retrieve a float value from the json file up to `f64`.
+
+`get_bool(&str) -> Result<Option<T>, bool>`: Retrieve a boolean value from the json file.
+
+`get_val(&str) -> Result<Option<T>, String>`: Retrieve any type of value that implements `FromStr` from the json file. It can be for example used to retrieve a values of enum types.
+
+#### Example of a configuration file:
+
+If we want to use this configuration, we can create a json file named `config.json` and put the following content in it:
+
+```json
+{
+  "pop_width": 200,
+  "pop_height": 200,
+  "mut_prob": 0.02,
+  "mut_amount": 10.0,
+  "crossover_prob": 0.1,
+  "visualise": false
+}
+```
