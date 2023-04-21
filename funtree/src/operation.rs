@@ -80,7 +80,7 @@ impl Operation {
         (a, b)
     }
 
-    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.operation_type = OperationType::random(rng);
         }
@@ -89,8 +89,8 @@ impl Operation {
             swap(&mut self.left, &mut self.right);
         }
 
-        self.left.mutate(rng, mut_prob);
-        self.right.mutate(rng, mut_prob);
+        self.left.mutate(rng, mut_prob, mut_amount);
+        self.right.mutate(rng, mut_prob, mut_amount);
     }
 
     pub fn append_nodes<'a>(&'a self, nodes: &mut Vec<&'a Expression>) {

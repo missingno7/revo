@@ -60,9 +60,9 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         _ind_data: &FuntreeIndividualData,
         rng: &mut ThreadRng,
         mut_prob: f32,
-        _mut_amount: f32,
+        mut_amount: f32,
     ) {
-        self.genom.mutate(rng, mut_prob);
+        self.genom.mutate(rng, mut_prob, mut_amount);
     }
 
     fn crossover_to(
@@ -102,7 +102,9 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
                 return;
             }
 
-            error += (y - y_pred).abs();
+            // Sum of squared errors
+            let err = y_pred - y;
+            error += err * err;
         }
 
         self.fitness = -error;

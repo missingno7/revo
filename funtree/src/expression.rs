@@ -79,13 +79,15 @@ impl Expression {
     pub fn as_string(&self) -> String {
         let mut s = String::new();
 
-        if self.minus {
-            s.push('-');
-        }
-
         match &self.expr {
-            Expr::Leaf(leaf) => s.push_str(&leaf.as_string()),
-            Expr::Op(op) => s.push_str(&op.as_string()),
+            Expr::Leaf(leaf) => s.push_str(&leaf.as_string(self.minus)),
+            Expr::Op(op) => {
+                if self.minus {
+                    s.push('-');
+                }
+
+                s.push_str(&op.as_string())
+            }
         }
 
         s
@@ -103,7 +105,7 @@ impl Expression {
         (a, b)
     }
 
-    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
         // Change the sign of the expression
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.minus = !self.minus;
@@ -116,8 +118,8 @@ impl Expression {
 
         // Call mutate on the child expressions
         match &mut self.expr {
-            Expr::Leaf(leaf) => leaf.mutate(rng, mut_prob),
-            Expr::Op(op) => op.mutate(rng, mut_prob),
+            Expr::Leaf(leaf) => leaf.mutate(rng, mut_prob, mut_amount),
+            Expr::Op(op) => op.mutate(rng, mut_prob, mut_amount),
         }
     }
 

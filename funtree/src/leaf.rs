@@ -1,6 +1,5 @@
 use rand::{rngs::ThreadRng, Rng};
 use rand_distr::{Distribution, Normal};
-use std::fmt;
 
 #[derive(Clone, Copy)]
 #[repr(u8)]
@@ -37,10 +36,16 @@ impl Leaf {
         Leaf { leaf_type, value }
     }
 
-    pub fn as_string(&self) -> String {
+    pub fn as_string(&self, minus: bool) -> String {
         match self.leaf_type {
-            LeafType::Constant => format!("{:.2}", self.value),
-            LeafType::Variable => "x".to_string(),
+            LeafType::Constant => format!("{:.2}", if minus { -self.value } else { self.value }),
+            LeafType::Variable => {
+                if minus {
+                    "-x".to_string()
+                } else {
+                    "x".to_string()
+                }
+            }
         }
     }
 
@@ -51,20 +56,14 @@ impl Leaf {
         (a, b)
     }
 
-    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32) {
+    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.leaf_type = LeafType::random(rng);
         }
 
         if rng.gen_range(0.0..1.0) < mut_prob {
-            let normal = Normal::new(0.0, 1.0).unwrap();
+            let normal = Normal::new(0.0, mut_amount as f64).unwrap();
             self.value += normal.sample(rng);
         }
-    }
-}
-
-impl fmt::Display for Leaf {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_string().fmt(f)
     }
 }
