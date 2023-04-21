@@ -185,15 +185,15 @@ using the `from_file` method.
 Each `get_*` method returns `Result<Option<T>, String>` where `T` is the type of the value that is being retrieved.
 Method takes a string as an argument, which is the key of the value in the json file.
 
-`get_int(&str) -> Result<Option<T>, String>`: Retrieve an integer value from the json file up to `i64`.
+`get_int(key: &str) -> Result<Option<T>, String>`: Retrieve an integer value from the json file up to `i64`.
 
-`get_uint(&str) -> Result<Option<T>, String>`: Retrieve an unsigned integer value from the json file up to `u64`. Fails if the value is negative.
+`get_uint(key: &str) -> Result<Option<T>, String>`: Retrieve an unsigned integer value from the json file up to `u64`. Fails if the value is negative.
 
-`get_float(&str) -> Result<Option<T>, String>`: Retrieve a float value from the json file up to `f64`.
+`get_float(key: &str) -> Result<Option<T>, String>`: Retrieve a float value from the json file up to `f64`.
 
-`get_bool(&str) -> Result<Option<T>, bool>`: Retrieve a boolean value from the json file.
+`get_bool(key: &str) -> Result<Option<T>, bool>`: Retrieve a boolean value from the json file.
 
-`get_val(&str) -> Result<Option<T>, String>`: Retrieve any type of value that implements `FromStr` from the json file. It can be for example used to retrieve a values of enum types.
+`get_val(key: &str) -> Result<Option<T>, String>`: Retrieve any type of value that implements `FromStr` from the json file. It can be for example used to retrieve a values of enum types.
 
 #### Example of a configuration file:
 
