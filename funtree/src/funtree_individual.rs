@@ -121,7 +121,7 @@ mod tests {
         let right_add_1 = Expression::new_leaf(2.0, LeafType::Constant, false);
         let add_1 =
             Expression::new_operation(left_add_1, right_add_1, OperationType::Addition, true);
-        let mut ind_1 = FuntreeIndividual {
+        let ind_1 = FuntreeIndividual {
             fitness: 0.0,
             genom: add_1,
         };
@@ -130,7 +130,7 @@ mod tests {
         let right_mul_1 = Expression::new_leaf(4.0, LeafType::Variable, true);
         let mul_1 =
             Expression::new_operation(left_mul_1, right_mul_1, OperationType::Multiplication, true);
-        let mut ind_2 = FuntreeIndividual {
+        let ind_2 = FuntreeIndividual {
             fitness: 0.0,
             genom: mul_1,
         };
