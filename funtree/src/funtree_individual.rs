@@ -117,19 +117,23 @@ mod tests {
         let ind_data = FuntreeIndividualData::default();
 
         // Create individuals
-        let mut ind_1 = FuntreeIndividual::new(&ind_data);
         let left_add_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
         let right_add_1 = Expression::new_leaf(2.0, LeafType::Constant, false);
         let add_1 =
             Expression::new_operation(left_add_1, right_add_1, OperationType::Addition, true);
-        ind_1.genom = add_1;
+        let mut ind_1 = FuntreeIndividual {
+            fitness: 0.0,
+            genom: add_1,
+        };
 
-        let mut ind_2 = FuntreeIndividual::new(&ind_data);
         let left_mul_1 = Expression::new_leaf(3.0, LeafType::Variable, false);
         let right_mul_1 = Expression::new_leaf(4.0, LeafType::Variable, true);
         let mul_1 =
             Expression::new_operation(left_mul_1, right_mul_1, OperationType::Multiplication, true);
-        ind_2.genom = mul_1;
+        let mut ind_2 = FuntreeIndividual {
+            fitness: 0.0,
+            genom: mul_1,
+        };
 
         // Check if nodes are correct
         assert_eq!(ind_1.genom.as_string(), "-(-1.00 + 2.00)");
