@@ -312,13 +312,6 @@ impl SalesmanIndividual {
 }
 
 impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
-    fn new(ind_data: &SalesmanIndividualData) -> Self {
-        SalesmanIndividual {
-            genom: (0_u16..ind_data.coords.len() as u16).collect(),
-            fitness: 0.0,
-        }
-    }
-
     fn new_randomised(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
         match ind_data.init_type {
             SalesmanInitType::Naive => Self::new_random_naive(ind_data, rng),

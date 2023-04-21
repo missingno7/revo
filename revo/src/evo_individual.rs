@@ -2,9 +2,6 @@ use image::RgbImage;
 use rand::rngs::ThreadRng;
 
 pub trait EvoIndividual<IndividualData>: Send + Sync {
-    // Create a new individual with default values
-    fn new(ind_data: &IndividualData) -> Self;
-
     // Create a new individual with randomised values
     fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 

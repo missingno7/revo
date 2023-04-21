@@ -83,19 +83,6 @@ impl Visualise<DistanceIndividualData> for DistanceIndividual {
 }
 
 impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
-    fn new(ind_data: &DistanceIndividualData) -> Self {
-        let mut coords: Vec<Coord> = Vec::new();
-
-        for _ in 0..ind_data.n_points {
-            coords.push(Coord { x: 100, y: 100 });
-        }
-
-        DistanceIndividual {
-            coords,
-            fitness: 0.0,
-        }
-    }
-
     fn new_randomised(ind_data: &DistanceIndividualData, rng: &mut ThreadRng) -> Self {
         let mut coords: Vec<Coord> = Vec::new();
         for _ in 0..ind_data.n_points {

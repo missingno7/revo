@@ -12,14 +12,6 @@ pub struct MockIndividual {
 }
 
 impl EvoIndividual<MockIndividualData> for MockIndividual {
-    fn new(_ind_data: &MockIndividualData) -> Self {
-        MockIndividual {
-            fitness: 0.0,
-            visuals: (0.0, 0.0),
-            value: 0.0,
-        }
-    }
-
     fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut ThreadRng) -> Self {
         MockIndividual {
             fitness: 0.0,

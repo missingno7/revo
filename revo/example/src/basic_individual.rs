@@ -21,14 +21,6 @@ pub struct BasicIndividual {
 }
 
 impl EvoIndividual<BasicIndividualData> for BasicIndividual {
-    fn new(ind_data: &BasicIndividualData) -> Self {
-        BasicIndividual {
-            fitness: 0.0,
-            foo: ind_data.value,
-            bar: ind_data.value,
-        }
-    }
-
     fn new_randomised(ind_data: &BasicIndividualData, rng: &mut ThreadRng) -> Self {
         BasicIndividual {
             fitness: 0.0,

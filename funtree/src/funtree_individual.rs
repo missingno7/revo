@@ -36,13 +36,6 @@ impl FuntreeIndividual {
 }
 
 impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
-    fn new(_ind_data: &FuntreeIndividualData) -> Self {
-        FuntreeIndividual {
-            fitness: 0.0,
-            genom: Expression::default(),
-        }
-    }
-
     fn new_randomised(_ind_data: &FuntreeIndividualData, rng: &mut ThreadRng) -> Self {
         FuntreeIndividual {
             fitness: 0.0,

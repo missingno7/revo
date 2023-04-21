@@ -15,63 +15,66 @@ use revo::config::Config;
 use revo::population::Population;
 
 fn main() {
-   // Load the configuration from the config.json file
-   let config = Config::new("config.json");
-   let output_dir = "./";
+    // Load the configuration from the config.json file
+    let config = Config::new("config.json");
+    let output_dir = "./";
 
-   // Prepare the individual data - The data is passed to the individual when it is created
-   // Individual data contains things that are not specific to the individual, but are needed for the evolution
-   // These can contain things like coordinates of cities in the Travelling Salesman Problem, or the target values in the Math Function Approximation Problem
-   let ind_data = BasicIndividualData::default();
+    // Prepare the individual data - The data is passed to the individual when it is created
+    // Individual data contains things that are not specific to the individual, but are needed for the evolution
+    // These can contain things like coordinates of cities in the Travelling Salesman Problem, or the target values in the Math Function Approximation Problem
+    let ind_data = BasicIndividualData::default();
 
-   // Create the population
-   let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&config, ind_data);
+    // Create the population
+    let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&config, ind_data);
 
-   // Evolve the population 
-   // This will apply the evolution rules to the population and create a new generation
-   // You can run next_gen() in a loop to evolve the population
-   pop.next_gen();
+    // Evolve the population 
+    // This will apply the evolution rules to the population and create a new generation
+    // You can run next_gen() in a loop to evolve the population
+    pop.next_gen();
 
-   // Get the best individual from the population
-   let pop_best = pop.get_best();
+    // Get the best individual from the population
+    let pop_best = pop.get_best();
 
-   // Get visualise flag from the configuration 
-   let visualise: bool = config.get_bool("visualise").unwrap().unwrap_or(false);
+    // Get visualise flag from the configuration 
+    let visualise: bool = config.get_bool("visualise").unwrap().unwrap_or(false);
 
-   // Visualize the population
-   if visualise
-   {
-      pop.visualise().save(format!("{}/pop_{}.png", output_dir, pop.get_generation())).unwrap();
-   }
+    // Visualize the population
+    if visualise
+    {
+        pop.visualise().save(format!("{}/pop_{}.png", output_dir, pop.get_generation())).unwrap();
+    }
 
-   // Print the best individual from the population - if the individual implements the Display trait
-   println!("{}", pop_best);
+    // Print the best individual from the population - if the individual implements the Display trait
+    println!("{}", pop_best);
 }
 ```
-
 
 ## Evolution Process
 
 In Revo, the evolution process consists of the following steps:
 
-1. Create a new population of individuals with randomized values using `new` and `new_randomised`.
+1. Create a new population of individuals with randomized values using `new_randomised`.
 2. Evaluate the fitness of each individual in the population using the `count_fitness` method.
-3. Select the best individuals from the current population for reproduction, using either the tournament or roulette selection
+3. Select the best individuals from the current population for reproduction, using either the tournament or roulette
+   selection
    strategy using `get_fitness`.
-4. Create new individuals through `crossover_to` and `copy_to` with `mutate` from the selected individuals in the new population.
+4. Create new individuals through `crossover` and `clone` with `mutate` from the selected individuals in the new
+   population.
 5. Evaluate the fitness of the new individuals using the `count_fitness` method.
 6. Swap the old population with the new population.
-- Replace the weakest individuals in the population with the new individuals by performing steps 3-6 until the desired number of generations is reached by calling `next_gen()` on the population.
 
-
+- Replace the weakest individuals in the population with the new individuals by performing steps 3-6 until the desired
+  number of generations is reached by calling `next_gen()` on the population.
 
 # The Population struct
 
-The population struct is used for storing the individuals and performing the evolution process. It provides methods for creating, evaluating, and visualising the population.
+The population struct is used for storing the individuals and performing the evolution process. It provides methods for
+creating, evaluating, and visualising the population.
 
 Population struct contains the following public methods:
 
-`new(config: &Config, ind_data: IndividualData) -> Population`: Create a new population with the given configuration and individual data. Individual data are stored in the population and are used for creating and evaluating individuals.
+`new(config: &Config, ind_data: IndividualData) -> Population`: Create a new population with the given configuration and
+individual data. Individual data are stored in the population and are used for creating and evaluating individuals.
 
 `next_gen(&mut self)`: Evolve the population by creating a new generation.
 
@@ -89,8 +92,6 @@ Population struct contains the following public methods:
 
 `get_individual_data(&self) -> &IndividualData`: Get the individual data from the population.
 
-
-
 # Implementing Your Own Individual
 
 To use Revo, you need to implement the `EvoIndividual` trait for your own individual. This trait provides methods for
@@ -102,9 +103,6 @@ Here are the methods that need to be implemented:
 use rand::rngs::ThreadRng;
 
 pub trait EvoIndividual<IndividualData>: Send + Sync {
-    // Create a new individual with default values
-    fn new(ind_data: &IndividualData) -> Self;
-
     // Create a new individual with randomised values
     fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 
@@ -120,14 +118,8 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
         mut_amount: f32,
     );
 
-    // Crossover the genome of the individual with another individual and store the result in dest_int
-    fn crossover_to(
-        &self,
-        another_ind: &Self,
-        dest_int: &mut Self,
-        ind_data: &IndividualData,
-        rng: &mut ThreadRng,
-    );
+    // Return new Individual with the genome that is a crossover of two individuals
+    fn crossover(&self, another_ind: &Self, ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 
     // Count the fitness of the individual
     fn count_fitness(&mut self, ind_data: &IndividualData);
@@ -143,22 +135,22 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
 `IndividualData` is the type of the data needed for creating and evaluating individuals. This can be any type that you
 define.
 
-`new(ind_data: &IndividualData) -> Self` method creates a new individual with default values.
+`new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self` method creates a new individual with randomized
+values.
 
-`new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self` method creates a new individual with randomized values.
+`mutate(&mut self, ind_data: &IndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32)` method mutates the
+genome of the individual by a given probability and amount.
 
-`copy_to(&self, ind: &mut Self)` method copies the genome of the self individual to another individual.
+`crossover(&self, another_ind: &Self, ind_data: &IndividualData, rng: &mut ThreadRng) -> Self` method returns new
+individual created by crossover of the self individual and another individual.
 
-`mutate(&mut self, ind_data: &IndividualData, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32)` method mutates the genome of the individual by a given probability and amount.
-
-`crossover_to(&self, another_ind: &Self, dest_int: &mut Self, ind_data: &IndividualData, rng: &mut ThreadRng)` method combines the genome of the self individual with another individual and copies the result to the
-destination individual.
-
-`count_fitness(&self, ind_data: &IndividualData)` method counts the fitness of the individual and stores it in the individual.
+`count_fitness(&self, ind_data: &IndividualData)` method counts the fitness of the individual and stores it in the
+individual.
 
 `get_fitness(&self) -> f64` method returns the fitness of the individual stored in the individual.
 
-`get_visuals(&self, ind_data: &IndividualData) -> (f64, f64)` method returns the A and B values of the individual for generating color value for visualisation of the
+`get_visuals(&self, ind_data: &IndividualData) -> (f64, f64)` method returns the A and B values of the individual for
+generating color value for visualisation of the
 population. It is used in the `visualise` method of the population.
 
 The Visualise trait is optional and provides a method for visualizing the individual. Here's the method that needs to be
@@ -170,14 +162,14 @@ pub trait Visualise<IndividualData> {
 }
 ```
 
-`visualise(&IndividualData) -> RgbImage` method returns an image of the individual for visualisation. 
-In case of travelling salesman problem this method returns an image of the path that the salesman takes. It requires the individual data to get the coordinates of the cities and genom of the individual to get the order of the cities.
-
-
+`visualise(&IndividualData) -> RgbImage` method returns an image of the individual for visualisation.
+In case of travelling salesman problem this method returns an image of the path that the salesman takes. It requires the
+individual data to get the coordinates of the cities and genom of the individual to get the order of the cities.
 
 ### Configuration
 
-Config struct contains the json wrapper and methods for retrieving values from the json file. The config can be loaded from a json file
+Config struct contains the json wrapper and methods for retrieving values from the json file. The config can be loaded
+from a json file
 using the `from_file` method.
 
 #### Methods for retrieving values from the json file:
@@ -187,13 +179,15 @@ Method takes a string as an argument, which is the key of the value in the json 
 
 `get_int(key: &str) -> Result<Option<T>, String>`: Retrieve an integer value from the json file up to `i64`.
 
-`get_uint(key: &str) -> Result<Option<T>, String>`: Retrieve an unsigned integer value from the json file up to `u64`. Fails if the value is negative.
+`get_uint(key: &str) -> Result<Option<T>, String>`: Retrieve an unsigned integer value from the json file up to `u64`.
+Fails if the value is negative.
 
 `get_float(key: &str) -> Result<Option<T>, String>`: Retrieve a float value from the json file up to `f64`.
 
 `get_bool(key: &str) -> Result<Option<T>, bool>`: Retrieve a boolean value from the json file.
 
-`get_val(key: &str) -> Result<Option<T>, String>`: Retrieve any type of value that implements `FromStr` from the json file. It can be for example used to retrieve a values of enum types.
+`get_val(key: &str) -> Result<Option<T>, String>`: Retrieve any type of value that implements `FromStr` from the json
+file. It can be for example used to retrieve a values of enum types.
 
 #### Example of a configuration file:
 

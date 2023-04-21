@@ -328,11 +328,11 @@ where
     /// Private methods
 
     // Function returns the index of the best individual in the tournament
-    fn _single_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> usize {
+    fn _single_tournament(indices: &[usize], inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
-            if curr_gen_inds[index].get_fitness() > curr_gen_inds[best_i].get_fitness() {
+            if inds[index].get_fitness() > inds[best_i].get_fitness() {
                 best_i = index;
             }
         }
@@ -340,15 +340,11 @@ where
         best_i
     }
 
-    fn _roulette_selection(
-        rng: &mut ThreadRng,
-        indices: &[usize],
-        curr_gen_inds: &[Individual],
-    ) -> usize {
+    fn _roulette_selection(rng: &mut ThreadRng, indices: &[usize], inds: &[Individual]) -> usize {
         // Get min fitness
-        let mut min_fitness = curr_gen_inds[indices[0]].get_fitness();
+        let mut min_fitness = inds[indices[0]].get_fitness();
         for &index in indices.iter() {
-            let fitness = curr_gen_inds[index].get_fitness();
+            let fitness = inds[index].get_fitness();
             if fitness < min_fitness {
                 min_fitness = fitness;
             }
@@ -358,14 +354,14 @@ where
         let mut fitness_sum = 0.0;
         for &index in indices.iter() {
             // subtract the min fitness to avoid negative values
-            fitness_sum += curr_gen_inds[index].get_fitness() - min_fitness;
+            fitness_sum += inds[index].get_fitness() - min_fitness;
         }
 
         // Calculate the probabilities of each individual
         let mut probabilities = Vec::with_capacity(indices.len());
         for &index in indices.iter() {
             // subtract the min fitness to avoid negative values
-            let prob = (curr_gen_inds[index].get_fitness() - min_fitness) / fitness_sum;
+            let prob = (inds[index].get_fitness() - min_fitness) / fitness_sum;
             probabilities.push(prob);
         }
 
@@ -387,10 +383,10 @@ where
     fn _dual_rulette(
         rng: &mut ThreadRng,
         indices: &[usize],
-        curr_gen_inds: &[Individual],
+        inds: &[Individual],
     ) -> (usize, usize) {
         // Select the first individual
-        let first = Self::_roulette_selection(rng, indices, curr_gen_inds);
+        let first = Self::_roulette_selection(rng, indices, inds);
 
         // Remove the first index from the indices vector to avoid selecting the same individual twice
         let mut indices2 = Vec::with_capacity(indices.len() - 1);
@@ -401,23 +397,21 @@ where
         }
 
         // Select the second individual
-        let second = Self::_roulette_selection(rng, &indices2, curr_gen_inds);
+        let second = Self::_roulette_selection(rng, &indices2, inds);
 
         (first, second)
     }
 
     // Function returns the indices of the two best individuals in the tournament
-    fn _dual_tournament(indices: &[usize], curr_gen_inds: &[Individual]) -> (usize, usize) {
+    fn _dual_tournament(indices: &[usize], inds: &[Individual]) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];
 
         for &index in indices.iter().skip(1) {
-            if curr_gen_inds[index].get_fitness() > curr_gen_inds[best_i].get_fitness() {
+            if inds[index].get_fitness() > inds[best_i].get_fitness() {
                 second_best_i = best_i;
                 best_i = index;
-            } else if curr_gen_inds[index].get_fitness()
-                > curr_gen_inds[second_best_i].get_fitness()
-            {
+            } else if inds[index].get_fitness() > inds[second_best_i].get_fitness() {
                 second_best_i = index;
             }
         }
@@ -530,19 +524,19 @@ mod tests {
 
         // Fill the population with mock individuals
         let mut vec_ind = Vec::new();
-        for i in 0..pop.curr_gen_inds.len() {
+        for i in 0..pop.inds.len() {
             vec_ind.push(MockIndividual {
                 fitness: i as f64,
                 visuals: (i as f64, i as f64),
                 value: i as f64,
             });
         }
-        pop.curr_gen_inds = vec_ind.clone();
+        pop.inds = vec_ind.clone();
 
         // Test get_best
         let res = pop.get_best();
         // Pop should return the best individual - the one with the highest fitness value (last in the vector)
-        assert_eq!(res.value, vec_ind[pop.curr_gen_inds.len() - 1].value);
+        assert_eq!(res.value, vec_ind[pop.inds.len() - 1].value);
 
         // Test get_at
         assert_eq!(pop.get_at(1, 2).value, 7.0);
@@ -551,17 +545,17 @@ mod tests {
         // Test next_gen
         assert_eq!(pop.get_generation(), 0);
         pop.next_gen();
-        assert_eq!(pop.curr_gen_inds[0].value, 7.0);
-        assert_eq!(pop.curr_gen_inds[1].value, 8.0);
-        assert_eq!(pop.curr_gen_inds[2].value, 9.0);
+        assert_eq!(pop.inds[0].value, 7.0);
+        assert_eq!(pop.inds[1].value, 8.0);
+        assert_eq!(pop.inds[2].value, 9.0);
 
-        assert_eq!(pop.curr_gen_inds[3].value, 7.0);
-        assert_eq!(pop.curr_gen_inds[4].value, 8.0);
-        assert_eq!(pop.curr_gen_inds[5].value, 9.0);
+        assert_eq!(pop.inds[3].value, 7.0);
+        assert_eq!(pop.inds[4].value, 8.0);
+        assert_eq!(pop.inds[5].value, 9.0);
 
-        assert_eq!(pop.curr_gen_inds[6].value, 9.0);
-        assert_eq!(pop.curr_gen_inds[7].value, 9.0);
-        assert_eq!(pop.curr_gen_inds[8].value, 9.0);
+        assert_eq!(pop.inds[6].value, 9.0);
+        assert_eq!(pop.inds[7].value, 9.0);
+        assert_eq!(pop.inds[8].value, 9.0);
 
         assert_eq!(pop.get_generation(), 1);
 
