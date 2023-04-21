@@ -1,12 +1,25 @@
-# revo - Rust 2D Cellular Evolution Library
+# revo - Rust 2D Cellular Evolution Library + examples
+
+This repo contains the revo library and example implementations using the library.
 
 Revo is a Rust 2D cellular evolution library designed to provide a simple framework for creating and evolving populations of 2D cellular automata. It provides an implementation of common genetic algorithm components, such as selection, mutation, and crossover, and is highly customizable to accommodate various applications.
 
-## Quick Start
-Implementation of the Travelling Salesman Problem is located in the [evo_salesman folder](https://github.com/missingno7/revo/tree/master/evo_salesman).
+- More about revo library can be found in the [revo](https://github.com/missingno7/revo/tree/master/revo) folder.
 
-The example implementation of the revo library is located in the [revo folder](https://github.com/missingno7/revo/tree/master/revo). 
+ 
+# Structure of the repo
 
+[revo](https://github.com/missingno7/revo/tree/master/revo) - The revo library used by the examples.
+
+[evo_salesman](https://github.com/missingno7/revo/tree/master/evo_salesman) - The implementation of the Travelling Salesman Problem using the revo library.
+
+[funtree](https://github.com/missingno7/revo/tree/master/funtree) - The implementation of the math function approximation using the revo library.
+
+[playground](https://github.com/missingno7/revo/tree/master/playground) - The windowed sandbox application for visualizing the evolution of the population.  
+
+[social_distance](https://github.com/missingno7/revo/tree/master/social_distance) - The implementation of the Social Distance Problem using the revo library.
+
+# Quick Start
 ## Implementing Your Own Individual
 
 To use Revo, you need to implement the `EvoIndividual` trait for your own individual. This trait provides methods for creating, mutating, and evaluating individuals in the population.
@@ -57,30 +70,31 @@ pub trait EvoIndividual<IndividualData>: Send + Sync {
 
 `IndividualData` is the type of the data needed for creating and evaluating individuals. This can be any type that you define.
 
-`new()` method creates a new individual with default values. new_randomised() method creates a new individual with randomized values.
+`new()` method creates a new individual with default values. 
 
-`copy_to()` method copies the genome of the individual to another individual.
+`new_randomised()` method creates a new individual with randomized values.
+
+`copy_to()` method copies the genome of the self individual to another individual.
 
 `mutate()` method mutates the genome of the individual.
 
-`crossover_to()` method crosses over the genome of the individual with another individual.
+`crossover_to()` method combines the genome of the self individual with another individual and copies the result to the destination individual.
 
-`count_fitness()` method counts the fitness of the individual.
+`count_fitness()` method counts the fitness of the individual and stores it in the individual.
 
-`get_fitness()` method returns the fitness of the individual.
+`get_fitness()` method returns the fitness of the individual stored in the individual.
 
-`get_visuals()` method returns the A and B values of the individual for visualisation.
+`get_visuals()` method returns the A and B values of the individual for generating color value for visualisation of the genom. 
 
 The Visualise trait is optional and provides a method for visualizing the individual. Here's the method that needs to be implemented:
 
-
 ```rust
 pub trait Visualise<IndividualData> {
-    fn visualise(&self, output_filename: &str, ind_data: &IndividualData);
+    fn visualise(&self, ind_data: &IndividualData) -> RgbImage;
 }
 ```
 
-`output_filename` is the name of the file to save the visualization to.
+`visualise()` method returns an image of the individual for visualisation. E.g. the path of the travelling salesman problem.
 
 
 ## Evolution Process
