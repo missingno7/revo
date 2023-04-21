@@ -114,8 +114,6 @@ mod tests {
 
     #[test]
     fn crossover() {
-        let ind_data = FuntreeIndividualData::default();
-
         // Create individuals
         let left_add_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
         let right_add_1 = Expression::new_leaf(2.0, LeafType::Constant, false);
