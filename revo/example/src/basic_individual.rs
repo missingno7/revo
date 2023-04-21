@@ -53,9 +53,7 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     ) -> BasicIndividual {
         let ratio = rng.gen_range(0.0..1.0);
 
-
-        BasicIndividual
-        {
+        BasicIndividual {
             fitness: 0.0,
             foo: self.foo * ratio + another_ind.foo * (1.0 - ratio),
             bar: self.bar * ratio + another_ind.bar * (1.0 - ratio),

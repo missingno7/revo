@@ -254,6 +254,7 @@ where
     pub fn next_gen(&mut self) {
         let pop_size = self.inds.len();
 
+        // Create a new vector for the next generation
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
 
         // Do selection and crossover/mutation in parallel for each individual
@@ -288,11 +289,13 @@ where
                 res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
                 res
             };
+
+            // Count fitness of the new individual and return it
             res.count_fitness(&self.ind_data);
             res
         }));
 
-        // Advance to next generation
+        // Swap the current generation with the next generation and increment the generation counter
         std::mem::swap(&mut self.inds, &mut next_gen_inds);
         self.i_generation += 1;
     }
