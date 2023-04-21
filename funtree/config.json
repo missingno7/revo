@@ -1,0 +1,12 @@
+{
+  "pop_width": 400,
+  "pop_height": 100,
+  "mut_prob": 0.015,
+  "mut_amount": 0.1,
+  "crossover_prob": 0.1,
+  "selection_strategy": "tournament",
+  "visualise": false,
+
+  "max_depth": 5,
+  "values": "1:2, 2:3, 3:5, 4:7, 5:11, 6:13, 7:17, 8:19, 9:23, 10:29, 11:31, 12:37, 13:41, 14:43, 15:47, 16:53, 17:59, 18:61, 19:67, 20:71, 21:73, 22:79, 23:83, 24:89, 25:97"
+  }

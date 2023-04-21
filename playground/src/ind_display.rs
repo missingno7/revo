@@ -5,19 +5,19 @@ use revo::evo_individual::{EvoIndividual, Visualise};
 use std::io::Cursor;
 
 pub struct IndDisplay {
-    images_width: i32,
-    images_height: i32,
+    images_width: u32,
+    images_height: u32,
     image: Image,
     top_label: Label,
     bottom_label: Label,
 }
 
 impl IndDisplay {
-    pub fn new(images_width: i32, images_height: i32) -> Self {
+    pub fn new(images_width: u32, images_height: u32) -> Self {
         let image = Image::new();
         image.set_halign(gtk::Align::Start);
         image.set_valign(gtk::Align::Start);
-        image.set_size_request(images_width, images_height);
+        image.set_size_request(images_width as i32, images_height as i32);
         let top_label = Label::new(None);
         let bottom_label = Label::new(None);
         IndDisplay {
@@ -53,8 +53,8 @@ impl IndDisplay {
         let mut pixbuf = loader.pixbuf().unwrap();
         pixbuf = pixbuf
             .scale_simple(
-                self.images_width,
-                self.images_height,
+                self.images_width as i32,
+                self.images_height as i32,
                 gdk_pixbuf::InterpType::Bilinear,
             )
             .unwrap();
