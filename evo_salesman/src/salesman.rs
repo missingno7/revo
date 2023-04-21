@@ -328,12 +328,6 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         }
     }
 
-    fn copy_to(&self, ind: &mut Self) {
-        for i in 0..self.genom.len() {
-            ind.genom[i] = self.genom[i];
-        }
-    }
-
     fn mutate(
         &mut self,
         ind_data: &SalesmanIndividualData,
@@ -369,24 +363,27 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         }
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &SalesmanIndividual,
-        dest_ind: &mut SalesmanIndividual,
         _ind_data: &SalesmanIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> SalesmanIndividual {
         let start_cross_point = rng.gen_range(0..self.genom.len() - 1);
         let end_cross_point = rng.gen_range(0..self.genom.len() - 1);
         let other_i = rng.gen_range(0..self.genom.len() - 1);
 
+        let mut dest_ind = self.clone();
+
         self._impl_crossover_to(
             another_ind,
-            dest_ind,
+            &mut dest_ind,
             start_cross_point,
             end_cross_point,
             other_i,
         );
+
+        dest_ind
     }
 
     fn count_fitness(&mut self, ind_data: &SalesmanIndividualData) {

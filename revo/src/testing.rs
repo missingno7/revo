@@ -28,12 +28,6 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
         }
     }
 
-    fn copy_to(&self, ind: &mut Self) {
-        ind.value = self.value;
-        ind.fitness = self.fitness;
-        ind.visuals = self.visuals;
-    }
-
     fn mutate(
         &mut self,
         _ind_data: &MockIndividualData,
@@ -44,14 +38,17 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
         self.value += 1.0;
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
-        _another_ind: &Self,
-        dest_ind: &mut Self,
+        another_ind: &Self,
         _ind_data: &MockIndividualData,
         _rng: &mut ThreadRng,
-    ) {
-        dest_ind.value = (self.value + dest_ind.value) / 2.0;
+    ) -> MockIndividual {
+        MockIndividual {
+            fitness: 0.0,
+            visuals: (0.0, 0.0),
+            value: (self.value + another_ind.value) / 2.0,
+        }
     }
 
     fn count_fitness(&mut self, _ind_data: &MockIndividualData) {

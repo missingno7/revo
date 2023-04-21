@@ -50,11 +50,6 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         }
     }
 
-    fn copy_to(&self, ind: &mut Self) {
-        ind.genom = self.genom.clone();
-        ind.fitness = self.fitness;
-    }
-
     fn mutate(
         &mut self,
         _ind_data: &FuntreeIndividualData,
@@ -65,28 +60,27 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         self.genom.mutate(rng, mut_prob, mut_amount);
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &FuntreeIndividual,
-        dest_ind: &mut FuntreeIndividual,
         _ind_data: &FuntreeIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> FuntreeIndividual {
         // Select random source genom and copy the other not selected genom to destination genom
-        let (mut source_genom_it, mut dest_genom_it) = if rng.gen_bool(0.5) {
-            dest_ind.genom = self.genom.clone();
-            (&another_ind.genom, &dest_ind.genom)
+        let (source_genom, dest_ind) = if rng.gen_bool(0.5) {
+            (&another_ind, self.clone())
         } else {
-            dest_ind.genom = another_ind.genom.clone();
-            (&self.genom, &dest_ind.genom)
+            (&self, another_ind.clone())
         };
 
         // Choose random node in source and destination genom
-        source_genom_it = source_genom_it.choose_random_node(rng);
-        dest_genom_it = dest_genom_it.choose_random_node(rng);
+        let source_genom_it = source_genom.genom.choose_random_node(rng);
+        let dest_genom_it = dest_ind.genom.choose_random_node(rng);
 
         // Copy data from selected source node to selected destination node
         unsafe { source_genom_it.copy_to(dest_genom_it.as_mut()) }
+
+        dest_ind
     }
 
     fn count_fitness(&mut self, ind_data: &FuntreeIndividualData) {

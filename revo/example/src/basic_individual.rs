@@ -53,23 +53,21 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         }
     }
 
-    fn crossover_to(
+    fn crossover(
         &self,
         another_ind: &BasicIndividual,
-        dest_int: &mut BasicIndividual,
         _ind_data: &BasicIndividualData,
         rng: &mut ThreadRng,
-    ) {
+    ) -> BasicIndividual {
         let ratio = rng.gen_range(0.0..1.0);
 
-        dest_int.foo = self.foo * ratio + another_ind.foo * (1.0 - ratio);
-        dest_int.bar = self.bar * ratio + another_ind.bar * (1.0 - ratio);
-    }
 
-    fn copy_to(&self, ind: &mut Self) {
-        ind.fitness = self.fitness;
-        ind.foo = self.foo;
-        ind.bar = self.bar;
+        BasicIndividual
+        {
+            fitness: 0.0,
+            foo: self.foo * ratio + another_ind.foo * (1.0 - ratio),
+            bar: self.bar * ratio + another_ind.bar * (1.0 - ratio),
+        }
     }
 
     fn count_fitness(&mut self, _ind_data: &BasicIndividualData) {

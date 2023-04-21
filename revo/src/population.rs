@@ -34,8 +34,7 @@ impl FromStr for SelectionStrategyType {
 
 pub struct Population<Individual, IndividualData> {
     // Current and next generation of individuals
-    curr_gen_inds: Vec<Individual>,
-    next_gen_inds: Vec<Individual>,
+    inds: Vec<Individual>,
 
     // Population size
     pop_width: usize,
@@ -56,7 +55,7 @@ pub struct Population<Individual, IndividualData> {
 
 impl<Individual, IndividualData> Population<Individual, IndividualData> {
     pub fn get_at(&self, x: usize, y: usize) -> &Individual {
-        &self.curr_gen_inds[y * self.pop_width + x]
+        &self.inds[y * self.pop_width + x]
     }
 
     pub fn get_width(&self) -> usize {
@@ -216,26 +215,17 @@ where
             .unwrap_or(DEFAULT_POP_HEIGHT);
 
         let size = pop_width * pop_height;
-        let mut curr_gen_inds: Vec<Individual> = Vec::with_capacity(size);
-        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(size);
+        let mut inds: Vec<Individual> = Vec::with_capacity(size);
 
         // Initialise population with randomised individuals and count their fitness in parallel
-        curr_gen_inds.par_extend(
+        inds.par_extend(
             (0..size)
                 .into_par_iter()
                 .map(|_| Self::_new_random_individual(&ind_data)),
         );
 
-        // Just fill next_gen with default values
-        next_gen_inds.par_extend(
-            (0..size)
-                .into_par_iter()
-                .map(|_| Individual::new(&ind_data)),
-        );
-
         Population {
-            curr_gen_inds,
-            next_gen_inds,
+            inds,
             pop_width,
             pop_height,
             mut_prob: config
@@ -262,62 +252,58 @@ where
     // Function moves the population to the next generation
     // It does selection, crossover/mutation and counts fitness for each individual
     pub fn next_gen(&mut self) {
+        let pop_size = self.inds.len();
+
+        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
+
         // Do selection and crossover/mutation in parallel for each individual
-        self.next_gen_inds
-            .par_iter_mut()
-            .enumerate()
-            .take(self.curr_gen_inds.len())
-            .for_each(|(i, res)| {
-                let mut rng = thread_rng();
+        next_gen_inds.par_extend((0..pop_size).into_par_iter().map(|i| {
+            let mut rng = thread_rng();
 
-                // Select 5 individuals
-                let indices = Self::_l5_selection(i, self.pop_width, self.pop_height);
+            // Select 5 individuals
+            let indices = Self::_l5_selection(i, self.pop_width, self.pop_height);
 
-                // Decide whether to do crossover or mutation
-                if rng.gen_range(0.0..1.0) < self.crossover_prob {
-                    // Do crossover
+            // Decide whether to do crossover or mutation
+            let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                // Do crossover
 
-                    // Select two individuals
-                    let (first_ind, second_ind) =
-                        Self::_dual_tournament(&indices, &self.curr_gen_inds);
+                // Select two individuals
+                let (first_ind, second_ind) = Self::_dual_tournament(&indices, &self.inds);
 
-                    self.curr_gen_inds[first_ind].crossover_to(
-                        &self.curr_gen_inds[second_ind],
-                        res,
-                        &self.ind_data,
-                        &mut rng,
-                    )
-                } else {
-                    // Do mutation
+                self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, &mut rng)
+            } else {
+                // Do mutation
 
-                    // Select one individual based on the selection type
-                    let selected_ind_index = match self.selection_strategy_type {
-                        SelectionStrategyType::Roulette => {
-                            Self::_roulette_selection(&mut rng, &indices, &self.curr_gen_inds)
-                        }
-                        SelectionStrategyType::Tournament => {
-                            Self::_single_tournament(&indices, &self.curr_gen_inds)
-                        }
-                    };
+                // Select one individual based on the selection type
+                let selected_ind_index = match self.selection_strategy_type {
+                    SelectionStrategyType::Roulette => {
+                        Self::_roulette_selection(&mut rng, &indices, &self.inds)
+                    }
+                    SelectionStrategyType::Tournament => {
+                        Self::_single_tournament(&indices, &self.inds)
+                    }
+                };
 
-                    self.curr_gen_inds[selected_ind_index].copy_to(res);
-                    res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
-                }
-                res.count_fitness(&self.ind_data);
-            });
+                let mut res = self.inds[selected_ind_index].clone();
+                res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                res
+            };
+            res.count_fitness(&self.ind_data);
+            res
+        }));
 
         // Advance to next generation
-        std::mem::swap(&mut self.curr_gen_inds, &mut self.next_gen_inds);
+        std::mem::swap(&mut self.inds, &mut next_gen_inds);
         self.i_generation += 1;
     }
 
     // Function returns the best individual in the current generation
     pub fn get_best(&self) -> &Individual {
-        let mut best_ind = &self.curr_gen_inds[0];
+        let mut best_ind = &self.inds[0];
 
-        for i in 1..self.curr_gen_inds.len() {
-            if self.curr_gen_inds[i].get_fitness() > best_ind.get_fitness() {
-                best_ind = &self.curr_gen_inds[i];
+        for i in 1..self.inds.len() {
+            if self.inds[i].get_fitness() > best_ind.get_fitness() {
+                best_ind = &self.inds[i];
             }
         }
 
@@ -441,9 +427,9 @@ where
 
     // Function gets the L, A and B values of the current generation
     fn _prepare_pop_lab_data(&self) -> Vec<IndexedLabData> {
-        let len = self.curr_gen_inds.len();
+        let len = self.inds.len();
         let mut lab_data: Vec<IndexedLabData> = Vec::with_capacity(len);
-        for (i, ind) in self.curr_gen_inds.iter().enumerate() {
+        for (i, ind) in self.inds.iter().enumerate() {
             let l = ind.get_fitness();
             let (a, b) = ind.get_visuals(&self.ind_data);
             lab_data.push(IndexedLabData::new(l, a, b, i));
