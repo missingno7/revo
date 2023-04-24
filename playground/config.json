@@ -16,6 +16,11 @@
  "n_points": 50,
  "required_distance": 20,
 
- "display_width": 400,
- "display_height":  400
+ "display_width": 1200,
+ "display_height":  1200,
+
+ "plot_width": 600,
+ "plot_height":  600,
+ "max_depth": 5,
+ "values": "0:0, 1:-1, 2:2, 3:-3, 4:4 "
 }

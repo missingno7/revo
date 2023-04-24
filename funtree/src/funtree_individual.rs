@@ -2,7 +2,14 @@ use crate::expression::Expression;
 use crate::funtree_data::FuntreeIndividualData;
 use rand::rngs::ThreadRng;
 use rand::Rng;
-use revo::evo_individual::EvoIndividual;
+use revo::evo_individual::{EvoIndividual, Visualise};
+
+use image::{ImageBuffer, Rgb};
+use plotters::prelude::*;
+use image::RgbImage;
+use itertools::Itertools;
+use plotters::coord::types::RangedCoordf64;
+
 
 #[derive(Clone)]
 pub struct FuntreeIndividual {
@@ -39,6 +46,63 @@ impl FuntreeIndividual {
             fitness: self.fitness,
             genom: self.genom.simplify(),
         }
+    }
+
+
+    fn _add_data(points: &Vec<(f64, f64)>, chart: &mut ChartContext<'_, plotters::prelude::BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, color: RGBColor)
+    {
+        chart.draw_series(
+            points
+                .iter()
+                .map(|(x, y)| Circle::new((*x, *y), 2, color.filled())),
+        ).unwrap();
+
+        chart.draw_series(LineSeries::new(
+            points.iter().map(|(x, y)| (*x, *y)),
+            &color, )).unwrap();
+    }
+
+    fn _create_rgb_image_from_points(pred: &Vec<(f64, f64)>, gt: &Vec<(f64, f64)>, width: u32, height: u32, caption: String) -> RgbImage {
+        let mut buffer: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(width, height);
+
+        {
+            let root = BitMapBackend::with_buffer(&mut buffer, (width, height)).into_drawing_area();
+            root.fill(&WHITE).unwrap();
+
+            let (min_x, max_x) = gt.iter().map(|p| p.0).minmax().into_option().unwrap();
+            let (min_y, max_y) = gt.iter().map(|p| p.1).minmax().into_option().unwrap();
+
+
+
+            let margin_x = (max_x - min_x) * 0.1;
+            let margin_y = (max_y - min_y) * 0.1;
+
+            let x_axis = min_x - margin_x..max_x + margin_x;
+            let y_axis = min_y - margin_y..max_y + margin_y;
+
+            let mut chart = ChartBuilder::on(&root)
+                .caption(caption, ("Arial", 15).into_font())
+                .margin(5)
+                .x_label_area_size(30)
+                .y_label_area_size(30)
+                .build_cartesian_2d(x_axis.clone(), y_axis.clone())
+                .unwrap();
+
+            chart
+                .configure_mesh()
+                .x_desc("X-Axis")
+                .y_desc("Y-Axis")
+                .axis_desc_style(("Arial", 15).into_font())
+                .draw()
+                .unwrap();
+
+            Self::_add_data(gt, &mut chart, BLUE);
+
+            Self::_add_data(pred, &mut chart, RED);
+
+        }
+
+        buffer
     }
 }
 
@@ -110,6 +174,31 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
 
     fn get_visuals(&self, _ind_data: &FuntreeIndividualData) -> (f64, f64) {
         self.genom.get_visuals()
+    }
+}
+
+impl Visualise<FuntreeIndividualData> for FuntreeIndividual {
+    fn visualise(&self, ind_data: &FuntreeIndividualData) -> RgbImage
+    {
+        let mut gt: Vec<(f64, f64)> = Vec::new();
+        let mut pred: Vec<(f64, f64)> = Vec::new();
+
+        // Count mean absolute error
+        for val in ind_data.vals.iter() {
+            let (x, y) = val.as_tuple();
+            let y_pred = self.genom.evaluate(x);
+
+            gt.push((x, y));
+
+            if !y_pred.is_nan() {
+                pred.push((x, y_pred));
+            }
+        }
+
+
+        let caption = format!("y = {}", self.genom.simplify().as_string());
+
+        Self::_create_rgb_image_from_points(&pred, &gt, ind_data.plot_width, ind_data.plot_height, caption)
     }
 }
 
