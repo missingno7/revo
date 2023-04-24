@@ -6,7 +6,6 @@ const DEFAULT_MAX_DEPTH: u32 = 5;
 const DEFAULT_PLOT_WIDTH: u32 = 400;
 const DEFAULT_PLOT_HEIGHT: u32 = 400;
 
-
 #[derive(Clone)]
 pub struct FuntreeIndividualData {
     pub vals: Vec<Val>,
@@ -24,8 +23,14 @@ impl FuntreeIndividualData {
                 .get_int("max_depth")
                 .unwrap()
                 .unwrap_or(DEFAULT_MAX_DEPTH),
-            plot_width: config.get_int("plot_width").unwrap().unwrap_or(DEFAULT_PLOT_WIDTH),
-            plot_height: config.get_int("plot_height").unwrap().unwrap_or(DEFAULT_PLOT_HEIGHT),
+            plot_width: config
+                .get_int("plot_width")
+                .unwrap()
+                .unwrap_or(DEFAULT_PLOT_WIDTH),
+            plot_height: config
+                .get_int("plot_height")
+                .unwrap()
+                .unwrap_or(DEFAULT_PLOT_HEIGHT),
         }
     }
 }

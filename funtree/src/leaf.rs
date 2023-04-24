@@ -36,7 +36,7 @@ impl Leaf {
         Leaf { leaf_type, value }
     }
 
-    pub fn as_string(&self, minus: bool) -> String {
+    pub fn to_string(&self, minus: bool) -> String {
         match self.leaf_type {
             LeafType::Constant => format!("{:.2}", if minus { -self.value } else { self.value }),
             LeafType::Variable => {
@@ -69,5 +69,13 @@ impl Leaf {
 
     pub fn get_leaf_type(&self) -> LeafType {
         self.leaf_type
+    }
+
+    pub fn is_constant(&self) -> bool {
+        self.leaf_type == LeafType::Constant
+    }
+
+    pub fn is_variable(&self) -> bool {
+        self.leaf_type == LeafType::Variable
     }
 }

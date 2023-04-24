@@ -4,7 +4,8 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use std::default::Default;
-use std::fmt;
+use std::mem::swap;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub enum Expr {
@@ -53,6 +54,14 @@ impl Expression {
         }
     }
 
+    pub fn new_constant(value: f64) -> Self {
+        Self::new_leaf(value, LeafType::Constant, false)
+    }
+
+    pub fn new_variable(minus: bool) -> Self {
+        Self::new_leaf(0.0, LeafType::Variable, minus)
+    }
+
     // Generate a random expression
     pub fn new_randomised(rng: &mut ThreadRng, max_depth: u16) -> Self {
         let minus = rng.gen_bool(0.5);
@@ -74,23 +83,6 @@ impl Expression {
 
             Self::new_operation(left, right, operation_type, minus)
         }
-    }
-
-    pub fn as_string(&self) -> String {
-        let mut s = String::new();
-
-        match &self.expr {
-            Expr::Leaf(leaf) => s.push_str(&leaf.as_string(self.minus)),
-            Expr::Op(op) => {
-                if self.minus {
-                    s.push('-');
-                }
-
-                s.push_str(&op.as_string())
-            }
-        }
-
-        s
     }
 
     pub fn get_visuals(&self) -> (f64, f64) {
@@ -151,18 +143,171 @@ impl Expression {
         other.expr = self.expr.clone();
     }
 
-    pub fn simplify(&self) -> Expression {
-        if let Expr::Op(op) = &self.expr {
-            op.simplify(self.minus)
-        } else {
-            self.clone()
+    pub fn is_constant(&self) -> bool {
+        match &self.expr {
+            Expr::Leaf(leaf) => leaf.is_constant(),
+            Expr::Op(_) => false,
         }
     }
 
-    pub fn is_constant(&self) -> bool {
+    pub fn is_variable(&self) -> bool {
         match &self.expr {
-            Expr::Leaf(leaf) => leaf.get_leaf_type() == LeafType::Constant,
-            Expr::Op(op) => op.is_constant(),
+            Expr::Leaf(leaf) => leaf.is_variable(),
+            Expr::Op(_) => false,
+        }
+    }
+
+    pub fn is_operation(&self) -> bool {
+        match &self.expr {
+            Expr::Leaf(_) => false,
+            Expr::Op(_) => true,
+        }
+    }
+
+    pub fn is_leaf(&self) -> bool {
+        match &self.expr {
+            Expr::Leaf(_) => true,
+            Expr::Op(_) => false,
+        }
+    }
+
+    pub fn simplify(&self) -> Expression {
+        // ?? means that it can be operation or leaf
+        // ? means it's a leaf (constant or variable)
+        // _ means it's any operation type
+        // +* means it's an addition or multiplication
+
+        // ??
+        match &self.expr {
+            // If the expression is a leaf, it is already simplified
+            // ? => ?
+            Expr::Leaf(_) => {
+                // Expression is already simplified
+                self.clone()
+            }
+            // (?? _ ??)
+            Expr::Op(op) => {
+                // Simplify the children
+                let mut left = op.get_left().simplify();
+                let mut right = op.get_right().simplify();
+
+                // (? _ ?)
+                if left.is_leaf() && right.is_leaf() {
+                    // a _ b => constant
+                    if left.is_constant() && right.is_constant() {
+                        // Both children are constants, make a new constant expression
+                        return Expression::new_leaf(
+                            op.evaluate(0.0),
+                            LeafType::Constant,
+                            self.minus,
+                        );
+                    }
+
+                    // x + x
+                    if left.is_variable() && right.is_variable() && op.is_addition() {
+                        // x + -x = -x + x => 0
+                        if left.minus != right.minus {
+                            return Self::new_constant(0.0);
+                        }
+                        // -x + -x => -2*x
+                        else if left.minus && right.minus {
+                            return Self::new_operation(
+                                Self::new_constant(-2.0),
+                                Self::new_variable(false),
+                                OperationType::Multiplication,
+                                self.minus,
+                            );
+                        }
+                        // x + x => 2*x
+                        else {
+                            return Self::new_operation(
+                                Self::new_constant(2.0),
+                                Self::new_variable(false),
+                                OperationType::Multiplication,
+                                self.minus,
+                            );
+                        }
+                    }
+
+                    // x * x
+                    if left.is_variable() && right.is_variable() && op.is_power() {
+                        // x * -x = -x * x => -x^2
+                        if left.minus != right.minus {
+                            return Self::new_operation(
+                                Self::new_variable(true),
+                                Self::new_constant(2.0),
+                                OperationType::Power,
+                                self.minus,
+                            );
+                        }
+                        // -x * -x = x * x => x^2
+                        else {
+                            return Self::new_operation(
+                                Self::new_variable(false),
+                                Self::new_constant(2.0),
+                                OperationType::Power,
+                                self.minus,
+                            );
+                        }
+                    }
+
+                    // x / x
+                    if left.is_variable() && right.is_variable() && op.is_division() {
+                        // x / -x = -x / x => -1
+                        if left.minus != right.minus {
+                            return Self::new_constant(-1.0);
+                        }
+                        // -x / -x = x / x => 1
+                        else {
+                            return Self::new_constant(1.0);
+                        }
+                    }
+
+                    // Constant always on the left in case of commutative operations
+                    if left.is_variable() && right.is_constant() && op.is_commutative() {
+                        return Expression::new_operation(
+                            right,
+                            left,
+                            op.get_operation_type(),
+                            self.minus,
+                        );
+                    }
+
+                    // Cannot simplify
+                    return Expression::new_operation(
+                        left,
+                        right,
+                        op.get_operation_type(),
+                        self.minus,
+                    );
+                }
+
+                // Optimization for commutative operations
+                // ?? +* ??
+                if op.is_commutative() {
+                    // Normalize that operation is always on the left side in case of commutative operations
+                    if left.is_leaf() && right.is_operation() {
+                        swap(&mut left, &mut right);
+                    }
+
+                    // (? _ ?) +* ??
+                    if let Expr::Op(ref left_op) = left.expr {
+                        let _left_left = left_op.get_left();
+                        let _left_right = left_op.get_right();
+
+                        // (? _ ?) +* (? _ ?)
+                        if let Expr::Op(ref _right_op) = right.expr {
+                        }
+                        // (? _ ?) +* ?
+                        else {
+                        }
+                    }
+                    // ? _ ?
+                }
+
+                // Unhandled cases
+                Expression::new_operation(left, right, op.get_operation_type(), self.minus)
+            }
         }
     }
 
@@ -181,15 +326,155 @@ impl Expression {
     }
 }
 
-impl fmt::Display for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_string())
-    }
-}
-
 impl Default for Expression {
     fn default() -> Self {
         Self::new_leaf(0.0, LeafType::Constant, false)
+    }
+}
+
+impl ToString for Expression {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+
+        match &self.expr {
+            Expr::Leaf(leaf) => s.push_str(&leaf.to_string(self.minus)),
+            Expr::Op(op) => {
+                if self.minus {
+                    s.push('-');
+                }
+
+                s.push_str(&op.to_string())
+            }
+        }
+
+        s
+    }
+}
+
+impl FromStr for Expression {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Remove all whitespaces
+        let s = s.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+
+        //println!("parsing: {}",s);
+
+        // Most inner
+        if !s.contains('(') && !s.contains(')') {
+            if let Some(op) = s.find(|c| c == '+' || c == '/' || c == '^' || c == '*') {
+                let left_expr = Self::from_str(&s[..op])?;
+                let right_expr = Self::from_str(&s[op + 1..])?;
+                let operation_type = OperationType::from_str(&s[op..op + 1])?;
+
+                return Ok(Expression::new_operation(
+                    left_expr,
+                    right_expr,
+                    operation_type,
+                    false,
+                ));
+            } else if s == "x" {
+                return Ok(Expression::new_variable(false));
+            } else if s == "-x" {
+                return Ok(Expression::new_variable(true));
+            } else {
+                return Ok(Expression::new_constant(s.parse::<f64>().unwrap()));
+            }
+        }
+
+        let left_start = s.find('(').unwrap_or(0);
+
+        let s_left = &s[left_start + 1..];
+
+        let mut depth = 0;
+        let mut left_end = left_start;
+        for (i, ch) in s_left.chars().enumerate() {
+            if ch == ')' && depth == 0 {
+                left_end = i;
+                break;
+            }
+
+            if ch == '(' {
+                depth += 1;
+            }
+            if ch == ')' {
+                depth -= 1;
+            }
+        }
+
+        let s_left = &s_left[..left_end];
+
+        let mut left_expr = Self::from_str(s_left)?;
+        if left_start > 0 && &s[left_start - 1..left_start] == "-" {
+            left_expr.minus = true;
+        }
+
+        // left is actually right - left part is missing () marks
+        if let Some(op_mark_i) =
+            s[..left_start].find(|c| c == '+' || c == '/' || c == '^' || c == '*')
+        {
+            let real_left_expr = Self::from_str(&s[..op_mark_i])?;
+
+            let op_type = OperationType::from_str(&s[op_mark_i..op_mark_i + 1])?;
+
+            return Ok(Expression::new_operation(
+                real_left_expr,
+                left_expr,
+                op_type,
+                false,
+            ));
+        }
+
+        let s_remaining = &s[left_end + 2..];
+
+        let op_type: Option<OperationType> =
+            match s_remaining.find(|c| c == '+' || c == '/' || c == '^' || c == '*') {
+                None => None,
+                Some(i) => Some(OperationType::from_str(&s_remaining[i..i + 1])?),
+            };
+
+        let mut right_start = s_remaining.find('(').unwrap_or(1);
+
+        if let Some(op_mark_i) = s_remaining.find(|c| c == '+' || c == '/' || c == '^' || c == '*')
+        {
+            right_start = op_mark_i;
+        }
+
+        if right_start + 1 > s_remaining.len() {
+            return Ok(left_expr);
+        }
+
+        let s_right = &s_remaining[right_start..];
+        let mut depth = 0;
+        let mut right_end = s_right.len();
+        for (i, ch) in s_right.chars().enumerate() {
+            if ch == ')' && depth == 0 {
+                right_end = i;
+                break;
+            }
+
+            if ch == '(' {
+                depth += 1;
+            }
+            if ch == ')' {
+                depth -= 1;
+            }
+        }
+
+        let s_right = &s_right[1..right_end];
+
+        let mut right_expr = Self::from_str(s_right)?;
+        if right_start > 0 && &s_remaining[right_start - 1..right_start] == "-" {
+            right_expr.minus = true;
+        }
+
+        if let Some(op_type) = op_type {
+            return Ok(Expression::new_operation(
+                left_expr, right_expr, op_type, false,
+            ));
+        }
+
+        Ok(right_expr)
     }
 }
 
@@ -204,18 +489,18 @@ mod tests {
         let add_1 = Expression::new_operation(leaf_1, leaf_2, OperationType::Addition, true);
 
         // Check the expression is correct
-        assert_eq!(add_1.as_string(), "-(-1.00 + 2.00)");
+        assert_eq!(add_1.to_string(), "-(-1.00 + 2.00)");
 
         // Get all nodes in the expression
         let nodes = add_1.get_nodes();
         assert_eq!(nodes.len(), 3);
-        assert_eq!(nodes[0].as_string(), "-(-1.00 + 2.00)");
-        assert_eq!(nodes[1].as_string(), "-1.00");
-        assert_eq!(nodes[2].as_string(), "2.00");
+        assert_eq!(nodes[0].to_string(), "-(-1.00 + 2.00)");
+        assert_eq!(nodes[1].to_string(), "-1.00");
+        assert_eq!(nodes[2].to_string(), "2.00");
     }
 
     #[test]
-    fn test_simplify() {
+    fn test_simplify_constants() {
         let leaf_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
         let leaf_2 = Expression::new_leaf(2.0, LeafType::Constant, false);
         // -(-1.00 + 2.00)
@@ -231,13 +516,13 @@ mod tests {
         let add_2 = Expression::new_operation(multiply_1, leaf_4, OperationType::Addition, true);
 
         // Check the expression is correct
-        assert_eq!(add_2.as_string(), "-(-(-(-1.00 + 2.00) * 3.00) + -4.00)");
+        assert_eq!(add_2.to_string(), "-(-(-(-1.00 + 2.00) * 3.00) + -4.00)");
 
         // Simplify the expression
         add_2.simplify();
 
         // Check the simplified expression is correct
-        assert_eq!(add_2.simplify().as_string(), "1.00");
+        assert_eq!(add_2.simplify().to_string(), "1.00");
 
         // Add *x to expression
         let leaf_5 = Expression::new_leaf(0.0, LeafType::Variable, true);
@@ -246,11 +531,39 @@ mod tests {
 
         // Check the expression is correct
         assert_eq!(
-            multiply_2.as_string(),
+            multiply_2.to_string(),
             "-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))"
         );
 
         // Check the simplified expression is correct
-        assert_eq!(multiply_2.simplify().as_string(), "-(-x * 1.00)");
+        assert_eq!(multiply_2.simplify().to_string(), "-(1.00 * -x)");
+    }
+
+    #[test]
+    fn from_string() {
+        // Testing some edge cases
+
+        let original_string = "(-(x ^ -0.13) * x)";
+        let new_string = Expression::from_str(original_string).unwrap().to_string();
+        assert_eq!(original_string, new_string);
+
+        let original_string = "((2.20 + 0.13) / x)";
+        let new_string = Expression::from_str(original_string).unwrap().to_string();
+        assert_eq!(original_string, new_string);
+
+        // Test with 10000 random expressions
+        let mut rng = rand::thread_rng();
+        for _ in 0..10000 {
+            let exp = Expression::new_randomised(&mut rng, 5);
+
+            let original_string = exp.to_string();
+            println!("Testing {}", original_string);
+
+            let new_string = Expression::from_str(original_string.as_str())
+                .unwrap()
+                .to_string();
+
+            assert_eq!(original_string, new_string);
+        }
     }
 }

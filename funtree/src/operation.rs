@@ -1,12 +1,11 @@
 use crate::expression::Expression;
-use crate::leaf::LeafType;
 use rand::prelude::SliceRandom;
 use rand::rngs::ThreadRng;
 use rand::Rng;
-use std::fmt;
 use std::mem::swap;
+use std::str::FromStr;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
 pub enum OperationType {
     Addition,
@@ -24,6 +23,20 @@ impl OperationType {
             OperationType::Power,
         ];
         *operations.choose(rng).unwrap()
+    }
+}
+
+impl FromStr for OperationType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(OperationType::Addition),
+            "*" => Ok(OperationType::Multiplication),
+            "/" => Ok(OperationType::Division),
+            "^" => Ok(OperationType::Power),
+            _ => Err(format!("Invalid operation type {}", s)),
+        }
     }
 }
 
@@ -56,21 +69,6 @@ impl Operation {
         }
     }
 
-    pub fn as_string(&self) -> String {
-        let op_str = match self.operation_type {
-            OperationType::Addition => "+",
-            OperationType::Multiplication => "*",
-            OperationType::Division => "/",
-            OperationType::Power => "^",
-        };
-        format!(
-            "({} {} {})",
-            self.left.as_string(),
-            op_str,
-            self.right.as_string()
-        )
-    }
-
     pub fn get_visuals(&self) -> (f64, f64) {
         let (left_a, left_b) = self.left.get_visuals();
         let (right_a, right_b) = self.right.get_visuals();
@@ -99,28 +97,52 @@ impl Operation {
         self.right.append_nodes(nodes);
     }
 
-    // Get if the operation is a constant only operation
-    pub fn is_constant(&self) -> bool {
-        if self.left.is_constant() && self.right.is_constant() {
-            return true;
-        }
-        false
+    pub fn get_left(&self) -> &Expression {
+        &self.left
     }
 
-    pub fn simplify(&self, minus: bool) -> Expression {
-        let left = self.left.simplify();
-        let right = self.right.simplify();
+    pub fn get_right(&self) -> &Expression {
+        &self.right
+    }
 
-        if left.is_constant() && right.is_constant() {
-            Expression::new_leaf(self.evaluate(0.0), LeafType::Constant, minus)
-        } else {
-            Expression::new_operation(left, right, self.operation_type, minus)
-        }
+    pub fn get_operation_type(&self) -> OperationType {
+        self.operation_type
+    }
+
+    pub fn is_addition(&self) -> bool {
+        self.operation_type == OperationType::Addition
+    }
+
+    pub fn is_multiplication(&self) -> bool {
+        self.operation_type == OperationType::Multiplication
+    }
+
+    pub fn is_division(&self) -> bool {
+        self.operation_type == OperationType::Division
+    }
+
+    pub fn is_power(&self) -> bool {
+        self.operation_type == OperationType::Power
+    }
+
+    pub fn is_commutative(&self) -> bool {
+        self.is_addition() || self.is_multiplication()
     }
 }
 
-impl fmt::Display for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_string().fmt(f)
+impl ToString for Operation {
+    fn to_string(&self) -> String {
+        let op_str = match self.operation_type {
+            OperationType::Addition => "+",
+            OperationType::Multiplication => "*",
+            OperationType::Division => "/",
+            OperationType::Power => "^",
+        };
+        format!(
+            "({} {} {})",
+            self.left.to_string(),
+            op_str,
+            self.right.to_string()
+        )
     }
 }

@@ -6,7 +6,6 @@ use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 use std::fs;
 
-
 fn main() {
     // Prepare output directory and remove old files if they exist
     let output_dir = "./out";
@@ -26,10 +25,8 @@ fn main() {
     let mut all_best_ind = pop.get_best().clone();
     println!(
         "Best individual: {}",
-        all_best_ind.simplify().as_string(&ind_data)
+        all_best_ind.simplify().to_string(&ind_data)
     );
-
-    all_best_ind.visualise(&ind_data).save("best.png").unwrap();
 
     // Run the evolution
     loop {
@@ -46,8 +43,12 @@ fn main() {
 
             println!(
                 "Best individual: {}",
-                all_best_ind.simplify().as_string(&ind_data)
+                all_best_ind.simplify().to_string(&ind_data)
             );
+            all_best_ind
+                .visualise(&ind_data)
+                .save(format!("{}/best_{}.png", output_dir, pop.get_generation()))
+                .unwrap();
         }
 
         if visualise {

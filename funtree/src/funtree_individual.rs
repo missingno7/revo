@@ -4,12 +4,11 @@ use rand::rngs::ThreadRng;
 use rand::Rng;
 use revo::evo_individual::{EvoIndividual, Visualise};
 
-use image::{ImageBuffer, Rgb};
-use plotters::prelude::*;
 use image::RgbImage;
+use image::{ImageBuffer, Rgb};
 use itertools::Itertools;
 use plotters::coord::types::RangedCoordf64;
-
+use plotters::prelude::*;
 
 #[derive(Clone)]
 pub struct FuntreeIndividual {
@@ -18,10 +17,10 @@ pub struct FuntreeIndividual {
 }
 
 impl FuntreeIndividual {
-    pub fn as_string(&self, ind_data: &FuntreeIndividualData) -> String {
+    pub fn to_string(&self, ind_data: &FuntreeIndividualData) -> String {
         let mut result = String::new();
 
-        result.push_str(&format!("y = {}\n", self.genom.as_string()));
+        result.push_str(&format!("y = {}\n", self.genom.to_string()));
 
         // Count mean absolute error
         for val in ind_data.vals.iter() {
@@ -48,21 +47,35 @@ impl FuntreeIndividual {
         }
     }
 
+    fn _add_data(
+        points: &[(f64, f64)],
+        chart: &mut ChartContext<
+            '_,
+            plotters::prelude::BitMapBackend<'_>,
+            Cartesian2d<RangedCoordf64, RangedCoordf64>,
+        >,
+        color: RGBColor,
+    ) {
+        chart
+            .draw_series(
+                points
+                    .iter()
+                    .map(|(x, y)| Circle::new((*x, *y), 2, color.filled())),
+            )
+            .unwrap();
 
-    fn _add_data(points: &Vec<(f64, f64)>, chart: &mut ChartContext<'_, plotters::prelude::BitMapBackend<'_>, Cartesian2d<RangedCoordf64, RangedCoordf64>>, color: RGBColor)
-    {
-        chart.draw_series(
-            points
-                .iter()
-                .map(|(x, y)| Circle::new((*x, *y), 2, color.filled())),
-        ).unwrap();
-
-        chart.draw_series(LineSeries::new(
-            points.iter().map(|(x, y)| (*x, *y)),
-            &color, )).unwrap();
+        chart
+            .draw_series(LineSeries::new(points.iter().map(|(x, y)| (*x, *y)), color))
+            .unwrap();
     }
 
-    fn _create_rgb_image_from_points(pred: &Vec<(f64, f64)>, gt: &Vec<(f64, f64)>, width: u32, height: u32, caption: String) -> RgbImage {
+    fn _create_rgb_image_from_points(
+        pred: &[(f64, f64)],
+        gt: &[(f64, f64)],
+        width: u32,
+        height: u32,
+        caption: String,
+    ) -> RgbImage {
         let mut buffer: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(width, height);
 
         {
@@ -71,8 +84,6 @@ impl FuntreeIndividual {
 
             let (min_x, max_x) = gt.iter().map(|p| p.0).minmax().into_option().unwrap();
             let (min_y, max_y) = gt.iter().map(|p| p.1).minmax().into_option().unwrap();
-
-
 
             let margin_x = (max_x - min_x) * 0.1;
             let margin_y = (max_y - min_y) * 0.1;
@@ -85,7 +96,7 @@ impl FuntreeIndividual {
                 .margin(5)
                 .x_label_area_size(30)
                 .y_label_area_size(30)
-                .build_cartesian_2d(x_axis.clone(), y_axis.clone())
+                .build_cartesian_2d(x_axis, y_axis)
                 .unwrap();
 
             chart
@@ -99,7 +110,6 @@ impl FuntreeIndividual {
             Self::_add_data(gt, &mut chart, BLUE);
 
             Self::_add_data(pred, &mut chart, RED);
-
         }
 
         buffer
@@ -178,8 +188,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
 }
 
 impl Visualise<FuntreeIndividualData> for FuntreeIndividual {
-    fn visualise(&self, ind_data: &FuntreeIndividualData) -> RgbImage
-    {
+    fn visualise(&self, ind_data: &FuntreeIndividualData) -> RgbImage {
         let mut gt: Vec<(f64, f64)> = Vec::new();
         let mut pred: Vec<(f64, f64)> = Vec::new();
 
@@ -195,10 +204,15 @@ impl Visualise<FuntreeIndividualData> for FuntreeIndividual {
             }
         }
 
+        let caption = format!("y = {}", self.genom.simplify().to_string());
 
-        let caption = format!("y = {}", self.genom.simplify().as_string());
-
-        Self::_create_rgb_image_from_points(&pred, &gt, ind_data.plot_width, ind_data.plot_height, caption)
+        Self::_create_rgb_image_from_points(
+            &pred,
+            &gt,
+            ind_data.plot_width,
+            ind_data.plot_height,
+            caption,
+        )
     }
 }
 
@@ -230,8 +244,8 @@ mod tests {
         };
 
         // Check if nodes are correct
-        assert_eq!(ind_1.genom.as_string(), "-(-1.00 + 2.00)");
-        assert_eq!(ind_2.genom.as_string(), "-(x * -x)");
+        assert_eq!(ind_1.genom.to_string(), "-(-1.00 + 2.00)");
+        assert_eq!(ind_2.genom.to_string(), "-(x * -x)");
 
         // Get references to nodes
         let ind_1_nodes = ind_1.genom.get_nodes();
@@ -243,11 +257,11 @@ mod tests {
         }
 
         // Copy root node from ind_1 to left child of ind_2
-        assert_eq!(ind_2.genom.as_string(), "-(-(-1.00 + 2.00) * -x)");
+        assert_eq!(ind_2.genom.to_string(), "-(-(-1.00 + 2.00) * -x)");
         assert_eq!(ind_2.genom.evaluate(11.0), -11.0);
 
         // Genom of ind_1 should not change
-        assert_eq!(ind_1.genom.as_string(), "-(-1.00 + 2.00)");
+        assert_eq!(ind_1.genom.to_string(), "-(-1.00 + 2.00)");
         assert_eq!(ind_1.genom.evaluate(10.0), -1.0);
 
         // Get references to nodes
@@ -258,9 +272,9 @@ mod tests {
         assert_eq!(ind_2_nodes.len(), 5);
 
         // Check that structure of nodes is the same
-        assert_eq!(ind_1_nodes[0].as_string(), ind_2_nodes[1].as_string());
-        assert_eq!(ind_1_nodes[1].as_string(), ind_2_nodes[2].as_string());
-        assert_eq!(ind_1_nodes[2].as_string(), ind_2_nodes[3].as_string());
+        assert_eq!(ind_1_nodes[0].to_string(), ind_2_nodes[1].to_string());
+        assert_eq!(ind_1_nodes[1].to_string(), ind_2_nodes[2].to_string());
+        assert_eq!(ind_1_nodes[2].to_string(), ind_2_nodes[3].to_string());
 
         assert_eq!(
             ind_1_nodes[0].evaluate(-10.0),
