@@ -483,63 +483,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_nodes() {
-        let leaf_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
-        let leaf_2 = Expression::new_leaf(2.0, LeafType::Constant, false);
-        let add_1 = Expression::new_operation(leaf_1, leaf_2, OperationType::Addition, true);
-
-        // Check the expression is correct
-        assert_eq!(add_1.to_string(), "-(-1.00 + 2.00)");
-
-        // Get all nodes in the expression
-        let nodes = add_1.get_nodes();
-        assert_eq!(nodes.len(), 3);
-        assert_eq!(nodes[0].to_string(), "-(-1.00 + 2.00)");
-        assert_eq!(nodes[1].to_string(), "-1.00");
-        assert_eq!(nodes[2].to_string(), "2.00");
-    }
-
-    #[test]
-    fn test_simplify_constants() {
-        let leaf_1 = Expression::new_leaf(1.0, LeafType::Constant, true);
-        let leaf_2 = Expression::new_leaf(2.0, LeafType::Constant, false);
-        // -(-1.00 + 2.00)
-        let add_1 = Expression::new_operation(leaf_1, leaf_2, OperationType::Addition, true);
-
-        let leaf_3 = Expression::new_leaf(3.0, LeafType::Constant, false);
-        // -(-(-1.00 + 2.00) * 3.00)
-        let multiply_1 =
-            Expression::new_operation(add_1, leaf_3, OperationType::Multiplication, true);
-
-        let leaf_4 = Expression::new_leaf(4.0, LeafType::Constant, true);
-        // -(-(-(-1.00 + 2.00) * 3.00) + -4.00)
-        let add_2 = Expression::new_operation(multiply_1, leaf_4, OperationType::Addition, true);
-
-        // Check the expression is correct
-        assert_eq!(add_2.to_string(), "-(-(-(-1.00 + 2.00) * 3.00) + -4.00)");
-
-        // Simplify the expression
-        add_2.simplify();
-
-        // Check the simplified expression is correct
-        assert_eq!(add_2.simplify().to_string(), "1.00");
-
-        // Add *x to expression
-        let leaf_5 = Expression::new_leaf(0.0, LeafType::Variable, true);
-        let multiply_2 =
-            Expression::new_operation(leaf_5, add_2, OperationType::Multiplication, true);
-
-        // Check the expression is correct
-        assert_eq!(
-            multiply_2.to_string(),
-            "-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))"
-        );
-
-        // Check the simplified expression is correct
-        assert_eq!(multiply_2.simplify().to_string(), "-(1.00 * -x)");
-    }
-
-    #[test]
     fn from_string() {
         // Testing some edge cases
 
@@ -557,13 +500,35 @@ mod tests {
             let exp = Expression::new_randomised(&mut rng, 5);
 
             let original_string = exp.to_string();
-            println!("Testing {}", original_string);
-
             let new_string = Expression::from_str(original_string.as_str())
                 .unwrap()
                 .to_string();
 
             assert_eq!(original_string, new_string);
         }
+    }
+
+    #[test]
+    fn test_get_nodes() {
+        let exp = Expression::from_str("-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))").unwrap();
+
+        // Get all nodes in the expression
+        let nodes = exp.get_nodes();
+        assert_eq!(nodes.len(), 9);
+        assert_eq!(
+            nodes[0].to_string(),
+            "-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))"
+        );
+        assert_eq!(nodes[1].to_string(), "-x");
+        assert_eq!(nodes[2].to_string(), "-(-(-(-1.00 + 2.00) * 3.00) + -4.00)");
+    }
+
+    #[test]
+    fn test_simplify_constants() {
+        let exp = Expression::from_str("-(-(-(-1.00 + 2.00) * 3.00) + -4.00)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "1.00");
+
+        let exp = Expression::from_str("-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-(1.00 * -x)");
     }
 }
