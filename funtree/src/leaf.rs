@@ -49,6 +49,14 @@ impl Leaf {
         }
     }
 
+    pub fn get_constant(&self) -> Result<f64, String> {
+        if self.leaf_type == LeafType::Constant {
+            Ok(self.value)
+        } else {
+            Err("Not a constant".to_string())
+        }
+    }
+
     pub fn get_visuals(&self) -> (f64, f64) {
         let a = self.value;
         let b = self.leaf_type as u8 as f64;

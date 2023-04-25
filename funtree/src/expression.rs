@@ -13,6 +13,22 @@ pub enum Expr {
     Op(Operation),
 }
 
+impl PartialEq for Expr {
+    fn eq(&self, other: &Self) -> bool {
+        let self_expr = Expression {
+            minus: false,
+            expr: self.clone(),
+        };
+
+        let other_expr = Expression {
+            minus: false,
+            expr: other.clone(),
+        };
+
+        self_expr.to_string() == other_expr.to_string()
+    }
+}
+
 #[derive(Clone)]
 pub struct Expression {
     minus: bool,
@@ -171,6 +187,13 @@ impl Expression {
         }
     }
 
+    pub fn get_constant(&self) -> Result<f64, String> {
+        match &self.expr {
+            Expr::Leaf(leaf) => leaf.get_constant(),
+            Expr::Op(_) => Err("Expression is not a constant".to_string()),
+        }
+    }
+
     pub fn simplify(&self) -> Expression {
         // ?? means that it can be operation or leaf
         // ? means it's a leaf (constant or variable)
@@ -191,13 +214,14 @@ impl Expression {
                 let mut left = op.get_left().simplify();
                 let mut right = op.get_right().simplify();
 
+                // Optimisation for simple operations
                 // (? _ ?)
                 if left.is_leaf() && right.is_leaf() {
                     // a _ b => constant
                     if left.is_constant() && right.is_constant() {
                         // Both children are constants, make a new constant expression
                         return Expression::new_leaf(
-                            op.evaluate(0.0),
+                            op.evaluate(1.0),
                             LeafType::Constant,
                             self.minus,
                         );
@@ -212,8 +236,8 @@ impl Expression {
                         // -x + -x => -2*x
                         else if left.minus && right.minus {
                             return Self::new_operation(
-                                Self::new_constant(-2.0),
                                 Self::new_variable(false),
+                                Self::new_constant(-2.0),
                                 OperationType::Multiplication,
                                 self.minus,
                             );
@@ -221,8 +245,8 @@ impl Expression {
                         // x + x => 2*x
                         else {
                             return Self::new_operation(
-                                Self::new_constant(2.0),
                                 Self::new_variable(false),
+                                Self::new_constant(2.0),
                                 OperationType::Multiplication,
                                 self.minus,
                             );
@@ -230,7 +254,7 @@ impl Expression {
                     }
 
                     // x * x
-                    if left.is_variable() && right.is_variable() && op.is_power() {
+                    if left.is_variable() && right.is_variable() && op.is_multiplication() {
                         // x * -x = -x * x => -x^2
                         if left.minus != right.minus {
                             return Self::new_operation(
@@ -250,62 +274,184 @@ impl Expression {
                             );
                         }
                     }
-
-                    // x / x
-                    if left.is_variable() && right.is_variable() && op.is_division() {
-                        // x / -x = -x / x => -1
-                        if left.minus != right.minus {
-                            return Self::new_constant(-1.0);
-                        }
-                        // -x / -x = x / x => 1
-                        else {
-                            return Self::new_constant(1.0);
-                        }
-                    }
-
-                    // Constant always on the left in case of commutative operations
-                    if left.is_variable() && right.is_constant() && op.is_commutative() {
-                        return Expression::new_operation(
-                            right,
-                            left,
-                            op.get_operation_type(),
-                            self.minus,
-                        );
-                    }
-
-                    // Cannot simplify
-                    return Expression::new_operation(
-                        left,
-                        right,
-                        op.get_operation_type(),
-                        self.minus,
-                    );
                 }
 
-                // Optimization for commutative operations
+                // Optimisation for commutative operations
                 // ?? +* ??
                 if op.is_commutative() {
-                    // Normalize that operation is always on the left side in case of commutative operations
-                    if left.is_leaf() && right.is_operation() {
+                    // Constant always on the right
+                    if left.is_constant() {
                         swap(&mut left, &mut right);
                     }
 
-                    // (? _ ?) +* ??
-                    if let Expr::Op(ref left_op) = left.expr {
-                        let _left_left = left_op.get_left();
-                        let _left_right = left_op.get_right();
-
-                        // (? _ ?) +* (? _ ?)
-                        if let Expr::Op(ref _right_op) = right.expr {
-                        }
-                        // (? _ ?) +* ?
-                        else {
-                        }
+                    // Normalise that operation is always on the left side
+                    if left.is_leaf() && right.is_operation() {
+                        swap(&mut left, &mut right);
                     }
-                    // ? _ ?
                 }
 
-                // Unhandled cases
+                // Simplification for nested operations
+
+                // (?? _ ??) _ ??
+                if let Expr::Op(ref left_op) = left.expr {
+                    let left_left = left_op.get_left();
+                    let left_right = left_op.get_right();
+
+                    // (?? _ ??) _ (?? _ ??)
+                    if let Expr::Op(ref right_op) = right.expr {
+                        let right_left = right_op.get_left();
+                        let right_right = right_op.get_right();
+
+                        // (?? * ??) + (?? * ??)
+                        // (?? * a) + (?? * b) => (?? * a+b)
+                        if op.is_addition()
+                            && left_op.is_multiplication()
+                            && right_op.is_multiplication()
+                            && left_right.is_constant()
+                            && right_right.is_constant()
+                            && left_left.expr == right_left.expr
+                        {
+                            let mut a = left_right.evaluate(1.0);
+                            if left.minus {
+                                a = -a
+                            };
+                            if left_left.minus {
+                                a = -a
+                            };
+
+                            let mut b = right_right.evaluate(1.0);
+                            if right.minus {
+                                b = -b
+                            };
+                            if right_left.minus {
+                                b = -b
+                            };
+
+                            let ab = a + b;
+
+                            if ab == 0.0 {
+                                return Expression::new_constant(0.0);
+                            }
+
+                            return Expression::new_operation(
+                                Expression {
+                                    expr: left_left.expr.clone(),
+                                    minus: false,
+                                },
+                                Expression::new_constant(ab),
+                                OperationType::Multiplication,
+                                self.minus,
+                            );
+                        }
+
+                        // (?? + a) + (?? + b) => (?? + a+b)
+                        if op.is_addition()
+                            && left_op.is_addition()
+                            && right_op.is_addition()
+                            && left_left.expr == right_left.expr
+                            && left_right.is_constant()
+                            && right_right.is_constant()
+                        {
+                            let mut a = left_right.evaluate(1.0);
+                            if left.minus {
+                                a = -a
+                            };
+
+                            let mut b = right_right.evaluate(1.0);
+                            if right.minus {
+                                b = -b
+                            };
+
+                            let mut ab = a + b;
+
+                            // -?? + ?? = 0
+                            if (left_left.minus != left.minus) != (right_left.minus != right.minus)
+                            {
+                                if self.minus {
+                                    ab = -ab;
+                                }
+                                return Expression::new_constant(ab);
+                            }
+
+                            return Expression::new_operation(
+                                Expression {
+                                    expr: left_left.expr.clone(),
+                                    minus: left_left.minus != left.minus,
+                                },
+                                Expression::new_constant(ab),
+                                OperationType::Addition,
+                                self.minus,
+                            );
+                        }
+                    }
+
+                    // (?? * a) * b => (a*b * x)
+                    if op.is_multiplication()
+                        && left_op.is_multiplication()
+                        && left_right.is_constant()
+                        && right.is_constant()
+                    {
+                        let minus = left.minus != self.minus;
+                        let ab = left_right.evaluate(1.0) * right.evaluate(1.0);
+                        return Expression::new_operation(
+                            left_left.clone(),
+                            Expression::new_constant(ab),
+                            OperationType::Multiplication,
+                            minus,
+                        );
+                    }
+
+                    // (?? + a) + b => (a+b + ??)
+                    if right.is_constant()
+                        && op.is_addition()
+                        && left_op.is_addition()
+                        && left_right.is_constant()
+                    {
+                        let minus = left.minus != self.minus;
+                        let ab = left_right.evaluate(1.0) + right.evaluate(1.0);
+                        return Expression::new_operation(
+                            left_left.clone(),
+                            Expression::new_constant(ab),
+                            OperationType::Addition,
+                            minus,
+                        );
+                    }
+                }
+
+                // Other simplifications
+
+                // ?? / ??
+                if op.is_division() {
+                    // ?? / a
+                    if right.is_constant() {
+                        let right_value = right.evaluate(1.0);
+
+                        // ?? / 1.0 = ??
+                        if right_value == 1.0 {
+                            let mut left_clone = left.clone();
+                            left_clone.minus = left_clone.minus != self.minus;
+                            return left_clone;
+                        }
+
+                        // ?? / -1.0 = -??
+                        if right_value == -1.0 {
+                            let mut left_clone = left.clone();
+                            left_clone.minus = !left_clone.minus != self.minus;
+                            return left_clone;
+                        }
+                    }
+
+                    // ?? / ?? where ?? == ?? => 1
+                    if left.expr == right.expr {
+                        if left.minus == right.minus {
+                            return Self::new_constant(1.0);
+                        } else {
+                            return Self::new_constant(-1.0);
+                        }
+                    }
+                }
+
+                // Unhandled cases ?? _ ??
                 Expression::new_operation(left, right, op.get_operation_type(), self.minus)
             }
         }
@@ -478,6 +624,12 @@ impl FromStr for Expression {
     }
 }
 
+impl PartialEq<Self> for Expression {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -521,14 +673,91 @@ mod tests {
         );
         assert_eq!(nodes[1].to_string(), "-x");
         assert_eq!(nodes[2].to_string(), "-(-(-(-1.00 + 2.00) * 3.00) + -4.00)");
+        assert_eq!(nodes[3].to_string(), "-(-(-1.00 + 2.00) * 3.00)");
+        assert_eq!(nodes[4].to_string(), "-(-1.00 + 2.00)");
+        assert_eq!(nodes[5].to_string(), "-1.00");
+        assert_eq!(nodes[6].to_string(), "2.00");
+        assert_eq!(nodes[7].to_string(), "3.00");
+        assert_eq!(nodes[8].to_string(), "-4.00");
     }
 
     #[test]
     fn test_simplify_constants() {
+        let exp = Expression::from_str("(((x^x)+2)+(3+(x^x))) + 5").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ x) + 10.00)");
+
+        let exp = Expression::from_str("(((x ^ x) + 5.00) + (x ^ x))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "(((x ^ x) + 5.00) + (x ^ x))");
+
+        // (?? + a) + (?? + b) => (?? + a+b)
+        let exp = Expression::from_str("((x^2)+2)+(3+(x^2))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ 2.00) + 5.00)");
+
+        let exp = Expression::from_str("(-(x^x)+2)+(3+(x^x))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "5.00");
+
+        let exp = Expression::from_str("((x^2)+2)+-(3+(x^2))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-1.00");
+
+        let exp = Expression::from_str("-((x^2)+2)+-(3+(x^2))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "(-(x ^ 2.00) + -5.00)");
+
+        // (?? * a) + (b * ??) => a+b * ??
+        let exp = Expression::from_str("(((x^2) * 2) + (3 * (x^2)))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ 2.00) * 5.00)");
+
+        let exp = Expression::from_str("(((x^2) * 2) + (3 * -(x^2)))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ 2.00) * -1.00)");
+
+        let exp = Expression::from_str("(-(-(x^2) * 2) + -(3 * -(x^2)))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ 2.00) * 5.00)");
+
+        // (?? + a) + b => a+b + ??
+        let exp = Expression::from_str("(3 + (2 + (x^2)))").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ 2.00) + 5.00)");
+
+        let exp = Expression::from_str("(-(-(x^x) + 2.00) + 3.00)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-(-(x ^ x) + 5.00)");
+
+        // Other
+
+        let exp = Expression::from_str("(((x + x) + (x + x))+x)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x * 4.00) + x)");
+
+        let exp = Expression::from_str("(5.0 + x)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "(x + 5.00)");
+
+        let exp = Expression::from_str("(x/x)+(x*x)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x ^ 2.00) + 1.00)");
+
         let exp = Expression::from_str("-(-(-(-1.00 + 2.00) * 3.00) + -4.00)").unwrap();
         assert_eq!(exp.simplify().to_string(), "1.00");
 
         let exp = Expression::from_str("-(-x * -(-(-(-1.00 + 2.00) * 3.00) + -4.00))").unwrap();
-        assert_eq!(exp.simplify().to_string(), "-(1.00 * -x)");
+        assert_eq!(exp.simplify().to_string(), "-(-x * 1.00)");
+
+        let exp = Expression::from_str("(x*x)/(x*x)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "1.00");
+
+        let exp = Expression::from_str("(x*x)/(x/-x)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-(x ^ 2.00)");
+
+        let exp = Expression::from_str("-(x*x)/(x*x)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-1.00");
+
+        let exp = Expression::from_str("((-1*-x)*3)*4").unwrap();
+        assert_eq!(exp.simplify().to_string(), "(-x * -12.00)");
+
+        let exp = Expression::from_str("(-(-1*-x)*3)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-(-x * -3.00)");
+
+        let exp = Expression::from_str("-(-(-1*-x)*-3)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "(-x * 3.00)");
+
+        let exp = Expression::from_str("-(-x/-1)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "-x");
+
+        let exp = Expression::from_str("((3*(x/2))*4)").unwrap();
+        assert_eq!(exp.simplify().to_string(), "((x / 2.00) * 12.00)");
     }
 }
