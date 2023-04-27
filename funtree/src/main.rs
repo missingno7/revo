@@ -14,7 +14,7 @@ fn main() {
 
     // Load the population config and create the individual data
     let config = Config::new(DEFAULT_CONFIG_FILENAME);
-    let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
+    let visualise = config.may_get_bool("visualise").unwrap().unwrap_or(false);
 
     // Create the population
     let mut pop: Population<FuntreeIndividual, FuntreeIndividualData> = Population::new(&config);
