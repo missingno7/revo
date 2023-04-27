@@ -5,12 +5,12 @@
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
  "visualise": false,
- "selection_strategy": "tournament",
+ "selection_strategy": "tournament", // "roulette", "tournament"
 
  "n_cities": 300,
  "screen_width": 1000,
  "screen_height":  1000,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
- "init_type": "greedy"
+ "init_type": "greedy" // "naive", "noise", "insertion", "greedy"
 }

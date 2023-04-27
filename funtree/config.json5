@@ -4,11 +4,11 @@
   "mut_prob": 0.015,
   "mut_amount": 0.1,
   "crossover_prob": 0.1,
-  "selection_strategy": "tournament",
+  "selection_strategy": "tournament", // "tournament", "roulette"
   "visualise": false,
 
   "plot_width": 800,
   "plot_height":  400,
   "max_depth": 8,
-  "values": "0:0, 1:2, 2:3, 3:4, 4:5"
+  "values": "0:0, 1:2, 2:3, 3:4, 4:5" // "x1:y1,x2:y2,..."
 }

@@ -5,10 +5,10 @@
  "mut_prob": 0.02,
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
- "selection_strategy": "tournament",
+ "selection_strategy": "tournament", // "tournament", "roulette"
 
  // Playground parameters
- "example": "salesman",
+ "example": "salesman", // "salesman", "social_distance", "funtree"
  "display_width": 600,
  "display_height":  600,
 
@@ -18,7 +18,7 @@
  "screen_height":  600,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
- "init_type": "greedy",
+ "init_type": "greedy", // "naive", "noise", "insertion", "greedy"
 
  // Social distance parameters
  "n_points": 50,
@@ -28,5 +28,5 @@
  "plot_width": 600,
  "plot_height":  600,
  "max_depth": 5,
- "values": "-3:3, -2:2, -1:1, 0:0, 1:1, 2:2, 3:3"
+ "values": "-3:3, -2:2, -1:1, 0:0, 1:1, 2:2, 3:3" // "x1:y1,x2:y2,..."
 }
