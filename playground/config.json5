@@ -1,4 +1,5 @@
 {
+ // General population parameters
  "pop_width": 50,
  "pop_height": 50,
  "mut_prob": 0.02,
@@ -6,8 +7,12 @@
  "crossover_prob": 0.1,
  "selection_strategy": "tournament",
 
+ // Playground parameters
  "example": "salesman",
+ "display_width": 600,
+ "display_height":  600,
 
+ // Salesman parameters
  "n_cities": 100,
  "screen_width": 600,
  "screen_height":  600,
@@ -15,12 +20,11 @@
  "rev_prob": 0.4,
  "init_type": "greedy",
 
+ // Social distance parameters
  "n_points": 50,
  "required_distance": 20,
 
- "display_width": 600,
- "display_height":  600,
-
+ // Funtree parameters
  "plot_width": 600,
  "plot_height":  600,
  "max_depth": 5,

@@ -442,7 +442,6 @@ mod tests {
     use super::*;
     use crate::testing::{MockIndividual, MockIndividualData};
     use crate::utils::LabData;
-    use rustc_serialize::json::Json;
 
     pub type TestPopulation = Population<MockIndividual, MockIndividualData>;
 
@@ -521,9 +520,8 @@ mod tests {
 
     #[test]
     fn test_population() {
-        let config = Config {
-            json: Json::from_str("{\"pop_width\": 3,  \"pop_height\": 3, \"mut_prob\":1.0, \"crossover_prob\":0.0, \"selection_strategy_type\":\"tournament\"  }").unwrap(),
-        };
+        let config = Config::from_str("{\"pop_width\": 3,  \"pop_height\": 3, \"mut_prob\":1.0, \"crossover_prob\":0.0, \"selection_strategy_type\":\"tournament\"  }").unwrap()
+        ;
 
         let mut pop = Population::new(&config);
 

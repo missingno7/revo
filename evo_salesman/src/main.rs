@@ -4,7 +4,7 @@ extern crate revo;
 use crate::revo::evo_population::EvoPopulation;
 use evo_salesman::salesman::SalesmanIndividual;
 use evo_salesman::salesman_data::SalesmanIndividualData;
-use revo::config::Config;
+use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 use std::fs;
@@ -16,7 +16,7 @@ fn main() {
     fs::create_dir(output_dir).unwrap();
 
     // Load the population config and create the individual data
-    let config = Config::new("config.json");
+    let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
     // Create the population

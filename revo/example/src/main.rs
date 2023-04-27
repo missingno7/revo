@@ -1,11 +1,11 @@
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
-use revo::config::Config;
+use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 
 fn main() {
     // Load the configuration from the config.json file
-    let config = Config::new("config.json");
+    let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let output_dir = "./";
 
     // Create the population

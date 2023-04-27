@@ -1,7 +1,7 @@
 use funtree::funtree_data::FuntreeIndividualData;
 use funtree::funtree_individual::FuntreeIndividual;
 
-use revo::config::Config;
+use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::evo_population::EvoPopulation;
 use revo::population::Population;
@@ -14,7 +14,7 @@ fn main() {
     fs::create_dir(output_dir).unwrap();
 
     // Load the population config and create the individual data
-    let config = Config::new("config.json");
+    let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
     // Create the population

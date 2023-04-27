@@ -1,19 +1,22 @@
+use json5;
 use num::{FromPrimitive, Num};
-use rustc_serialize::json::Json;
+use serde_json::Value;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
 use std::str::FromStr;
 
+pub const DEFAULT_CONFIG_FILENAME: &str = "config.json5";
+
 #[derive(Clone)]
 pub struct Config {
-    pub json: Json,
+    pub json: Value,
 }
 
 impl Config {
     // Get a floating point value from the JSON data by key
     pub fn get_float<T: Num + FromPrimitive>(&self, key: &str) -> Result<Option<T>, String> {
-        match self.json.find_path(&[key]) {
+        match self.json.get(key) {
             // Value found in JSON
             Some(value) => match value.as_f64() {
                 Some(num) => Ok(Some(T::from_f64(num).unwrap())),
@@ -38,7 +41,7 @@ impl Config {
 
     // Get a unsigned integer value from the JSON data by key
     pub fn get_uint<T: Num + FromPrimitive>(&self, key: &str) -> Result<Option<T>, String> {
-        match self.json.find_path(&[key]) {
+        match self.json.get(key) {
             // Value found in JSON
             Some(value) => match value.as_u64() {
                 Some(num) => Ok(Some(T::from_u64(num).unwrap())),
@@ -63,7 +66,7 @@ impl Config {
 
     // Get an integer value from the JSON data by key
     pub fn get_int<T: Num + FromPrimitive>(&self, key: &str) -> Result<Option<T>, String> {
-        match self.json.find_path(&[key]) {
+        match self.json.get(key) {
             // Value found in JSON
             Some(value) => match value.as_i64() {
                 Some(num) => Ok(Some(T::from_i64(num).unwrap())),
@@ -88,9 +91,9 @@ impl Config {
 
     // Get a boolean value from the JSON data by key
     pub fn get_bool(&self, key: &str) -> Result<Option<bool>, String> {
-        match self.json.find_path(&[key]) {
+        match self.json.get(key) {
             // Value found in JSON
-            Some(value) => match value.as_boolean() {
+            Some(value) => match value.as_bool() {
                 Some(bool_value) => Ok(Some(bool_value)),
                 None => Err(format!("Value for key '{}' is not a boolean", key)),
             },
@@ -114,9 +117,9 @@ impl Config {
         <T as FromStr>::Err: Debug,
         <T as FromStr>::Err: std::fmt::Display,
     {
-        match self.json.find_path(&[key]) {
+        match self.json.get(key) {
             // Value found in JSON
-            Some(value) => match T::from_str(value.as_string().unwrap()) {
+            Some(value) => match T::from_str(value.as_str().unwrap()) {
                 Ok(value) => Ok(Some(value)),
                 Err(err) => Err(format!("Converting value to T failed: '{}'", err)),
             },
@@ -143,16 +146,24 @@ impl Config {
         let mut data = String::new();
         file.read_to_string(&mut data).unwrap();
 
-        let json = Json::from_str(&data).unwrap();
+        let json = json5::from_str(&data).unwrap();
 
         Config { json }
+    }
+}
+
+impl FromStr for Config {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let json = json5::from_str(s).unwrap();
+        Ok(Config { json })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::config::Config;
-    use rustc_serialize::json::Json;
     use std::str::FromStr;
 
     #[derive(Clone, PartialEq, Debug)]
@@ -176,9 +187,7 @@ mod tests {
     #[test]
     fn test_int() {
         // Regular integer
-        let config = Config {
-            json: Json::from_str("{\"pop_width\": 3, \"pop_height\": 4}").unwrap(),
-        };
+        let config = Config::from_str("{\"pop_width\": 3, \"pop_height\": 4}").unwrap();
 
         let mut test_int: u32 = config.get_uint("pop_width").unwrap().unwrap();
         assert_eq!(test_int, 3);
@@ -187,17 +196,13 @@ mod tests {
         assert_eq!(test_int, 4);
 
         // u64 max value integer
-        let config = Config {
-            json: Json::from_str("{\"big_int\": 18446744073709551615}").unwrap(),
-        };
+        let config = Config::from_str("{\"big_int\": 1844674407370955161}").unwrap();
 
         let big_int: u64 = config.get_uint("big_int").unwrap().unwrap();
-        assert_eq!(big_int, 18446744073709551615);
+        assert_eq!(big_int, 1844674407370955161);
 
         // Negative integer
-        let config = Config {
-            json: Json::from_str("{\"negative_int\": -2, \"negative_int_2\": -3}").unwrap(),
-        };
+        let config = Config::from_str("{\"negative_int\": -2, \"negative_int_2\": -3}").unwrap();
 
         // Cannot get negative number as unsigned integer
         assert!(config.get_uint::<u8>("negative_int").is_err());
@@ -211,10 +216,8 @@ mod tests {
 
     #[test]
     fn test_val() {
-        let config = Config {
-            json: Json::from_str("{ \"test_enum\":\"bar\", \"another_test_enum\":\"foo\" }")
-                .unwrap(),
-        };
+        let config =
+            Config::from_str("{ \"test_enum\":\"bar\", \"another_test_enum\":\"foo\" }").unwrap();
 
         let mut test_enum: TestEnum = config.get_val("test_enum").unwrap().unwrap();
         assert_eq!(test_enum, TestEnum::Bar);
@@ -227,9 +230,7 @@ mod tests {
 
     #[test]
     fn test_float() {
-        let config = Config {
-            json: Json::from_str("{\"pop_width\": 3.1, \"pop_height\": -4.2}").unwrap(),
-        };
+        let config = Config::from_str("{\"pop_width\": 3.1, \"pop_height\": -4.2}").unwrap();
 
         let mut test_num: f32 = config.get_float("pop_width").unwrap().unwrap();
         assert_eq!(test_num, 3.1);
@@ -240,9 +241,7 @@ mod tests {
 
     #[test]
     fn test_bool() {
-        let config = Config {
-            json: Json::from_str("{\"test_bool\":true, \"another_test_bool\":false}").unwrap(),
-        };
+        let config = Config::from_str("{\"test_bool\":true, \"another_test_bool\":false}").unwrap();
 
         let mut test_bool = config.get_bool("test_bool").unwrap().unwrap();
         assert_eq!(test_bool, true);

@@ -4,12 +4,12 @@ use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 
-use revo::config::Config;
+use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_population::EvoPopulation;
 use std::fs;
 
 fn main() {
-    let config = Config::new("pop.json");
+    let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let output_dir = "./out";
     let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
