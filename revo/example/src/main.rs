@@ -4,7 +4,7 @@ use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 
 fn main() {
-    // Load the configuration from the config.json file
+    // Load the configuration from the config.json5 file
     let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let output_dir = "./";
 
