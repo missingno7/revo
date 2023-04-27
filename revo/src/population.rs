@@ -431,6 +431,7 @@ mod tests {
     use super::*;
     use crate::testing::{MockIndividual, MockIndividualData};
     use crate::utils::LabData;
+    use std::str::FromStr;
 
     pub type TestPopulation = Population<MockIndividual, MockIndividualData>;
 
