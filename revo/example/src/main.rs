@@ -1,5 +1,6 @@
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
 use revo::config::Config;
+use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 
 fn main() {
@@ -7,14 +8,8 @@ fn main() {
     let config = Config::new("config.json");
     let output_dir = "./";
 
-    // Prepare the individual data - The data is passed to the individual when it is created
-    // Individual data contains things that are not specific to the individual, but are needed for the evolution
-    // These can contain things like coordinates of cities in the Travelling Salesman Problem, or the target values in the Math Function Approximation Problem
-    let ind_data = BasicIndividualData::default();
-
     // Create the population
-    let mut pop: Population<BasicIndividual, BasicIndividualData> =
-        Population::new(&config, ind_data);
+    let mut pop: Population<BasicIndividual, BasicIndividualData> = Population::new(&config);
 
     // Evolve the population
     // This will apply the evolution rules to the population and create a new generation

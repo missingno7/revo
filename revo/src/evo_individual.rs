@@ -1,7 +1,12 @@
+use crate::config::Config;
 use image::RgbImage;
 use rand::rngs::ThreadRng;
 
-pub trait EvoIndividual<IndividualData>: Send + Sync {
+pub trait EvoIndividualData: Send + Sync {
+    fn from_config(config: &Config) -> Self;
+}
+
+pub trait EvoIndividual<IndividualData>: Send + Sync + Clone {
     // Create a new individual with randomised values
     fn new_randomised(ind_data: &IndividualData, rng: &mut ThreadRng) -> Self;
 

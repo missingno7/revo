@@ -1,50 +1,55 @@
-use evo_salesman::salesman::SalesmanIndividual;
-use evo_salesman::salesman_data::SalesmanIndividualData;
-
 use revo::population::Population;
 
-use playground::main_app::MainApp;
-use revo::config::Config;
-use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
+use evo_salesman::salesman::SalesmanIndividual;
+use evo_salesman::salesman_data::SalesmanIndividualData;
 use funtree::funtree_data::FuntreeIndividualData;
 use funtree::funtree_individual::FuntreeIndividual;
+use playground::main_app::MainApp;
+use revo::config::Config;
+use revo::evo_population::EvoPopulation;
+use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
+use strum::IntoEnumIterator;
+use strum_macros::{Display, EnumIter, EnumString};
 
-pub fn prepare_population_salesman(
-    config: &Config,
-) -> Population<SalesmanIndividual, SalesmanIndividualData> {
-    let mut rng = rand::thread_rng();
-
-    // Individual data
-    let ind_data: SalesmanIndividualData = SalesmanIndividualData::from_config(&mut rng, config);
-
-    Population::new(config, ind_data)
-}
-
-pub fn prepare_population_social_distance(
-    config: &Config,
-) -> Population<DistanceIndividual, DistanceIndividualData> {
-    // Individual data
-    let ind_data: DistanceIndividualData = DistanceIndividualData::from_config(config);
-
-    Population::new(config, ind_data)
-}
-
-
-pub fn prepare_population_funtree(
-    config: &Config,
-) -> Population<FuntreeIndividual, FuntreeIndividualData> {
-    // Individual data
-    let ind_data: FuntreeIndividualData = FuntreeIndividualData::from_config(config);
-
-    Population::new(config, ind_data)
+#[derive(Clone, EnumString, EnumIter, Display)]
+pub enum ExampleType {
+    #[strum(serialize = "salesman")]
+    Salesman,
+    #[strum(serialize = "social_distance")]
+    SocialDistance,
+    #[strum(serialize = "funtree")]
+    Funtree,
 }
 
 fn main() {
     let config = Config::new("config.json");
 
-    //let pop = prepare_population_salesman(&config);
-    let pop = prepare_population_funtree(&config);
+    // Get the example type from the config file
+    let example_type: ExampleType = config.get_val("example").unwrap().unwrap_or_else(|| {
+        let possible_example_types = ExampleType::iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>();
 
-    let main_app = MainApp::new(pop, &config);
+        panic!(
+            "No example type specified in config.json, possible values for \"example\" are: {:?}",
+            possible_example_types
+        )
+    });
+
+    let main_app = match example_type {
+        ExampleType::Funtree => {
+            let pop = Population::<FuntreeIndividual, FuntreeIndividualData>::new(&config);
+            MainApp::new(pop, &config)
+        }
+        ExampleType::SocialDistance => {
+            let pop = Population::<DistanceIndividual, DistanceIndividualData>::new(&config);
+            MainApp::new(pop, &config)
+        }
+        ExampleType::Salesman => {
+            let pop = Population::<SalesmanIndividual, SalesmanIndividualData>::new(&config);
+            MainApp::new(pop, &config)
+        }
+    };
+
     main_app.run();
 }

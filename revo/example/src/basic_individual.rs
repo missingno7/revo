@@ -1,15 +1,20 @@
 use rand::prelude::ThreadRng;
 use rand::Rng;
-use revo::evo_individual::EvoIndividual;
+use revo::config::Config;
+use revo::evo_individual::{EvoIndividual, EvoIndividualData};
 use std::fmt;
 
 pub struct BasicIndividualData {
     value: f64,
 }
 
-impl Default for BasicIndividualData {
-    fn default() -> Self {
-        BasicIndividualData { value: 0.0 }
+const DEFAULT_VALUE: f64 = 0.0;
+
+impl EvoIndividualData for BasicIndividualData {
+    fn from_config(config: &Config) -> Self {
+        BasicIndividualData {
+            value: config.get_float("value").unwrap().unwrap_or(DEFAULT_VALUE),
+        }
     }
 }
 

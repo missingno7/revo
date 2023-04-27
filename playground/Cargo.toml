@@ -9,6 +9,8 @@ edition = "2021"
 gtk = { version = "0.17.1" }
 rand = "0.8.4"
 image = "0.24.6"
+strum = "0.24.1"
+strum_macros = "0.24.3"
 
 revo = { path = "../revo", version = "*" }
 #revo = { git = "https://github.com/missingno7/revo" }

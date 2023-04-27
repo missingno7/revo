@@ -109,7 +109,21 @@ impl FuntreeIndividual {
 
             Self::_add_data(gt, &mut chart, BLUE);
 
-            Self::_add_data(pred, &mut chart, RED);
+            // Truncate the prediction to the chart area
+            let pred: Vec<(f64, f64)> = pred
+                .iter()
+                .filter(|(x, y)| {
+                    x.is_finite()
+                        && y.is_finite()
+                        && *x >= min_x - margin_x * 10.0
+                        && *x <= max_x + margin_x * 10.0
+                        && *y >= min_y - margin_y * 10.0
+                        && *y <= max_y + margin_y * 10.0
+                })
+                .map(|(x, y)| (*x, *y))
+                .collect();
+
+            Self::_add_data(&pred, &mut chart, RED);
         }
 
         buffer
@@ -193,14 +207,31 @@ impl Visualise<FuntreeIndividualData> for FuntreeIndividual {
         let mut pred: Vec<(f64, f64)> = Vec::new();
 
         // Count mean absolute error
-        for val in ind_data.vals.iter() {
+        for (i, val) in ind_data.vals.iter().enumerate() {
             let (x, y) = val.as_tuple();
-            let y_pred = self.genom.evaluate(x);
-
             gt.push((x, y));
 
-            if !y_pred.is_nan() {
-                pred.push((x, y_pred));
+            if i < ind_data.vals.len() - 1 {
+                let (x_next, _) = ind_data.vals[i + 1].as_tuple();
+                let margin = x_next - x;
+
+                // Get 10 values uniformly distributed between x and x_next
+                let steps = 10;
+                let step_size = margin / (steps as f64);
+
+                let x_values = (0..=steps).map(|i| x + i as f64 * step_size);
+
+                for x_val in x_values {
+                    let y_pred = self.genom.evaluate(x_val);
+                    if !y_pred.is_nan() {
+                        pred.push((x_val, y_pred));
+                    }
+                }
+            } else {
+                let y_pred = self.genom.evaluate(x);
+                if !y_pred.is_nan() {
+                    pred.push((x, y_pred));
+                }
             }
         }
 

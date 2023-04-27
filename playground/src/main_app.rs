@@ -2,7 +2,7 @@ use crate::main_window::MainWindow;
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow};
 use revo::config::Config;
-use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::evo_individual::{EvoIndividual, EvoIndividualData, Visualise};
 use revo::population::Population;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -17,13 +17,8 @@ impl MainApp {
         config: &Config,
     ) -> MainApp
     where
-        Individual: EvoIndividual<IndividualData>
-            + Visualise<IndividualData>
-            + Send
-            + Sync
-            + Clone
-            + 'static,
-        IndividualData: Sync + 'static,
+        Individual: EvoIndividual<IndividualData> + Visualise<IndividualData> + 'static,
+        IndividualData: EvoIndividualData + 'static,
     {
         let rc_pop = Rc::new(RefCell::new(pop));
         let app = Application::new(Some("com.example.image_box"), Default::default());

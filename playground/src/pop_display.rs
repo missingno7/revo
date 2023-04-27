@@ -6,7 +6,8 @@ use std::cell::RefCell;
 use std::io::Cursor;
 use std::rc::Rc;
 
-use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::evo_individual::{EvoIndividual, EvoIndividualData, Visualise};
+use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 
 pub struct PopDisplay {
@@ -51,8 +52,8 @@ impl PopDisplay {
         &mut self,
         pop: &Population<Individual, IndividualData>,
     ) where
-        Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
-        IndividualData: Sync,
+        Individual: EvoIndividual<IndividualData>,
+        IndividualData: EvoIndividualData,
     {
         let img = pop.visualise();
         // Save the image to a vector in memory using a Cursor
@@ -69,7 +70,7 @@ impl PopDisplay {
         let mut pixbuf = loader.pixbuf().unwrap();
 
         self.original_image_width = pixbuf.width() as u32;
-        self.original_image_height = pixbuf.height()as u32;
+        self.original_image_height = pixbuf.height() as u32;
 
         pixbuf = pixbuf
             .scale_simple(
@@ -88,13 +89,8 @@ impl PopDisplay {
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
     ) -> Box
     where
-        Individual: EvoIndividual<IndividualData>
-            + Visualise<IndividualData>
-            + Send
-            + Sync
-            + Clone
-            + 'static,
-        IndividualData: Sync + 'static,
+        Individual: EvoIndividual<IndividualData> + Visualise<IndividualData> + 'static,
+        IndividualData: EvoIndividualData + 'static,
     {
         let box_ = Box::new(gtk::Orientation::Vertical, 0);
         let self_ = self_pointer.borrow();

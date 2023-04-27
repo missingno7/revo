@@ -1,6 +1,6 @@
-use rand::prelude::ThreadRng;
 use rand::Rng;
 use revo::config::Config;
+use revo::evo_individual::EvoIndividualData;
 use revo::utils::Coord;
 use std::str::FromStr;
 
@@ -43,38 +43,9 @@ pub struct SalesmanIndividualData {
     pub init_type: SalesmanInitType,
 }
 
-impl SalesmanIndividualData {
-    pub fn new(
-        rng: &mut ThreadRng,
-        n_cities: u32,
-        screen_width: u32,
-        screen_height: u32,
-        shift_prob: f64,
-        rev_prob: f64,
-        init_type: SalesmanInitType,
-    ) -> Self {
-        let mut coords: Vec<Coord> = Vec::new();
-
-        for _ in 0..n_cities {
-            coords.push(Coord {
-                x: rng.gen_range(5..screen_width - 5) as i32,
-                y: rng.gen_range(5..screen_height - 5) as i32,
-            });
-        }
-
-        SalesmanIndividualData {
-            coords,
-            screen_width,
-            screen_height,
-            shift_prob,
-            rev_prob,
-            init_type,
-        }
-    }
-
-    pub fn from_config(rng: &mut ThreadRng, config: &Config) -> Self {
+impl EvoIndividualData for SalesmanIndividualData {
+    fn from_config(config: &Config) -> Self {
         Self::new(
-            rng,
             config
                 .get_int("n_cities")
                 .unwrap()
@@ -100,5 +71,36 @@ impl SalesmanIndividualData {
                 .unwrap()
                 .unwrap_or(DEFAULT_INIT_TYPE),
         )
+    }
+}
+
+impl SalesmanIndividualData {
+    pub fn new(
+        n_cities: u32,
+        screen_width: u32,
+        screen_height: u32,
+        shift_prob: f64,
+        rev_prob: f64,
+        init_type: SalesmanInitType,
+    ) -> Self {
+        let mut rng = rand::thread_rng();
+
+        let mut coords: Vec<Coord> = Vec::new();
+
+        for _ in 0..n_cities {
+            coords.push(Coord {
+                x: rng.gen_range(5..screen_width - 5) as i32,
+                y: rng.gen_range(5..screen_height - 5) as i32,
+            });
+        }
+
+        SalesmanIndividualData {
+            coords,
+            screen_width,
+            screen_height,
+            shift_prob,
+            rev_prob,
+            init_type,
+        }
     }
 }

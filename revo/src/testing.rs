@@ -1,8 +1,15 @@
-use crate::evo_individual::EvoIndividual;
+use crate::config::Config;
+use crate::evo_individual::{EvoIndividual, EvoIndividualData};
 use rand::rngs::ThreadRng;
 
 #[derive(Clone)]
 pub struct MockIndividualData {}
+
+impl EvoIndividualData for MockIndividualData {
+    fn from_config(_config: &Config) -> Self {
+        MockIndividualData {}
+    }
+}
 
 #[derive(Clone)]
 pub struct MockIndividual {

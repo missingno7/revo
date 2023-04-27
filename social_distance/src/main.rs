@@ -5,6 +5,7 @@ use revo::population::Population;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 
 use revo::config::Config;
+use revo::evo_population::EvoPopulation;
 use std::fs;
 
 fn main() {
@@ -12,9 +13,7 @@ fn main() {
     let output_dir = "./out";
     let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
-    let ind_data = DistanceIndividualData::from_config(&config);
-    let mut pop: Population<DistanceIndividual, DistanceIndividualData> =
-        Population::new(&config, ind_data.clone());
+    let mut pop: Population<DistanceIndividual, DistanceIndividualData> = Population::new(&config);
 
     fs::create_dir(output_dir).unwrap();
 
@@ -24,7 +23,7 @@ fn main() {
 
         if best_ind.get_fitness() > all_best_ind.get_fitness() {
             all_best_ind = best_ind.clone();
-            let img = all_best_ind.visualise(&ind_data);
+            let img = all_best_ind.visualise(pop.get_individual_data());
             img.save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
                 .unwrap();
 

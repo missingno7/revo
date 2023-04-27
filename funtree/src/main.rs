@@ -3,6 +3,7 @@ use funtree::funtree_individual::FuntreeIndividual;
 
 use revo::config::Config;
 use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 use std::fs;
 
@@ -14,18 +15,16 @@ fn main() {
 
     // Load the population config and create the individual data
     let config = Config::new("config.json");
-    let ind_data = FuntreeIndividualData::from_config(&config);
     let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
 
     // Create the population
-    let mut pop: Population<FuntreeIndividual, FuntreeIndividualData> =
-        Population::new(&config, ind_data.clone());
+    let mut pop: Population<FuntreeIndividual, FuntreeIndividualData> = Population::new(&config);
 
     // Get the best individual
     let mut all_best_ind = pop.get_best().clone();
     println!(
         "Best individual: {}",
-        all_best_ind.simplify().to_string(&ind_data)
+        all_best_ind.simplify().to_string(pop.get_individual_data())
     );
 
     // Run the evolution
@@ -43,10 +42,10 @@ fn main() {
 
             println!(
                 "Best individual: {}",
-                all_best_ind.simplify().to_string(&ind_data)
+                all_best_ind.simplify().to_string(pop.get_individual_data())
             );
             all_best_ind
-                .visualise(&ind_data)
+                .visualise(pop.get_individual_data())
                 .save(format!("{}/best_{}.png", output_dir, pop.get_generation()))
                 .unwrap();
         }
