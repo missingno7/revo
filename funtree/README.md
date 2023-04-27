@@ -1,6 +1,7 @@
-# Travelling Salesman Problem implementation using the revo library
+# Arbitrary function approximation (funtree)
+## Description
+This implementation solves the arbitrary function approximation problem.
 
-This implementation solves the Travelling Salesman Problem.
 
 ## Configuration
 
@@ -16,22 +17,23 @@ generation is generated.
 ```json5
 {
   // Population parameters
-  "pop_width": 200,
-  "pop_height": 200,
-  "mut_prob": 0.02,
+  "pop_width": 1000,
+  "pop_height": 100,
+  "mut_prob": 0.015,
+  "mut_amount": 0.1,
   "crossover_prob": 0.1,
+  "selection_strategy": "tournament", // "tournament", "roulette"
   "visualise": false,
-  "selection_strategy": "tournament", // "roulette", "tournament"
 
-  // TSP parameters
-  "n_cities": 300,
-  "screen_width": 1000,
-  "screen_height": 1000,
-  "shift_prob": 0.4,
-  "rev_prob": 0.4,
-  "init_type": "greedy" // "naive", "noise", "insertion", "greedy"
+  // Funtree parameters
+  "plot_width": 800,
+  "plot_height":  400,
+  "max_depth": 8,
+  "values": "0:0, 1:2, 2:3, 3:4, 4:5" // "x1:y1,x2:y2,..."
 }
 ```
+
+- Values are given as a comma separated list of `x:y` pairs, where `x` is the input value and `y` is the expected output value.
 
 ## Running the implementation
 
@@ -41,7 +43,9 @@ To run the implementation, run the following command in the root directory of th
 cargo run --release
 ```
 
-- Best individual of each generation are stored in the `out` directory as a png files with the
+- Plots of function that do the best approximation of each generation (best individuals) are stored in the `out` directory as a png files with the
   name `best_{generation}.png`.
+- Best individual is also printed to the console.
 - When visualisation is enabled, the population is visualised at each generation and stored in the `out` directory as a
   png file with the name `pop_{generation}.png`.
+

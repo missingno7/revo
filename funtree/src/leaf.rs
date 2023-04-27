@@ -1,7 +1,7 @@
 use rand::{rngs::ThreadRng, Rng};
 use rand_distr::{Distribution, Normal};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LeafType {
     Constant,
@@ -36,7 +36,7 @@ impl Leaf {
         Leaf { leaf_type, value }
     }
 
-    pub fn as_string(&self, minus: bool) -> String {
+    pub fn to_string(&self, minus: bool) -> String {
         match self.leaf_type {
             LeafType::Constant => format!("{:.2}", if minus { -self.value } else { self.value }),
             LeafType::Variable => {
@@ -46,6 +46,14 @@ impl Leaf {
                     "x".to_string()
                 }
             }
+        }
+    }
+
+    pub fn get_constant(&self) -> Result<f64, String> {
+        if self.leaf_type == LeafType::Constant {
+            Ok(self.value)
+        } else {
+            Err("Not a constant".to_string())
         }
     }
 
@@ -65,5 +73,17 @@ impl Leaf {
             let normal = Normal::new(0.0, mut_amount as f64).unwrap();
             self.value += normal.sample(rng);
         }
+    }
+
+    pub fn get_leaf_type(&self) -> LeafType {
+        self.leaf_type
+    }
+
+    pub fn is_constant(&self) -> bool {
+        self.leaf_type == LeafType::Constant
+    }
+
+    pub fn is_variable(&self) -> bool {
+        self.leaf_type == LeafType::Variable
     }
 }

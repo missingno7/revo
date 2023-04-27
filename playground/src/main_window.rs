@@ -4,11 +4,14 @@ use gtk::prelude::*;
 use gtk::Box;
 use gtk::Button;
 use revo::config::Config;
-use revo::evo_individual::EvoIndividual;
 use revo::evo_individual::Visualise;
+use revo::evo_individual::{EvoIndividual, EvoIndividualData};
 use revo::population::Population;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+const DEFAULT_DISPLAY_WIDTH: u32 = 400;
+const DEFAULT_DISPLAY_HEIGHT: u32 = 400;
 
 pub struct MainWindow<Individual, IndividualData> {
     pop: Rc<RefCell<Population<Individual, IndividualData>>>,
@@ -17,16 +20,22 @@ pub struct MainWindow<Individual, IndividualData> {
 }
 
 impl<
-        Individual: EvoIndividual<IndividualData> + Visualise<IndividualData> + Send + Sync + Clone + 'static,
-        IndividualData: Sync + 'static,
+        Individual: EvoIndividual<IndividualData> + Visualise<IndividualData> + 'static,
+        IndividualData: EvoIndividualData + 'static,
     > MainWindow<Individual, IndividualData>
 {
     pub fn new(
         pop: Rc<RefCell<Population<Individual, IndividualData>>>,
         config: &Config,
     ) -> MainWindow<Individual, IndividualData> {
-        let display_width: u32 = config.get_uint("display_width").unwrap().unwrap_or(400) ;
-        let display_height: u32 = config.get_uint("display_height").unwrap().unwrap_or(400);
+        let display_width: u32 = config
+            .may_get_uint("display_width")
+            .unwrap()
+            .unwrap_or(DEFAULT_DISPLAY_WIDTH);
+        let display_height: u32 = config
+            .may_get_uint("display_height")
+            .unwrap()
+            .unwrap_or(DEFAULT_DISPLAY_HEIGHT);
 
         let ind_display = Rc::new(RefCell::new(IndDisplay::new(display_width, display_height)));
         ind_display

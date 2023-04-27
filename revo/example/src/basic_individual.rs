@@ -1,15 +1,24 @@
+use image::RgbImage;
 use rand::prelude::ThreadRng;
 use rand::Rng;
-use revo::evo_individual::EvoIndividual;
+use revo::config::Config;
+use revo::evo_individual::{EvoIndividual, EvoIndividualData, Visualise};
 use std::fmt;
 
 pub struct BasicIndividualData {
     value: f64,
 }
 
-impl Default for BasicIndividualData {
-    fn default() -> Self {
-        BasicIndividualData { value: 0.0 }
+const DEFAULT_VALUE: f64 = 0.0;
+
+impl EvoIndividualData for BasicIndividualData {
+    fn from_config(config: &Config) -> Self {
+        BasicIndividualData {
+            value: config
+                .may_get_float("value")
+                .unwrap()
+                .unwrap_or(DEFAULT_VALUE),
+        }
     }
 }
 
@@ -75,5 +84,11 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
 impl fmt::Display for BasicIndividual {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "foo: {}, bar: {}", self.foo, self.bar)
+    }
+}
+
+impl<IndividualData> Visualise<IndividualData> for BasicIndividual {
+    fn visualise(&self, _: &IndividualData) -> RgbImage {
+        RgbImage::new(1, 1)
     }
 }

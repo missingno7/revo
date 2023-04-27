@@ -12,6 +12,10 @@ rayon = "1.7.0"
 image = "0.24.6"
 lab = "0.11.0"
 num = "0.4.0"
+serde_json = "1.0.64"
+json5 = "0.4.1"
+strum = "0.24.1"
+strum_macros = "0.24.3"
 
 [profile.dev]
 opt-level = 3               # Use slightly better optimizations.
