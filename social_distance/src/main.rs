@@ -10,7 +10,7 @@ use std::fs;
 fn main() {
     let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let output_dir = "./out";
-    let visualise = config.get_bool("visualise").unwrap().unwrap_or(false);
+    let visualise = config.may_get_bool("visualise").unwrap().unwrap_or(false);
 
     let mut pop: Population<DistanceIndividual, DistanceIndividualData> = Population::new(&config);
 
