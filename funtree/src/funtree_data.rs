@@ -19,17 +19,17 @@ pub struct FuntreeIndividualData {
 impl EvoIndividualData for FuntreeIndividualData {
     fn from_config(config: &Config) -> Self {
         FuntreeIndividualData {
-            vals: config.get_val::<ValVec>("values").unwrap().unwrap().into(),
+            vals: config.get_val::<ValVec>("values").unwrap().into(),
             max_depth: config
-                .get_int("max_depth")
+                .may_get_int("max_depth")
                 .unwrap()
                 .unwrap_or(DEFAULT_MAX_DEPTH),
             plot_width: config
-                .get_int("plot_width")
+                .may_get_int("plot_width")
                 .unwrap()
                 .unwrap_or(DEFAULT_PLOT_WIDTH),
             plot_height: config
-                .get_int("plot_height")
+                .may_get_int("plot_height")
                 .unwrap()
                 .unwrap_or(DEFAULT_PLOT_HEIGHT),
         }

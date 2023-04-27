@@ -7,7 +7,7 @@ use lab::Lab;
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use std::str::FromStr;
+use strum_macros::{Display, EnumIter, EnumString};
 
 const DEFAULT_POP_WIDTH: usize = 128;
 const DEFAULT_POP_HEIGHT: usize = 128;
@@ -16,21 +16,12 @@ const DEFAULT_MUT_AMOUNT: f32 = 1.0;
 const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
 const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
 
-#[derive(Clone)]
+#[derive(Clone, EnumString, EnumIter, Display)]
 pub enum SelectionStrategyType {
+    #[strum(serialize = "tournament")]
     Tournament,
+    #[strum(serialize = "roulette")]
     Roulette,
-}
-
-impl FromStr for SelectionStrategyType {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "tournament" => Ok(SelectionStrategyType::Tournament),
-            "roulette" => Ok(SelectionStrategyType::Roulette),
-            _ => Err(format!("{} is not a valid selection type", s)),
-        }
-    }
 }
 
 pub struct Population<Individual, IndividualData> {
@@ -80,11 +71,11 @@ where
     // Function creates a new population with randomised individuals and counts their fitness
     pub fn new(config: &Config) -> Population<Individual, IndividualData> {
         let pop_width = config
-            .get_uint("pop_width")
+            .may_get_uint("pop_width")
             .unwrap()
             .unwrap_or(DEFAULT_POP_WIDTH);
         let pop_height = config
-            .get_uint("pop_height")
+            .may_get_uint("pop_height")
             .unwrap()
             .unwrap_or(DEFAULT_POP_HEIGHT);
 
@@ -104,19 +95,19 @@ where
             pop_width,
             pop_height,
             mut_prob: config
-                .get_float("mut_prob")
+                .may_get_float("mut_prob")
                 .unwrap()
                 .unwrap_or(DEFAULT_MUT_PROB),
             mut_amount: config
-                .get_float("mut_amount")
+                .may_get_float("mut_amount")
                 .unwrap()
                 .unwrap_or(DEFAULT_MUT_AMOUNT),
             crossover_prob: config
-                .get_float("crossover_prob")
+                .may_get_float("crossover_prob")
                 .unwrap()
                 .unwrap_or(DEFAULT_CROSSOVER_PROB),
             selection_strategy_type: config
-                .get_val("selection_strategy")
+                .may_get_enum("selection_strategy")
                 .unwrap()
                 .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE),
             i_generation: 0,

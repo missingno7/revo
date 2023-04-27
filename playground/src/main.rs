@@ -7,7 +7,6 @@ use funtree::funtree_individual::FuntreeIndividual;
 use playground::main_app::MainApp;
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
-use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Clone, EnumString, EnumIter, Display)]
@@ -24,16 +23,7 @@ fn main() {
     let config = Config::new(DEFAULT_CONFIG_FILENAME);
 
     // Get the example type from the config file
-    let example_type: ExampleType = config.get_val("example").unwrap().unwrap_or_else(|| {
-        let possible_example_types = ExampleType::iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>();
-
-        panic!(
-            "No example type specified in {}, possible values for \"example\" are: {:?}",
-            DEFAULT_CONFIG_FILENAME, possible_example_types
-        )
-    });
+    let example_type: ExampleType = config.get_enum("example").unwrap();
 
     let main_app = match example_type {
         ExampleType::Funtree => {

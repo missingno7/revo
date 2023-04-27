@@ -13,7 +13,6 @@ strum = "0.24.1"
 strum_macros = "0.24.3"
 
 revo = { path = "../revo", version = "*" }
-#revo = { git = "https://github.com/missingno7/revo" }
 social_distance =  { path = "../social_distance", version = "*" }
 evo_salesman = { path = "../evo_salesman", version = "*" }
 funtree = { path = "../funtree", version = "*" }

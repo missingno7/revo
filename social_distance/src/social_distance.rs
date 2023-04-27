@@ -24,19 +24,19 @@ impl EvoIndividualData for DistanceIndividualData {
     fn from_config(config: &Config) -> Self {
         Self::new(
             config
-                .get_int("screen_width")
+                .may_get_int("screen_width")
                 .unwrap()
                 .unwrap_or(DEFAULT_SCREEN_WIDTH),
             config
-                .get_int("screen_height")
+                .may_get_int("screen_height")
                 .unwrap()
                 .unwrap_or(DEFAULT_SCREEN_HEIGHT),
             config
-                .get_int("n_points")
+                .may_get_int("n_points")
                 .unwrap()
                 .unwrap_or(DEFAULT_N_POINTS),
             config
-                .get_int("required_distance")
+                .may_get_int("required_distance")
                 .unwrap()
                 .unwrap_or(DEFAULT_REQUIRED_DISTANCE),
         )
