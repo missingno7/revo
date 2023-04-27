@@ -13,6 +13,7 @@ and visualizing the population.
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
 use revo::config::Config;
 use revo::population::Population;
+use revo::evo_individual::Visualise;
 
 fn main() {
     // Load the configuration from the config.json file
@@ -47,9 +48,7 @@ fn main() {
     // These can contain stuff like coordinates of cities in the Travelling Salesman Problem, or the target values in the Math Function Approximation Problem
     let ind_data: &BasicIndividualData = pop.get_individual_data();
     // visualise returns an RgbImage that can be saved to a file or displayed
-    ind.visualise(ind_data).save(format!("{}/ind_{}.png", output_dir, pop.get_generation())).unwrap();
-
-    
+    pop_best.visualise(ind_data).save(format!("{}/ind_{}.png", output_dir, pop.get_generation())).unwrap();
 }
 ```
 
