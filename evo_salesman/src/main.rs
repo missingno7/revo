@@ -1,7 +1,6 @@
 extern crate evo_salesman;
 extern crate revo;
 
-use crate::revo::evo_population::EvoPopulation;
 use evo_salesman::salesman::SalesmanIndividual;
 use evo_salesman::salesman_data::SalesmanIndividualData;
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};

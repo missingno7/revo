@@ -6,7 +6,6 @@ use gtk::Button;
 use revo::config::Config;
 use revo::evo_individual::Visualise;
 use revo::evo_individual::{EvoIndividual, EvoIndividualData};
-use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 use std::cell::RefCell;
 use std::rc::Rc;

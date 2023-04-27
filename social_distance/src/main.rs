@@ -5,7 +5,6 @@ use revo::population::Population;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
-use revo::evo_population::EvoPopulation;
 use std::fs;
 
 fn main() {

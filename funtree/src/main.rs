@@ -3,7 +3,6 @@ use funtree::funtree_individual::FuntreeIndividual;
 
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_individual::{EvoIndividual, Visualise};
-use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 use std::fs;
 

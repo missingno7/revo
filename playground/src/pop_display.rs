@@ -7,7 +7,6 @@ use std::io::Cursor;
 use std::rc::Rc;
 
 use revo::evo_individual::{EvoIndividual, EvoIndividualData, Visualise};
-use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 
 pub struct PopDisplay {

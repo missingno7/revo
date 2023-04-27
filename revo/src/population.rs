@@ -1,5 +1,4 @@
 use super::evo_individual::EvoIndividual;
-use super::evo_population::EvoPopulation;
 use crate::config::Config;
 use crate::evo_individual::EvoIndividualData;
 use crate::utils::{IndexedLabData, LabData};
@@ -56,27 +55,30 @@ pub struct Population<Individual, IndividualData> {
 }
 
 impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualData>
-    EvoPopulation<Individual, IndividualData> for Population<Individual, IndividualData>
+    Population<Individual, IndividualData>
+where
+    Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
+    IndividualData: EvoIndividualData,
 {
-    fn get_at(&self, x: usize, y: usize) -> &Individual {
+    pub fn get_at(&self, x: usize, y: usize) -> &Individual {
         &self.inds[y * self.pop_width + x]
     }
 
-    fn get_width(&self) -> usize {
+    pub fn get_width(&self) -> usize {
         self.pop_width
     }
 
-    fn get_height(&self) -> usize {
+    pub fn get_height(&self) -> usize {
         self.pop_height
     }
 
     // Function returns the number of the current generation
-    fn get_generation(&self) -> usize {
+    pub fn get_generation(&self) -> usize {
         self.i_generation
     }
 
     // Function creates a new population with randomised individuals and counts their fitness
-    fn new(config: &Config) -> Population<Individual, IndividualData> {
+    pub fn new(config: &Config) -> Population<Individual, IndividualData> {
         let pop_width = config
             .get_uint("pop_width")
             .unwrap()
@@ -124,7 +126,7 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualDat
 
     // Function moves the population to the next generation
     // It does selection, crossover/mutation and counts fitness for each individual
-    fn next_gen(&mut self) {
+    pub fn next_gen(&mut self) {
         let pop_size = self.inds.len();
 
         // Create a new vector for the next generation
@@ -174,7 +176,7 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualDat
     }
 
     // Function returns the best individual in the current generation
-    fn get_best(&self) -> &Individual {
+    pub fn get_best(&self) -> &Individual {
         let mut best_ind = &self.inds[0];
 
         for i in 1..self.inds.len() {
@@ -188,7 +190,7 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualDat
 
     // Function creates a visualization of the current generation in the form of an PNG image
     // It maps the fitness (L) and visual attributes (A, B) of each individual
-    fn visualise(&self) -> RgbImage {
+    pub fn visualise(&self) -> RgbImage {
         let mut lab_data = self._prepare_pop_lab_data();
 
         lab_data = Self::_normalize_lab_data_rank_based(lab_data);
@@ -197,16 +199,12 @@ impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualDat
     }
 
     // Function returns the data for individuals
-    fn get_individual_data(&self) -> &IndividualData {
+    pub fn get_individual_data(&self) -> &IndividualData {
         &self.ind_data
     }
-}
 
-impl<Individual, IndividualData> Population<Individual, IndividualData>
-where
-    Individual: EvoIndividual<IndividualData> + Send + Sync + Clone,
-    IndividualData: Sync,
-{
+    // Private functions
+
     // Function returns the indices of 5 neighbours of i in a + shape
     fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
         // Get x and y coordinates of i

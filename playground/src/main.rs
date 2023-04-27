@@ -6,7 +6,6 @@ use funtree::funtree_data::FuntreeIndividualData;
 use funtree::funtree_individual::FuntreeIndividual;
 use playground::main_app::MainApp;
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
-use revo::evo_population::EvoPopulation;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, EnumString};

@@ -1,6 +1,5 @@
 use example::basic_individual::{BasicIndividual, BasicIndividualData};
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
-use revo::evo_population::EvoPopulation;
 use revo::population::Population;
 
 fn main() {
