@@ -5,7 +5,7 @@ use evo_salesman::salesman_data::SalesmanIndividualData;
 use funtree::funtree_data::FuntreeIndividualData;
 use funtree::funtree_individual::FuntreeIndividual;
 use playground::main_app::MainApp;
-use revo::config::{Config, DEFAULT_CONFIG};
+use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_population::EvoPopulation;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 use strum::IntoEnumIterator;
@@ -22,7 +22,7 @@ pub enum ExampleType {
 }
 
 fn main() {
-    let config = Config::new(DEFAULT_CONFIG);
+    let config = Config::new(DEFAULT_CONFIG_FILENAME);
 
     // Get the example type from the config file
     let example_type: ExampleType = config.get_val("example").unwrap().unwrap_or_else(|| {
@@ -32,7 +32,7 @@ fn main() {
 
         panic!(
             "No example type specified in {}, possible values for \"example\" are: {:?}",
-            DEFAULT_CONFIG, possible_example_types
+            DEFAULT_CONFIG_FILENAME, possible_example_types
         )
     });
 
