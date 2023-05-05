@@ -66,7 +66,7 @@ impl IndDisplay {
         self.top_label
             .set_text(&format!("a: {:.4}, b: {:.4}", ind_visuals.0, ind_visuals.1));
         self.bottom_label
-            .set_text(&format!("fitness: {:.4}", ind.get_fitness()));
+            .set_text(&format!("fitness: {:.4}", ind.count_fitness(ind_data)));
     }
 
     pub fn get_widget(&self) -> Box {

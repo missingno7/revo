@@ -24,7 +24,6 @@ impl EvoIndividualData for BasicIndividualData {
 
 #[derive(Clone)]
 pub struct BasicIndividual {
-    fitness: f64,
     foo: f64,
     bar: f64,
 }
@@ -32,7 +31,6 @@ pub struct BasicIndividual {
 impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     fn new_randomised(ind_data: &BasicIndividualData, rng: &mut ThreadRng) -> Self {
         BasicIndividual {
-            fitness: 0.0,
             foo: ind_data.value + rng.gen_range(0.0..10.0),
             bar: ind_data.value + rng.gen_range(0.0..10.0),
         }
@@ -63,17 +61,13 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         let ratio = rng.gen_range(0.0..1.0);
 
         BasicIndividual {
-            fitness: 0.0,
             foo: self.foo * ratio + another_ind.foo * (1.0 - ratio),
             bar: self.bar * ratio + another_ind.bar * (1.0 - ratio),
         }
     }
 
-    fn count_fitness(&mut self, _ind_data: &BasicIndividualData) {
-        self.fitness = (self.foo - self.bar).abs();
-    }
-    fn get_fitness(&self) -> f64 {
-        self.fitness
+    fn count_fitness(&self, _ind_data: &BasicIndividualData) -> f64 {
+        (self.foo - self.bar).abs()
     }
 
     fn get_visuals(&self, _ind_data: &BasicIndividualData) -> (f64, f64) {

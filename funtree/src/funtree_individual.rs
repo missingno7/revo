@@ -171,7 +171,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         dest_ind
     }
 
-    fn count_fitness(&mut self, ind_data: &FuntreeIndividualData) {
+    fn count_fitness(&self, ind_data: &FuntreeIndividualData) -> f64{
         // Count mean absolute error
         let mut error = 0.0;
         for val in ind_data.vals.iter() {
@@ -180,8 +180,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
 
             // Handling cases like division by zero
             if y_pred.is_nan() {
-                self.fitness = -f64::INFINITY;
-                return;
+                return -f64::INFINITY;
             }
 
             // Sum of squared errors
@@ -189,11 +188,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
             error += err * err;
         }
 
-        self.fitness = -error;
-    }
-
-    fn get_fitness(&self) -> f64 {
-        self.fitness
+        -error
     }
 
     fn get_visuals(&self, _ind_data: &FuntreeIndividualData) -> (f64, f64) {

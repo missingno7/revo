@@ -13,7 +13,6 @@ impl EvoIndividualData for MockIndividualData {
 
 #[derive(Clone)]
 pub struct MockIndividual {
-    pub fitness: f64,
     pub visuals: (f64, f64),
     pub value: f64,
 }
@@ -21,7 +20,6 @@ pub struct MockIndividual {
 impl EvoIndividual<MockIndividualData> for MockIndividual {
     fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut ThreadRng) -> Self {
         MockIndividual {
-            fitness: 0.0,
             visuals: (0.0, 0.0),
             value: 0.0,
         }
@@ -44,18 +42,13 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
         _rng: &mut ThreadRng,
     ) -> MockIndividual {
         MockIndividual {
-            fitness: 0.0,
             visuals: (0.0, 0.0),
             value: (self.value + another_ind.value) / 2.0,
         }
     }
 
-    fn count_fitness(&mut self, _ind_data: &MockIndividualData) {
-        self.fitness = self.value;
-    }
-
-    fn get_fitness(&self) -> f64 {
-        self.fitness
+    fn count_fitness(&self, _ind_data: &MockIndividualData) -> f64 {
+        return self.value;
     }
 
     fn get_visuals(&self, _ind_data: &MockIndividualData) -> (f64, f64) {

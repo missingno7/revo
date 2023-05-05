@@ -4,7 +4,7 @@ extern crate revo;
 use evo_salesman::salesman::SalesmanIndividual;
 use evo_salesman::salesman_data::SalesmanIndividualData;
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
-use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::evo_individual::Visualise;
 use revo::population::Population;
 use std::fs;
 
@@ -22,19 +22,21 @@ fn main() {
     let mut pop: Population<SalesmanIndividual, SalesmanIndividualData> = Population::new(&config);
 
     // Get the best individual
-    let mut all_best_ind = pop.get_best().clone();
+    let mut all_best_ind: SalesmanIndividual;
+    let mut all_best_fitness = pop.get_best_with_fitness().1;
 
     // Run the evolution
     loop {
-        let best_ind = pop.get_best();
+        let (best_ind, best_fitness) = pop.get_best_with_fitness();
 
-        if best_ind.get_fitness() > all_best_ind.get_fitness() {
+        if best_fitness > all_best_fitness {
             all_best_ind = best_ind.clone();
+            all_best_fitness = best_fitness;
 
             println!(
                 "Round {}, best fitness: {}",
                 pop.get_generation(),
-                all_best_ind.get_fitness()
+                all_best_fitness
             );
             let image = all_best_ind.visualise(pop.get_individual_data());
             image

@@ -2,7 +2,7 @@ use funtree::funtree_data::FuntreeIndividualData;
 use funtree::funtree_individual::FuntreeIndividual;
 
 use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
-use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::evo_individual::{Visualise};
 use revo::population::Population;
 use std::fs;
 
@@ -20,23 +20,21 @@ fn main() {
     let mut pop: Population<FuntreeIndividual, FuntreeIndividualData> = Population::new(&config);
 
     // Get the best individual
-    let mut all_best_ind = pop.get_best().clone();
-    println!(
-        "Best individual: {}",
-        all_best_ind.simplify().to_string(pop.get_individual_data())
-    );
+    let mut all_best_ind: FuntreeIndividual;
+    let mut all_best_fitness = pop.get_best_with_fitness().1;
 
     // Run the evolution
     loop {
-        let best_ind = pop.get_best();
+         let (best_ind, best_fitness) = pop.get_best_with_fitness();
 
-        if best_ind.get_fitness() > all_best_ind.get_fitness() {
+        if best_fitness > all_best_fitness {
             all_best_ind = best_ind.clone();
+            all_best_fitness = best_fitness;
 
             println!(
                 "Round {}, best fitness: {}",
                 pop.get_generation(),
-                all_best_ind.get_fitness()
+                all_best_fitness
             );
 
             println!(
