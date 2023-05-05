@@ -1,6 +1,6 @@
 extern crate revo;
 
-use revo::evo_individual::{EvoIndividual, Visualise};
+use revo::evo_individual::Visualise;
 use revo::population::Population;
 use social_distance::social_distance::{DistanceIndividual, DistanceIndividualData};
 
@@ -16,12 +16,15 @@ fn main() {
 
     fs::create_dir(output_dir).unwrap();
 
-    let mut all_best_ind = pop.get_best().clone();
-    for _ in 0..1000000 {
-        let best_ind = pop.get_best();
+    let mut all_best_ind;
+    let mut all_best_fitness = pop.get_best_with_fitness().1;
 
-        if best_ind.get_fitness() > all_best_ind.get_fitness() {
+    for _ in 0..1000000 {
+        let (best_ind, best_fitness) = pop.get_best_with_fitness();
+
+        if best_fitness > all_best_fitness {
             all_best_ind = best_ind.clone();
+            all_best_fitness = best_fitness;
             let img = all_best_ind.visualise(pop.get_individual_data());
             img.save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
                 .unwrap();
@@ -29,13 +32,13 @@ fn main() {
             println!(
                 "Round {}, best fitness: {} - New record",
                 pop.get_generation(),
-                best_ind.get_fitness()
+                best_fitness
             );
         } else {
             println!(
                 "Round {}, best fitness: {}",
                 pop.get_generation(),
-                best_ind.get_fitness()
+                best_fitness
             );
         }
 

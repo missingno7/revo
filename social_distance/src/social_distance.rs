@@ -61,7 +61,6 @@ impl DistanceIndividualData {
 
 #[derive(Clone)]
 pub struct DistanceIndividual {
-    fitness: f64,
     coords: Vec<Coord>,
 }
 
@@ -94,10 +93,7 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
             });
         }
 
-        DistanceIndividual {
-            coords,
-            fitness: 0.0,
-        }
+        DistanceIndividual { coords }
     }
 
     fn mutate(
@@ -147,8 +143,8 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         dest_ind
     }
 
-    fn count_fitness(&mut self, ind_data: &DistanceIndividualData) {
-        self.fitness = 0.0;
+    fn count_fitness(&self, ind_data: &DistanceIndividualData) -> f64 {
+        let mut fitness = 0.0;
 
         let center_x: i32 = (ind_data.screen_width / 2) as i32;
         let center_y: i32 = (ind_data.screen_height / 2) as i32;
@@ -172,17 +168,14 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
                 }
             }
 
-            self.fitness -= i64::abs(
+            fitness -= i64::abs(
                 closest_dist
                     - (ind_data.required_distance as i64 * ind_data.required_distance as i64),
             ) as f64;
-            self.fitness -= Coord::distance_euclid(&self.coords[i], &center) as f64
+            fitness -= Coord::distance_euclid(&self.coords[i], &center) as f64
                 / ((self.coords.len() as f64) * 1.0);
         }
-    }
-
-    fn get_fitness(&self) -> f64 {
-        self.fitness
+        fitness
     }
 
     fn get_visuals(&self, _ind_data: &DistanceIndividualData) -> (f64, f64) {

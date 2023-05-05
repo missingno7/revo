@@ -24,9 +24,14 @@ pub enum SelectionStrategyType {
     Roulette,
 }
 
+#[derive(Clone)]
+struct IndividualMetaData {
+    fitness: f64,
+}
+
 pub struct Population<Individual, IndividualData> {
     // Current and next generation of individuals
-    inds: Vec<Individual>,
+    inds: Vec<(Individual, IndividualMetaData)>,
 
     // Population size
     pop_width: usize,
@@ -52,7 +57,7 @@ where
     IndividualData: EvoIndividualData,
 {
     pub fn get_at(&self, x: usize, y: usize) -> &Individual {
-        &self.inds[y * self.pop_width + x]
+        &self.inds[y * self.pop_width + x].0
     }
 
     pub fn get_width(&self) -> usize {
@@ -81,7 +86,7 @@ where
 
         let ind_data = IndividualData::from_config(config);
         let size = pop_width * pop_height;
-        let mut inds: Vec<Individual> = Vec::with_capacity(size);
+        let mut inds: Vec<(Individual, IndividualMetaData)> = Vec::with_capacity(size);
 
         // Initialise population with randomised individuals and count their fitness in parallel
         inds.par_extend(
@@ -121,7 +126,7 @@ where
         let pop_size = self.inds.len();
 
         // Create a new vector for the next generation
-        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
+        let mut next_gen_inds: Vec<(Individual, IndividualMetaData)> = Vec::with_capacity(pop_size);
 
         // Do selection and crossover/mutation in parallel for each individual
         next_gen_inds.par_extend((0..pop_size).into_par_iter().map(|i| {
@@ -131,13 +136,15 @@ where
             let indices = Self::_l5_selection(i, self.pop_width, self.pop_height);
 
             // Decide whether to do crossover or mutation
-            let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
+            let res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
                 // Do crossover
 
                 // Select two individuals
                 let (first_ind, second_ind) = Self::_dual_tournament(&indices, &self.inds);
 
-                self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, &mut rng)
+                self.inds[first_ind]
+                    .0
+                    .crossover(&self.inds[second_ind].0, &self.ind_data, &mut rng)
             } else {
                 // Do mutation
 
@@ -151,14 +158,14 @@ where
                     }
                 };
 
-                let mut res = self.inds[selected_ind_index].clone();
+                let mut res = self.inds[selected_ind_index].0.clone();
                 res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
                 res
             };
 
             // Count fitness of the new individual and return it
-            res.count_fitness(&self.ind_data);
-            res
+            let fitness = res.count_fitness(&self.ind_data);
+            (res, IndividualMetaData { fitness })
         }));
 
         // Swap the current generation with the next generation and increment the generation counter
@@ -168,15 +175,13 @@ where
 
     // Function returns the best individual in the current generation
     pub fn get_best(&self) -> &Individual {
-        let mut best_ind = &self.inds[0];
+        &self.inds[self._get_best_i()].0
+    }
 
-        for i in 1..self.inds.len() {
-            if self.inds[i].get_fitness() > best_ind.get_fitness() {
-                best_ind = &self.inds[i];
-            }
-        }
-
-        best_ind
+    // Function returns the best individual in the current generation and its fitness
+    pub fn get_best_with_fitness(&self) -> (&Individual, f64) {
+        let best_ind_i = self._get_best_i();
+        (&self.inds[best_ind_i].0, self.inds[best_ind_i].1.fitness)
     }
 
     // Function creates a visualization of the current generation in the form of an PNG image
@@ -195,6 +200,18 @@ where
     }
 
     // Private functions
+
+    // Function returns the index of the best individual in the current generation
+    pub fn _get_best_i(&self) -> usize {
+        let mut best_ind_i = 0;
+
+        for i in 1..self.inds.len() {
+            if self.inds[i].1.fitness > self.inds[best_ind_i].1.fitness {
+                best_ind_i = i;
+            }
+        }
+        best_ind_i
+    }
 
     // Function returns the indices of 5 neighbours of i in a + shape
     fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
@@ -312,21 +329,21 @@ where
     }
 
     // Function creates a new individual with randomised values and counts its fitness
-    fn _new_random_individual(ind_data: &IndividualData) -> Individual {
+    fn _new_random_individual(ind_data: &IndividualData) -> (Individual, IndividualMetaData) {
         let mut rng = rand::thread_rng();
-        let mut curr_gen_ind = Individual::new_randomised(ind_data, &mut rng);
-        curr_gen_ind.count_fitness(ind_data);
-        curr_gen_ind
+        let curr_gen_ind = Individual::new_randomised(ind_data, &mut rng);
+        let fitness = curr_gen_ind.count_fitness(ind_data);
+        (curr_gen_ind, IndividualMetaData { fitness })
     }
 
     /// Private methods
 
     // Function returns the index of the best individual in the tournament
-    fn _single_tournament(indices: &[usize], inds: &[Individual]) -> usize {
+    fn _single_tournament(indices: &[usize], inds: &[(Individual, IndividualMetaData)]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
-            if inds[index].get_fitness() > inds[best_i].get_fitness() {
+            if inds[index].1.fitness > inds[best_i].1.fitness {
                 best_i = index;
             }
         }
@@ -334,11 +351,15 @@ where
         best_i
     }
 
-    fn _roulette_selection(rng: &mut ThreadRng, indices: &[usize], inds: &[Individual]) -> usize {
+    fn _roulette_selection(
+        rng: &mut ThreadRng,
+        indices: &[usize],
+        inds: &[(Individual, IndividualMetaData)],
+    ) -> usize {
         // Get min fitness
-        let mut min_fitness = inds[indices[0]].get_fitness();
+        let mut min_fitness = inds[indices[0]].1.fitness;
         for &index in indices.iter() {
-            let fitness = inds[index].get_fitness();
+            let fitness = inds[index].1.fitness;
             if fitness < min_fitness {
                 min_fitness = fitness;
             }
@@ -348,14 +369,14 @@ where
         let mut fitness_sum = 0.0;
         for &index in indices.iter() {
             // subtract the min fitness to avoid negative values
-            fitness_sum += inds[index].get_fitness() - min_fitness;
+            fitness_sum += inds[index].1.fitness - min_fitness;
         }
 
         // Calculate the probabilities of each individual
         let mut probabilities = Vec::with_capacity(indices.len());
         for &index in indices.iter() {
             // subtract the min fitness to avoid negative values
-            let prob = (inds[index].get_fitness() - min_fitness) / fitness_sum;
+            let prob = (inds[index].1.fitness - min_fitness) / fitness_sum;
             probabilities.push(prob);
         }
 
@@ -377,7 +398,7 @@ where
     fn _dual_rulette(
         rng: &mut ThreadRng,
         indices: &[usize],
-        inds: &[Individual],
+        inds: &[(Individual, IndividualMetaData)],
     ) -> (usize, usize) {
         // Select the first individual
         let first = Self::_roulette_selection(rng, indices, inds);
@@ -397,15 +418,18 @@ where
     }
 
     // Function returns the indices of the two best individuals in the tournament
-    fn _dual_tournament(indices: &[usize], inds: &[Individual]) -> (usize, usize) {
+    fn _dual_tournament(
+        indices: &[usize],
+        inds: &[(Individual, IndividualMetaData)],
+    ) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];
 
         for &index in indices.iter().skip(1) {
-            if inds[index].get_fitness() > inds[best_i].get_fitness() {
+            if inds[index].1.fitness > inds[best_i].1.fitness {
                 second_best_i = best_i;
                 best_i = index;
-            } else if inds[index].get_fitness() > inds[second_best_i].get_fitness() {
+            } else if inds[index].1.fitness > inds[second_best_i].1.fitness {
                 second_best_i = index;
             }
         }
@@ -418,8 +442,8 @@ where
         let len = self.inds.len();
         let mut lab_data: Vec<IndexedLabData> = Vec::with_capacity(len);
         for (i, ind) in self.inds.iter().enumerate() {
-            let l = ind.get_fitness();
-            let (a, b) = ind.get_visuals(&self.ind_data);
+            let l = ind.1.fitness;
+            let (a, b) = ind.0.get_visuals(&self.ind_data);
             lab_data.push(IndexedLabData::new(l, a, b, i));
         }
         lab_data
@@ -476,11 +500,13 @@ mod tests {
     fn test_single_tournament() {
         let mut vec_ind = Vec::new();
         for i in 0..6 {
-            vec_ind.push(MockIndividual {
-                fitness: i as f64,
-                visuals: (0.0, 0.0),
-                value: 0.0,
-            });
+            vec_ind.push((
+                MockIndividual {
+                    visuals: (0.0, 0.0),
+                    value: 0.0,
+                },
+                IndividualMetaData { fitness: i as f64 },
+            ));
         }
 
         let res = TestPopulation::_single_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
@@ -494,11 +520,13 @@ mod tests {
     fn test_dual_tournament() {
         let mut vec_ind = Vec::new();
         for i in 0..6 {
-            vec_ind.push(MockIndividual {
-                fitness: i as f64,
-                visuals: (0.0, 0.0),
-                value: 0.0,
-            });
+            vec_ind.push((
+                MockIndividual {
+                    visuals: (0.0, 0.0),
+                    value: 0.0,
+                },
+                IndividualMetaData { fitness: i as f64 },
+            ));
         }
 
         let res = TestPopulation::_dual_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
@@ -511,25 +539,27 @@ mod tests {
     #[test]
     fn test_population() {
         let config = Config::from_str("{\"pop_width\": 3,  \"pop_height\": 3, \"mut_prob\":1.0, \"crossover_prob\":0.0, \"selection_strategy_type\":\"tournament\"  }").unwrap()
-        ;
+            ;
 
         let mut pop = Population::new(&config);
 
         // Fill the population with mock individuals
         let mut vec_ind = Vec::new();
         for i in 0..pop.inds.len() {
-            vec_ind.push(MockIndividual {
-                fitness: i as f64,
-                visuals: (i as f64, i as f64),
-                value: i as f64,
-            });
+            vec_ind.push((
+                MockIndividual {
+                    visuals: (i as f64, i as f64),
+                    value: i as f64,
+                },
+                IndividualMetaData { fitness: i as f64 },
+            ));
         }
         pop.inds = vec_ind.clone();
 
         // Test get_best
         let res = pop.get_best();
         // Pop should return the best individual - the one with the highest fitness value (last in the vector)
-        assert_eq!(res.value, vec_ind[pop.inds.len() - 1].value);
+        assert_eq!(res.value, vec_ind[pop.inds.len() - 1].0.value);
 
         // Test get_at
         assert_eq!(pop.get_at(1, 2).value, 7.0);
@@ -538,17 +568,17 @@ mod tests {
         // Test next_gen
         assert_eq!(pop.get_generation(), 0);
         pop.next_gen();
-        assert_eq!(pop.inds[0].value, 7.0);
-        assert_eq!(pop.inds[1].value, 8.0);
-        assert_eq!(pop.inds[2].value, 9.0);
+        assert_eq!(pop.inds[0].0.value, 7.0);
+        assert_eq!(pop.inds[1].0.value, 8.0);
+        assert_eq!(pop.inds[2].0.value, 9.0);
 
-        assert_eq!(pop.inds[3].value, 7.0);
-        assert_eq!(pop.inds[4].value, 8.0);
-        assert_eq!(pop.inds[5].value, 9.0);
+        assert_eq!(pop.inds[3].0.value, 7.0);
+        assert_eq!(pop.inds[4].0.value, 8.0);
+        assert_eq!(pop.inds[5].0.value, 9.0);
 
-        assert_eq!(pop.inds[6].value, 9.0);
-        assert_eq!(pop.inds[7].value, 9.0);
-        assert_eq!(pop.inds[8].value, 9.0);
+        assert_eq!(pop.inds[6].0.value, 9.0);
+        assert_eq!(pop.inds[7].0.value, 9.0);
+        assert_eq!(pop.inds[8].0.value, 9.0);
 
         assert_eq!(pop.get_generation(), 1);
 

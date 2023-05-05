@@ -24,10 +24,7 @@ pub trait EvoIndividual<IndividualData>: Send + Sync + Clone {
         -> Self;
 
     // Count the fitness of the individual
-    fn count_fitness(&mut self, ind_data: &IndividualData);
-
-    // Get the fitness of the individual
-    fn get_fitness(&self) -> f64;
+    fn count_fitness(&self, ind_data: &IndividualData) -> f64;
 
     // Get the A and B values of the individual for visualisation
     fn get_visuals(&self, ind_data: &IndividualData) -> (f64, f64);
