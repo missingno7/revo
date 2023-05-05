@@ -171,7 +171,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         dest_ind
     }
 
-    fn count_fitness(&self, ind_data: &FuntreeIndividualData) -> f64{
+    fn count_fitness(&self, ind_data: &FuntreeIndividualData) -> f64 {
         // Count mean absolute error
         let mut error = 0.0;
         for val in ind_data.vals.iter() {
