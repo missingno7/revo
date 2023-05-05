@@ -48,7 +48,7 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
     }
 
     fn count_fitness(&self, _ind_data: &MockIndividualData) -> f64 {
-        return self.value;
+        self.value
     }
 
     fn get_visuals(&self, _ind_data: &MockIndividualData) -> (f64, f64) {
