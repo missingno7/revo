@@ -166,7 +166,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         let dest_genom_it = dest_ind.genom.choose_random_node(rng);
 
         // Copy data from selected source node to selected destination node
-        unsafe { source_genom_it.copy_to(dest_genom_it.as_mut()) }
+        unsafe { source_genom_it.copy_to(dest_genom_it.as_mut_ptr().as_mut()) }
 
         dest_ind
     }

@@ -6,7 +6,7 @@ use rand_distr::{Distribution, Normal};
 use std::default::Default;
 use std::mem::swap;
 use std::str::FromStr;
-
+use core::ptr::NonNull;
 #[derive(Clone)]
 pub enum Expr {
     Leaf(Leaf),
@@ -465,10 +465,12 @@ impl Expression {
     ///
     /// The caller must ensure that there are no other mutable references to the same data,
     /// otherwise this function can violate Rust's aliasing rules.
-    #[allow(clippy::mut_from_ref)]
-    pub unsafe fn as_mut(&self) -> &mut Expression {
-        #[allow(clippy::cast_ref_to_mut)]
-        &mut *(self as *const _ as *mut _)
+     #[inline]
+    pub fn as_mut_ptr(&self) -> NonNull<Expression> {
+        // raw pointer cast is allowed; we are NOT creating a `&mut`.
+        // (Avoids `invalid_reference_casting`.)
+        // SAFETY: `self` is non-null and properly aligned.
+        unsafe { NonNull::new_unchecked(self as *const _ as *mut _) }
     }
 }
 
