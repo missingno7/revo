@@ -36,13 +36,14 @@ pub struct Population<Individual, IndividualData> {
     mut_prob: f32,
     mut_amount: f32,
     crossover_prob: f32,
-    selection_strategy_type: SelectionStrategyType,
 
     // Current generation number
     i_generation: usize,
 
     // Data for individuals
     ind_data: IndividualData,
+
+    selection_fn: fn(&mut ThreadRng, &[usize], &[Individual]) -> usize,
 }
 
 impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualData>
@@ -90,6 +91,17 @@ where
                 .map(|_| Self::_new_random_individual(&ind_data)),
         );
 
+        let selection_strategy_type = config
+            .may_get_enum("selection_strategy")
+            .unwrap()
+            .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE);
+
+        let selection_fn: fn(&mut ThreadRng, &[usize], &[Individual]) -> usize =
+            match selection_strategy_type {
+                SelectionStrategyType::Roulette => Self::_roulette_selection,
+                SelectionStrategyType::Tournament => Self::_single_tournament,
+            };
+
         Population {
             inds,
             pop_width,
@@ -106,12 +118,9 @@ where
                 .may_get_float("crossover_prob")
                 .unwrap()
                 .unwrap_or(DEFAULT_CROSSOVER_PROB),
-            selection_strategy_type: config
-                .may_get_enum("selection_strategy")
-                .unwrap()
-                .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE),
             i_generation: 0,
             ind_data,
+            selection_fn
         }
     }
 
@@ -142,14 +151,7 @@ where
                 // Do mutation
 
                 // Select one individual based on the selection type
-                let selected_ind_index = match self.selection_strategy_type {
-                    SelectionStrategyType::Roulette => {
-                        Self::_roulette_selection(&mut rng, &indices, &self.inds)
-                    }
-                    SelectionStrategyType::Tournament => {
-                        Self::_single_tournament(&indices, &self.inds)
-                    }
-                };
+                let selected_ind_index = (self.selection_fn)(&mut rng, &indices, &self.inds);
 
                 let mut res = self.inds[selected_ind_index].clone();
                 res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
@@ -197,37 +199,26 @@ where
     // Private functions
 
     // Function returns the indices of 5 neighbours of i in a + shape
-    fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
-        // Get x and y coordinates of i
-        let x: usize = i % pop_width;
-        let y: usize = i / pop_width;
+    #[inline]
+    fn _l5_selection(i: usize, w: usize, h: usize) -> [usize; 5] {
+        let x = i % w;
+        let y = i / w;
 
-        // Compute indices of neighbors, using wrapping for out-of-bounds indices
-        let left_neighbour = if x > 0 { i - 1 } else { i + pop_width - 1 };
-        let right_neighbour = if x + 1 < pop_width {
-            i + 1
-        } else {
-            i + 1 - pop_width
-        };
-        let top_neighbour = if y > 0 {
-            i - pop_width
-        } else {
-            i + pop_width * (pop_height - 1)
-        };
-        let bottom_neighbour = if y + 1 < pop_height {
-            i + pop_width
-        } else {
-            i - pop_width * (pop_height - 1)
-        };
+        // wrap in X
+        let xl = (x + w - 1) % w; // left
+        let xr = (x + 1) % w;     // right
 
-        // Return indices of 5 neighbours in a + shape with i in the middle
-        vec![
-            i,
-            left_neighbour,
-            right_neighbour,
-            top_neighbour,
-            bottom_neighbour,
-        ]
+        // wrap in Y
+        let yt = (y + h - 1) % h; // up (top)
+        let yb = (y + 1) % h;     // down (bottom)
+
+        let left   = y  * w + xl;
+        let right  = y  * w + xr;
+        let up     = yt * w + x;
+        let down   = yb * w + x;
+
+        // [middle, left, right, up, down]
+        [i, left, right, up, down]
     }
 
     fn _normalize_component(
@@ -322,7 +313,7 @@ where
     /// Private methods
 
     // Function returns the index of the best individual in the tournament
-    fn _single_tournament(indices: &[usize], inds: &[Individual]) -> usize {
+    fn _single_tournament(_rng: &mut ThreadRng, indices: &[usize], inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
@@ -444,36 +435,37 @@ mod tests {
         // Test top-left corner
         let i = 0;
         let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![0, 4, 1, 20, 5]);
+        assert_eq!(neighbors, [0, 4, 1, 20, 5]);
 
         // Test top-right corner
         let i = 4;
         let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![4, 3, 0, 24, 9]);
+        assert_eq!(neighbors, [4, 3, 0, 24, 9]);
 
         // Test bottom-left corner
         let i = 20;
         let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![20, 24, 21, 15, 0]);
+        assert_eq!(neighbors, [20, 24, 21, 15, 0]);
 
         // Test bottom-right corner
         let i = 24;
         let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![24, 23, 20, 19, 4]);
+        assert_eq!(neighbors, [24, 23, 20, 19, 4]);
 
         // Test middle element
         let i = 12;
         let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![12, 11, 13, 7, 17]);
+        assert_eq!(neighbors, [12, 11, 13, 7, 17]);
 
         // Test bottom-middle element
         let i = 22;
         let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![22, 21, 23, 17, 2]);
+        assert_eq!(neighbors, [22, 21, 23, 17, 2]);
     }
 
     #[test]
     fn test_single_tournament() {
+        let mut rng = rand::thread_rng();
         let mut vec_ind = Vec::new();
         for i in 0..6 {
             vec_ind.push(MockIndividual {
@@ -483,10 +475,10 @@ mod tests {
             });
         }
 
-        let res = TestPopulation::_single_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
+        let res = TestPopulation::_single_tournament(&mut rng,&vec![0, 3, 2, 1], &mut vec_ind);
         assert_eq!(res, 3);
 
-        let res = TestPopulation::_single_tournament(&vec![3, 0, 2, 4], &mut vec_ind);
+        let res = TestPopulation::_single_tournament(&mut rng,&vec![3, 0, 2, 4], &mut vec_ind);
         assert_eq!(res, 4);
     }
 
