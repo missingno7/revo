@@ -15,6 +15,7 @@ const DEFAULT_MUT_PROB: f32 = 0.1;
 const DEFAULT_MUT_AMOUNT: f32 = 1.0;
 const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
 const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
+const MAX_NEIGHBOURS: usize = 9;
 
 #[derive(Clone, EnumString, EnumIter, Display)]
 pub enum SelectionStrategyType {
@@ -44,6 +45,7 @@ pub struct Population<Individual, IndividualData> {
     ind_data: IndividualData,
 
     selection_fn: fn(&mut ThreadRng, &[usize], &[Individual]) -> usize,
+    neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize,
 }
 
 impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualData>
@@ -102,6 +104,9 @@ where
                 SelectionStrategyType::Tournament => Self::_single_tournament,
             };
 
+        let neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize =
+            { Self::_l5_selection };
+
         Population {
             inds,
             pop_width,
@@ -120,7 +125,8 @@ where
                 .unwrap_or(DEFAULT_CROSSOVER_PROB),
             i_generation: 0,
             ind_data,
-            selection_fn
+            selection_fn,
+            neighbours_fn,
         }
     }
 
@@ -137,21 +143,23 @@ where
             let mut rng = thread_rng();
 
             // Select 5 individuals
-            let indices = Self::_l5_selection(i, self.pop_width, self.pop_height);
+            let mut neigh_buf = [0usize; MAX_NEIGHBOURS];
+            let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, &mut neigh_buf);
+            let indices = &neigh_buf[..n_neigh];
 
             // Decide whether to do crossover or mutation
             let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
                 // Do crossover
 
                 // Select two individuals
-                let (first_ind, second_ind) = Self::_dual_tournament(&indices, &self.inds);
+                let (first_ind, second_ind) = Self::_dual_tournament(indices, &self.inds);
 
                 self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, &mut rng)
             } else {
                 // Do mutation
 
                 // Select one individual based on the selection type
-                let selected_ind_index = (self.selection_fn)(&mut rng, &indices, &self.inds);
+                let selected_ind_index = (self.selection_fn)(&mut rng, indices, &self.inds);
 
                 let mut res = self.inds[selected_ind_index].clone();
                 res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
@@ -200,25 +208,30 @@ where
 
     // Function returns the indices of 5 neighbours of i in a + shape
     #[inline]
-    fn _l5_selection(i: usize, w: usize, h: usize) -> [usize; 5] {
+    fn _l5_selection(i: usize, w: usize, h: usize, buf: &mut [usize; MAX_NEIGHBOURS]) -> usize {
         let x = i % w;
         let y = i / w;
 
         // wrap in X
         let xl = (x + w - 1) % w; // left
-        let xr = (x + 1) % w;     // right
+        let xr = (x + 1) % w; // right
 
         // wrap in Y
         let yt = (y + h - 1) % h; // up (top)
-        let yb = (y + 1) % h;     // down (bottom)
+        let yb = (y + 1) % h; // down (bottom)
 
-        let left   = y  * w + xl;
-        let right  = y  * w + xr;
-        let up     = yt * w + x;
-        let down   = yb * w + x;
+        let left = y * w + xl;
+        let right = y * w + xr;
+        let up = yt * w + x;
+        let down = yb * w + x;
 
-        // [middle, left, right, up, down]
-        [i, left, right, up, down]
+        buf[0] = i;
+        buf[1] = left;
+        buf[2] = right;
+        buf[3] = up;
+        buf[4] = down;
+
+        5
     }
 
     fn _normalize_component(
@@ -428,38 +441,45 @@ mod tests {
 
     #[test]
     fn test_l5_selection() {
+        let mut neigh_buf = [0usize; MAX_NEIGHBOURS];
         let pop_width = 5;
         let pop_height = 5;
 
         // indices goes like [middle, left, right, up, down]
         // Test top-left corner
         let i = 0;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
         assert_eq!(neighbors, [0, 4, 1, 20, 5]);
 
         // Test top-right corner
         let i = 4;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
         assert_eq!(neighbors, [4, 3, 0, 24, 9]);
 
         // Test bottom-left corner
         let i = 20;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
         assert_eq!(neighbors, [20, 24, 21, 15, 0]);
 
         // Test bottom-right corner
         let i = 24;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
         assert_eq!(neighbors, [24, 23, 20, 19, 4]);
 
         // Test middle element
         let i = 12;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
         assert_eq!(neighbors, [12, 11, 13, 7, 17]);
 
         // Test bottom-middle element
         let i = 22;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
         assert_eq!(neighbors, [22, 21, 23, 17, 2]);
     }
 
@@ -475,10 +495,10 @@ mod tests {
             });
         }
 
-        let res = TestPopulation::_single_tournament(&mut rng,&vec![0, 3, 2, 1], &mut vec_ind);
+        let res = TestPopulation::_single_tournament(&mut rng, &vec![0, 3, 2, 1], &mut vec_ind);
         assert_eq!(res, 3);
 
-        let res = TestPopulation::_single_tournament(&mut rng,&vec![3, 0, 2, 4], &mut vec_ind);
+        let res = TestPopulation::_single_tournament(&mut rng, &vec![3, 0, 2, 4], &mut vec_ind);
         assert_eq!(res, 4);
     }
 
