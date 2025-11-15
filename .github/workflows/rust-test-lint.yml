@@ -11,11 +11,15 @@ jobs:
         example: [revo, revo/example, social_distance, evo_salesman, funtree]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+
       - name: Set up Rust
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
+          profile: minimal
+          override: true
+
       - name: Build and test ${{ matrix.example }}
         run: |
           cd ${{ matrix.example }}
@@ -23,4 +27,3 @@ jobs:
           cargo clippy -- -D warnings
           cargo build --verbose
           cargo test --verbose
-        
