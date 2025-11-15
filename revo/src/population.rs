@@ -218,23 +218,23 @@ where
         let y = i / w;
 
         // wrap in X
-        let xl = (x + w - 1) % w; // left
-        let xr = (x + 1) % w; // right
+        let xl = (x + w - 1) % w;
+        let xr = (x + 1) % w;
 
         // wrap in Y
-        let yt = (y + h - 1) % h; // up (top)
-        let yb = (y + 1) % h; // down (bottom)
+        let yt = (y + h - 1) % h;
+        let yb = (y + 1) % h;
 
-        let left = y * w + xl;
-        let right = y * w + xr;
-        let up = yt * w + x;
-        let down = yb * w + x;
+        // Precompute row offsets
+        let row = y * w;
+        let row_yt = yt * w;
+        let row_yb = yb * w;
 
-        buf[0] = i;
-        buf[1] = left;
-        buf[2] = right;
-        buf[3] = up;
-        buf[4] = down;
+        buf[0] = i; // center
+        buf[1] = row + xl; // left
+        buf[2] = row + xr; // right
+        buf[3] = row_yt + x; // up
+        buf[4] = row_yb + x; // down
 
         5
     }
