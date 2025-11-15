@@ -8,7 +8,7 @@
   "selection_strategy": "tournament", // "roulette", "tournament"
 
   // TSP parameters
-  "n_cities": 100,
+  "n_cities": 150,
   "screen_width": 1000,
   "screen_height": 1000,
   "shift_prob": 0.4,
