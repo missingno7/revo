@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::evo_individual::{EvoIndividual, EvoIndividualData};
-use rand::rngs::ThreadRng;
+use rand::rngs::SmallRng;
 
 #[derive(Clone)]
 pub struct MockIndividualData {}
@@ -19,7 +19,7 @@ pub struct MockIndividual {
 }
 
 impl EvoIndividual<MockIndividualData> for MockIndividual {
-    fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut ThreadRng) -> Self {
+    fn new_randomised(_ind_data: &MockIndividualData, _rng: &mut SmallRng) -> Self {
         MockIndividual {
             fitness: 0.0,
             visuals: (0.0, 0.0),
@@ -30,7 +30,7 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
     fn mutate(
         &mut self,
         _ind_data: &MockIndividualData,
-        _rng: &mut ThreadRng,
+        _rng: &mut SmallRng,
         _mut_prob: f32,
         _mut_amount: f32,
     ) {
@@ -41,7 +41,7 @@ impl EvoIndividual<MockIndividualData> for MockIndividual {
         &self,
         another_ind: &Self,
         _ind_data: &MockIndividualData,
-        _rng: &mut ThreadRng,
+        _rng: &mut SmallRng,
     ) -> MockIndividual {
         MockIndividual {
             fitness: 0.0,

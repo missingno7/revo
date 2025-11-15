@@ -1,6 +1,6 @@
 use crate::leaf::{Leaf, LeafType};
 use crate::operation::{Operation, OperationType};
-use rand::rngs::ThreadRng;
+use rand::rngs::SmallRng;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use std::default::Default;
@@ -79,7 +79,7 @@ impl Expression {
     }
 
     // Generate a random expression
-    pub fn new_randomised(rng: &mut ThreadRng, max_depth: u16) -> Self {
+    pub fn new_randomised(rng: &mut SmallRng, max_depth: u16) -> Self {
         let minus = rng.gen_bool(0.5);
 
         if max_depth == 0 || rng.gen_bool(0.5) {
@@ -113,7 +113,7 @@ impl Expression {
         (a, b)
     }
 
-    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
+    pub fn mutate(&mut self, rng: &mut SmallRng, mut_prob: f32, mut_amount: f32) {
         // Change the sign of the expression
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.minus = !self.minus;
@@ -131,7 +131,7 @@ impl Expression {
         }
     }
 
-    pub fn choose_random_node(&self, rng: &mut ThreadRng) -> &Expression {
+    pub fn choose_random_node(&self, rng: &mut SmallRng) -> &Expression {
         // Get all nodes in the expression
         let nodes = self.get_nodes();
 
@@ -466,6 +466,8 @@ impl Expression {
     /// The caller must ensure that there are no other mutable references to the same data,
     /// otherwise this function can violate Rust's aliasing rules.
     #[allow(clippy::mut_from_ref)]
+    #[allow(clippy::cast_ref_to_mut)]
+    #[allow(invalid_reference_casting)]
     pub unsafe fn as_mut(&self) -> &mut Expression {
         #[allow(clippy::cast_ref_to_mut)]
         &mut *(self as *const _ as *mut _)

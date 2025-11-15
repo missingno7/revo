@@ -1,11 +1,12 @@
 use super::evo_individual::EvoIndividual;
 use crate::config::Config;
 use crate::evo_individual::EvoIndividualData;
+use crate::rand::SeedableRng;
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
-use rand::rngs::ThreadRng;
-use rand::{thread_rng, Rng};
+use rand::rngs::SmallRng;
+use rand::Rng;
 use rayon::prelude::*;
 use strum_macros::{Display, EnumIter, EnumString};
 
@@ -44,7 +45,7 @@ pub struct Population<Individual, IndividualData> {
     // Data for individuals
     ind_data: IndividualData,
 
-    selection_fn: fn(&mut ThreadRng, &[usize], &[Individual]) -> usize,
+    selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize,
     neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize,
 }
 
@@ -90,7 +91,9 @@ where
         inds.par_extend(
             (0..size)
                 .into_par_iter()
-                .map(|_| Self::_new_random_individual(&ind_data)),
+                .map_init(SmallRng::from_entropy, |rng, _| {
+                    Self::_new_random_individual(rng, &ind_data)
+                }),
         );
 
         let selection_strategy_type = config
@@ -98,7 +101,7 @@ where
             .unwrap()
             .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE);
 
-        let selection_fn: fn(&mut ThreadRng, &[usize], &[Individual]) -> usize =
+        let selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize =
             match selection_strategy_type {
                 SelectionStrategyType::Roulette => Self::_roulette_selection,
                 SelectionStrategyType::Tournament => Self::_single_tournament,
@@ -139,37 +142,39 @@ where
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
 
         // Do selection and crossover/mutation in parallel for each individual
-        next_gen_inds.par_extend((0..pop_size).into_par_iter().map(|i| {
-            let mut rng = thread_rng();
+        next_gen_inds.par_extend((0..pop_size).into_par_iter().map_init(
+            SmallRng::from_entropy,
+            |rng, i| {
+                // Select 5 individuals
+                let mut neigh_buf = [0usize; MAX_NEIGHBOURS];
+                let n_neigh =
+                    (self.neighbours_fn)(i, self.pop_width, self.pop_height, &mut neigh_buf);
+                let indices = &neigh_buf[..n_neigh];
 
-            // Select 5 individuals
-            let mut neigh_buf = [0usize; MAX_NEIGHBOURS];
-            let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, &mut neigh_buf);
-            let indices = &neigh_buf[..n_neigh];
+                // Decide whether to do crossover or mutation
+                let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                    // Do crossover
 
-            // Decide whether to do crossover or mutation
-            let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
-                // Do crossover
+                    // Select two individuals
+                    let (first_ind, second_ind) = Self::_dual_tournament(indices, &self.inds);
 
-                // Select two individuals
-                let (first_ind, second_ind) = Self::_dual_tournament(indices, &self.inds);
+                    self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, rng)
+                } else {
+                    // Do mutation
 
-                self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, &mut rng)
-            } else {
-                // Do mutation
+                    // Select one individual based on the selection type
+                    let selected_ind_index = (self.selection_fn)(rng, indices, &self.inds);
 
-                // Select one individual based on the selection type
-                let selected_ind_index = (self.selection_fn)(&mut rng, indices, &self.inds);
+                    let mut res = self.inds[selected_ind_index].clone();
+                    res.mutate(&self.ind_data, rng, self.mut_prob, self.mut_amount);
+                    res
+                };
 
-                let mut res = self.inds[selected_ind_index].clone();
-                res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                // Count fitness of the new individual and return it
+                res.count_fitness(&self.ind_data);
                 res
-            };
-
-            // Count fitness of the new individual and return it
-            res.count_fitness(&self.ind_data);
-            res
-        }));
+            },
+        ));
 
         // Swap the current generation with the next generation and increment the generation counter
         std::mem::swap(&mut self.inds, &mut next_gen_inds);
@@ -316,9 +321,8 @@ where
     }
 
     // Function creates a new individual with randomised values and counts its fitness
-    fn _new_random_individual(ind_data: &IndividualData) -> Individual {
-        let mut rng = rand::thread_rng();
-        let mut curr_gen_ind = Individual::new_randomised(ind_data, &mut rng);
+    fn _new_random_individual(rng: &mut SmallRng, ind_data: &IndividualData) -> Individual {
+        let mut curr_gen_ind = Individual::new_randomised(ind_data, rng);
         curr_gen_ind.count_fitness(ind_data);
         curr_gen_ind
     }
@@ -326,7 +330,7 @@ where
     /// Private methods
 
     // Function returns the index of the best individual in the tournament
-    fn _single_tournament(_rng: &mut ThreadRng, indices: &[usize], inds: &[Individual]) -> usize {
+    fn _single_tournament(_rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
@@ -338,7 +342,7 @@ where
         best_i
     }
 
-    fn _roulette_selection(rng: &mut ThreadRng, indices: &[usize], inds: &[Individual]) -> usize {
+    fn _roulette_selection(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
         // Get min fitness
         let mut min_fitness = inds[indices[0]].get_fitness();
         for &index in indices.iter() {
@@ -378,11 +382,7 @@ where
     }
 
     // Function selects two individuals using roulette selection
-    fn _dual_rulette(
-        rng: &mut ThreadRng,
-        indices: &[usize],
-        inds: &[Individual],
-    ) -> (usize, usize) {
+    fn _dual_rulette(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> (usize, usize) {
         // Select the first individual
         let first = Self::_roulette_selection(rng, indices, inds);
 
@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn test_single_tournament() {
-        let mut rng = rand::thread_rng();
+        let mut rng = SmallRng::from_entropy();
         let mut vec_ind = Vec::new();
         for i in 0..6 {
             vec_ind.push(MockIndividual {

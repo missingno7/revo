@@ -1,7 +1,7 @@
 use image::{ImageBuffer, Rgb, RgbImage};
 use imageproc::drawing::draw_hollow_rect_mut;
 use imageproc::rect::Rect;
-use rand::prelude::ThreadRng;
+use rand::prelude::SmallRng;
 use rand::Rng;
 use revo::config::Config;
 use revo::evo_individual::{EvoIndividual, EvoIndividualData, Visualise};
@@ -85,7 +85,7 @@ impl Visualise<DistanceIndividualData> for DistanceIndividual {
 }
 
 impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
-    fn new_randomised(ind_data: &DistanceIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_randomised(ind_data: &DistanceIndividualData, rng: &mut SmallRng) -> Self {
         let mut coords: Vec<Coord> = Vec::new();
         for _ in 0..ind_data.n_points {
             coords.push(Coord {
@@ -103,7 +103,7 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
     fn mutate(
         &mut self,
         ind_data: &DistanceIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
         mut_prob: f32,
         mut_amount: f32,
     ) {
@@ -131,7 +131,7 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         &self,
         another_ind: &DistanceIndividual,
         _ind_data: &DistanceIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
     ) -> DistanceIndividual {
         let mut dest_ind = self.clone();
         for i in 0..self.coords.len() {

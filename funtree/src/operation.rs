@@ -1,6 +1,6 @@
 use crate::expression::Expression;
 use rand::prelude::SliceRandom;
-use rand::rngs::ThreadRng;
+use rand::rngs::SmallRng;
 use rand::Rng;
 use std::mem::swap;
 use std::str::FromStr;
@@ -15,7 +15,7 @@ pub enum OperationType {
 }
 
 impl OperationType {
-    pub fn random(rng: &mut ThreadRng) -> Self {
+    pub fn random(rng: &mut SmallRng) -> Self {
         let operations = [
             OperationType::Addition,
             OperationType::Multiplication,
@@ -79,7 +79,7 @@ impl Operation {
         (a, b)
     }
 
-    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
+    pub fn mutate(&mut self, rng: &mut SmallRng, mut_prob: f32, mut_amount: f32) {
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.operation_type = OperationType::random(rng);
         }

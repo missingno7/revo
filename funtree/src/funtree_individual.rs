@@ -1,6 +1,6 @@
 use crate::expression::Expression;
 use crate::funtree_data::FuntreeIndividualData;
-use rand::rngs::ThreadRng;
+use rand::rngs::SmallRng;
 use rand::Rng;
 use revo::evo_individual::{EvoIndividual, Visualise};
 
@@ -131,7 +131,7 @@ impl FuntreeIndividual {
 }
 
 impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
-    fn new_randomised(_ind_data: &FuntreeIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_randomised(_ind_data: &FuntreeIndividualData, rng: &mut SmallRng) -> Self {
         FuntreeIndividual {
             fitness: 0.0,
             genom: Expression::new_randomised(rng, 5),
@@ -141,7 +141,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
     fn mutate(
         &mut self,
         _ind_data: &FuntreeIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
         mut_prob: f32,
         mut_amount: f32,
     ) {
@@ -152,7 +152,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         &self,
         another_ind: &FuntreeIndividual,
         _ind_data: &FuntreeIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
     ) -> FuntreeIndividual {
         // Select random source genom and copy the other not selected genom to destination genom
         let (source_genom, dest_ind) = if rng.gen_bool(0.5) {

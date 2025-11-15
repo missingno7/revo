@@ -2,7 +2,7 @@ use crate::salesman_data::{SalesmanIndividualData, SalesmanInitType};
 use image::{Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_line_segment_mut};
 use imageproc::rect::Rect;
-use rand::prelude::ThreadRng;
+use rand::prelude::SmallRng;
 use rand::seq::SliceRandom;
 use rand::Rng;
 use revo::evo_individual::{EvoIndividual, Visualise};
@@ -140,7 +140,7 @@ impl SalesmanIndividual {
         }
     }
 
-    fn new_random_naive(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_random_naive(ind_data: &SalesmanIndividualData, rng: &mut SmallRng) -> Self {
         let mut visited: Vec<bool> = vec![false; ind_data.coords.len()];
         let mut genom: Vec<u16> = (0_u16..ind_data.coords.len() as u16).collect();
 
@@ -172,7 +172,7 @@ impl SalesmanIndividual {
         }
     }
 
-    fn new_random_noise(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_random_noise(ind_data: &SalesmanIndividualData, rng: &mut SmallRng) -> Self {
         let mut genom: Vec<u16> = (0_u16..ind_data.coords.len() as u16).collect();
         genom.shuffle(rng);
 
@@ -182,7 +182,7 @@ impl SalesmanIndividual {
         }
     }
 
-    fn new_random_insertion(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_random_insertion(ind_data: &SalesmanIndividualData, rng: &mut SmallRng) -> Self {
         let mut cities: HashSet<u16> = (0_u16..ind_data.coords.len() as u16).collect();
         let mut genom: Vec<u16> = Vec::new();
 
@@ -240,7 +240,7 @@ impl SalesmanIndividual {
         }
     }
 
-    fn new_random_greedy_joining(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_random_greedy_joining(ind_data: &SalesmanIndividualData, rng: &mut SmallRng) -> Self {
         let mut paths: Vec<Vec<u16>> = Vec::new();
 
         for i in 0..ind_data.coords.len() {
@@ -312,7 +312,7 @@ impl SalesmanIndividual {
 }
 
 impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
-    fn new_randomised(ind_data: &SalesmanIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_randomised(ind_data: &SalesmanIndividualData, rng: &mut SmallRng) -> Self {
         match ind_data.init_type {
             SalesmanInitType::Naive => Self::new_random_naive(ind_data, rng),
             SalesmanInitType::Noise => Self::new_random_noise(ind_data, rng),
@@ -324,7 +324,7 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
     fn mutate(
         &mut self,
         ind_data: &SalesmanIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
         mut_prob: f32,
         _mut_amount: f32,
     ) {
@@ -360,7 +360,7 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
         &self,
         another_ind: &SalesmanIndividual,
         _ind_data: &SalesmanIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
     ) -> SalesmanIndividual {
         let start_cross_point = rng.gen_range(0..self.genom.len() - 1);
         let end_cross_point = rng.gen_range(0..self.genom.len() - 1);
