@@ -181,15 +181,14 @@ where
 
     // Function returns the best individual in the current generation
     pub fn get_best(&self) -> &Individual {
-        let mut best_ind = &self.inds[0];
-
-        for i in 1..self.inds.len() {
-            if self.inds[i].get_fitness() > best_ind.get_fitness() {
-                best_ind = &self.inds[i];
-            }
-        }
-
-        best_ind
+        self.inds
+            .iter()
+            .max_by(|a, b| {
+                a.get_fitness()
+                    .partial_cmp(&b.get_fitness())
+                    .expect("fitness must not be NaN")
+            })
+            .expect("population must not be empty")
     }
 
     // Function creates a visualization of the current generation in the form of an PNG image
