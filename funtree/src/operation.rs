@@ -1,8 +1,8 @@
-use std::fmt;
 use crate::expression::Expression;
 use rand::prelude::SliceRandom;
 use rand::rngs::SmallRng;
 use rand::Rng;
+use std::fmt;
 use std::mem::swap;
 use std::str::FromStr;
 

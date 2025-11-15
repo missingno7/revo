@@ -528,7 +528,7 @@ impl FromStr for Expression {
                 Ok(Expression::new_variable(true))
             } else {
                 Ok(Expression::new_constant(s.parse::<f64>().unwrap()))
-            }
+            };
         }
 
         let left_start = s.find('(').unwrap_or(0);
@@ -559,9 +559,7 @@ impl FromStr for Expression {
         }
 
         // left is actually right - left part is missing () marks
-        if let Some(op_mark_i) =
-            s[..left_start].find(|c| EXP_CHARS.contains(c))
-        {
+        if let Some(op_mark_i) = s[..left_start].find(|c| EXP_CHARS.contains(c)) {
             let real_left_expr = Self::from_str(&s[..op_mark_i])?;
 
             let op_type = OperationType::from_str(&s[op_mark_i..op_mark_i + 1])?;
@@ -576,16 +574,14 @@ impl FromStr for Expression {
 
         let s_remaining = &s[left_end + 2..];
 
-        let op_type: Option<OperationType> =
-            match s_remaining.find(|c| EXP_CHARS.contains(c))  {
-                None => None,
-                Some(i) => Some(OperationType::from_str(&s_remaining[i..i + 1])?),
-            };
+        let op_type: Option<OperationType> = match s_remaining.find(|c| EXP_CHARS.contains(c)) {
+            None => None,
+            Some(i) => Some(OperationType::from_str(&s_remaining[i..i + 1])?),
+        };
 
         let mut right_start = s_remaining.find('(').unwrap_or(1);
 
-        if let Some(op_mark_i) = s_remaining.find(|c| EXP_CHARS.contains(c))
-        {
+        if let Some(op_mark_i) = s_remaining.find(|c| EXP_CHARS.contains(c)) {
             right_start = op_mark_i;
         }
 
@@ -635,8 +631,8 @@ impl PartialEq<Self> for Expression {
 
 #[cfg(test)]
 mod tests {
-    use rand::SeedableRng;
     use super::*;
+    use rand::SeedableRng;
 
     #[test]
     fn from_string() {
