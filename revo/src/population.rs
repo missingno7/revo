@@ -143,12 +143,10 @@ where
 
         // Do selection and crossover/mutation in parallel for each individual
         next_gen_inds.par_extend((0..pop_size).into_par_iter().map_init(
-            SmallRng::from_entropy,
-            |rng, i| {
+            || (SmallRng::from_entropy(), [0usize; MAX_NEIGHBOURS]),
+            |(rng, neigh_buf), i| {
                 // Select 5 individuals
-                let mut neigh_buf = [0usize; MAX_NEIGHBOURS];
-                let n_neigh =
-                    (self.neighbours_fn)(i, self.pop_width, self.pop_height, &mut neigh_buf);
+                let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, neigh_buf);
                 let indices = &neigh_buf[..n_neigh];
 
                 // Decide whether to do crossover or mutation
