@@ -327,7 +327,7 @@ where
         curr_gen_ind
     }
 
-    /// Private methods
+    // Private methods
 
     // Function returns the index of the best individual in the tournament
     fn _single_tournament(_rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
