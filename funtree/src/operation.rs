@@ -1,3 +1,4 @@
+use std::fmt;
 use crate::expression::Expression;
 use rand::prelude::SliceRandom;
 use rand::rngs::SmallRng;
@@ -130,19 +131,15 @@ impl Operation {
     }
 }
 
-impl ToString for Operation {
-    fn to_string(&self) -> String {
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let op_str = match self.operation_type {
             OperationType::Addition => "+",
             OperationType::Multiplication => "*",
             OperationType::Division => "/",
             OperationType::Power => "^",
         };
-        format!(
-            "({} {} {})",
-            self.left.to_string(),
-            op_str,
-            self.right.to_string()
-        )
+
+        write!(f, "({} {} {})", self.left, op_str, self.right)
     }
 }

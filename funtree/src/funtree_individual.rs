@@ -20,7 +20,7 @@ impl FuntreeIndividual {
     pub fn to_string(&self, ind_data: &FuntreeIndividualData) -> String {
         let mut result = String::new();
 
-        result.push_str(&format!("y = {}\n", self.genom.to_string()));
+        result.push_str(&format!("y = {}\n", self.genom));
 
         // Count mean absolute error
         for val in ind_data.vals.iter() {
@@ -235,7 +235,7 @@ impl Visualise<FuntreeIndividualData> for FuntreeIndividual {
             }
         }
 
-        let caption = format!("y = {}", self.genom.simplify().to_string());
+        let caption = format!("y = {}", self.genom.simplify());
 
         Self::_create_rgb_image_from_points(
             &pred,

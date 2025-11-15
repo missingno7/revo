@@ -3,6 +3,7 @@ use crate::evo_individual::{EvoIndividual, EvoIndividualData};
 use rand::rngs::SmallRng;
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct MockIndividualData {}
 
 impl EvoIndividualData for MockIndividualData {
@@ -12,6 +13,7 @@ impl EvoIndividualData for MockIndividualData {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct MockIndividual {
     pub fitness: f64,
     pub visuals: (f64, f64),
