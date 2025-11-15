@@ -158,7 +158,7 @@ impl EvoIndividual<DistanceIndividualData> for DistanceIndividual {
         };
 
         for i in 0..self.coords.len() {
-            let mut closest_dist = std::i64::MAX;
+            let mut closest_dist = i64::MAX;
 
             for j in 0..self.coords.len() {
                 if i == j {
