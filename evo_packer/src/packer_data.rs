@@ -31,8 +31,6 @@ pub struct PackerIndividualData {
     pub height_change_prob: f32,
     pub height_change_amount: u32,
     pub max_width: u32,
-    pub vis_w1: Vec<f64>,
-    pub vis_w2: Vec<f64>,
 }
 
 impl EvoIndividualData for PackerIndividualData {
@@ -105,10 +103,6 @@ impl PackerIndividualData {
             rects.push(RectSpec { w, h });
         }
 
-        let dim = n_rects * 2 + 1; // order + rotations + row_len
-        let vis_w1: Vec<f64> = (0..dim).map(|_| rng.gen_range(-1.0..1.0)).collect();
-        let vis_w2: Vec<f64> = (0..dim).map(|_| rng.gen_range(-1.0..1.0)).collect();
-
         PackerIndividualData {
             rects,
             screen_width,
@@ -119,8 +113,6 @@ impl PackerIndividualData {
             height_change_prob,
             height_change_amount,
             max_width,
-            vis_w1,
-            vis_w2,
         }
     }
 }

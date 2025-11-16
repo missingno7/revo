@@ -234,59 +234,25 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         self.fitness
     }
 
-    fn get_visuals(&self, ind_data: &PackerIndividualData) -> (f64, f64) {
-        let n = self.order.len();
-        if n == 0 {
-            return (0.0, 0.0);
+    fn get_visuals(&self, _ind_data: &PackerIndividualData) -> (f64, f64) {
+        let mut s1 = 0.0f64;
+        let mut s2 = 0.0f64;
+
+        for (i, &g) in self.order.iter().enumerate() {
+            s1 += g as f64 * ((i * 31) as f64).sin();
+            s2 += g as f64 * ((i * 17) as f64).cos();
         }
 
-        // 1) Permutation smoothness: how "locally ordered" the permutation is.
-        //    Small |Δ| -> smooth, large |Δ| -> scrambled.
-        let mut adj_sum: u64 = 0;
-        for i in 0..(n - 1) {
-            let a = self.order[i] as i32;
-            let b = self.order[i + 1] as i32;
-            adj_sum += (a - b).unsigned_abs() as u64;
+        for (i, &r) in self.rotations.iter().enumerate() {
+            let v = if r { 1.0 } else { -1.0 };
+            s1 += v * ((i * 13) as f64).sin();
+            s2 += v * ((i * 29) as f64).cos();
         }
 
-        // Maximal possible adjacency sum (very rough upper bound):
-        // assume worst case ~ (n-1)*(n-1)
-        let max_adj = ((n as u64).saturating_sub(1)).pow(2).max(1);
-        let perm_smooth = 1.0 - (adj_sum as f64 / max_adj as f64);
-        // perm_smooth ~1.0 => "nice smooth" permutation
-        // perm_smooth ~0.0 => "very scrambled"
+        s1 += self.row_len as f64 * 0.1;
+        s2 += self.row_len as f64 * 0.07;
 
-        // 2) Rotation features
-        let mut rot_count = 0u32;
-        let mut rot_pos_sum = 0.0;
-
-        for (i, &rot) in self.rotations.iter().enumerate() {
-            if rot {
-                rot_count += 1;
-                // normalized position in [0,1]
-                rot_pos_sum += i as f64 / (n - 1).max(1) as f64;
-            }
-        }
-
-        let rot_ratio = rot_count as f64 / n as f64; // 0..1
-        let rot_center = if rot_count > 0 {
-            rot_pos_sum / rot_count as f64 // 0..1
-        } else {
-            0.5 // no rotations -> neutral
-        };
-
-        // 3) Row length normalized
-        let row_norm = if ind_data.max_width > 0 {
-            self.row_len as f64 / ind_data.max_width as f64
-        } else {
-            0.0
-        };
-
-        // 4) Compose A and B from these features.
-        let a = perm_smooth + 0.5 * rot_ratio; // more about permutation
-        let b = row_norm + 0.5 * rot_center; // more about row layout
-
-        (a, b)
+        (s1, s2)
     }
 }
 

@@ -1,14 +1,14 @@
 {
   // Population parameters
-  "pop_width": 256,
-  "pop_height": 256,
+  "pop_width": 4096,
+  "pop_height": 128,
   "mut_prob": 0.05,
   "crossover_prob": 0.4,
-  "visualise": true,
+  "visualise": false,
   "selection_strategy": "tournament", // "roulette", "tournament"
 
   // Packer parameters
-  "n_rects": 30,
+  "n_rects": 20,
   "rect_min": 1,
   "rect_max": 10,
   "swap_prob": 0.1,
