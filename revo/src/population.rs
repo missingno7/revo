@@ -238,32 +238,41 @@ where
 
     fn _normalize_component(
         data: &mut [IndexedLabData],
-        mut get_component: impl FnMut(&LabData) -> f64,
-        mut set_component: impl FnMut(&mut LabData, f64),
+        get_component: impl Fn(&LabData) -> f64 + Copy,
+        set_component: impl Fn(&mut LabData, f64) + Copy,
         min_val: f64,
         max_val: f64,
     ) {
         let len = data.len();
-        let eps = 1e-9;
+        if len == 0 {
+            return;
+        }
 
+        let eps = 1e-9;
+        let range = max_val - min_val;
+        let denom = if len > 1 { (len - 1) as f64 } else { 1.0 };
+
+        // Sort by component
         data.sort_by(|a, b| {
             get_component(&a.data)
                 .partial_cmp(&get_component(&b.data))
                 .unwrap()
         });
-        let mut last_val = get_component(&data.last().unwrap().data);
-        let mut last_val_normalised = 0.0;
 
-        for (i, value) in data.iter_mut().enumerate() {
-            let current_val = get_component(&value.data);
+        let mut last_val = get_component(&data[0].data);
+        let mut last_norm = min_val;
+        set_component(&mut data[0].data, last_norm);
 
-            if (current_val - last_val).abs() < eps {
-                set_component(&mut value.data, last_val_normalised);
+        for (i, item) in data.iter_mut().enumerate().skip(1) {
+            let v = get_component(&item.data);
+
+            if (v - last_val).abs() < eps {
+                set_component(&mut item.data, last_norm);
             } else {
-                last_val = current_val;
-                let normalised_val = ((i as f64) * (max_val - min_val)) / len as f64 + min_val;
-                set_component(&mut value.data, normalised_val);
-                last_val_normalised = normalised_val;
+                last_val = v;
+                let norm = min_val + (i as f64) * range / denom;
+                set_component(&mut item.data, norm);
+                last_norm = norm;
             }
         }
     }

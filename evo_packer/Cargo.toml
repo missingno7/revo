@@ -1,0 +1,19 @@
+[package]
+name = "evo_packer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+revo = { path = "../revo", version = "*" }
+#revo = { git = "https://github.com/missingno7/revo" }
+rand = { version = "0.8.5", features = ["small_rng"] }
+image = "0.24.6"
+imageproc = "0.23.0"
+strum = "0.24.1"
+strum_macros = "0.24.3"
+
+[profile.dev]
+opt-level = 3               # Use slightly better optimizations.
+overflow-checks = false     # Disable integer overflow checks.
