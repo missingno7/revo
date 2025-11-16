@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 gtk = { version = "0.17.1" }
-rand = "0.8.4"
+rand = { version = "0.8.5", features = ["small_rng"] }
 image = "0.24.6"
 strum = "0.24.1"
 strum_macros = "0.24.3"

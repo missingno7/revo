@@ -8,9 +8,9 @@
  "selection_strategy": "tournament", // "tournament", "roulette"
 
  // Playground parameters
- "example": "funtree", // "salesman", "social_distance", "funtree"
- "display_width": 1200,
- "display_height":  1200,
+ "example": "salesman", // "salesman", "social_distance", "funtree"
+ "display_width": 500,
+ "display_height":  500,
 
  // Salesman parameters
  "n_cities": 100,

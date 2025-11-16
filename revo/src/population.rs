@@ -1,11 +1,12 @@
 use super::evo_individual::EvoIndividual;
 use crate::config::Config;
 use crate::evo_individual::EvoIndividualData;
+use crate::rand::SeedableRng;
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
-use rand::rngs::ThreadRng;
-use rand::{thread_rng, Rng};
+use rand::rngs::SmallRng;
+use rand::Rng;
 use rayon::prelude::*;
 use strum_macros::{Display, EnumIter, EnumString};
 
@@ -15,6 +16,7 @@ const DEFAULT_MUT_PROB: f32 = 0.1;
 const DEFAULT_MUT_AMOUNT: f32 = 1.0;
 const DEFAULT_CROSSOVER_PROB: f32 = 0.1;
 const DEFAULT_SELECTION_STRATEGY_TYPE: SelectionStrategyType = SelectionStrategyType::Tournament;
+const MAX_NEIGHBOURS: usize = 9;
 
 #[derive(Clone, EnumString, EnumIter, Display)]
 pub enum SelectionStrategyType {
@@ -36,13 +38,15 @@ pub struct Population<Individual, IndividualData> {
     mut_prob: f32,
     mut_amount: f32,
     crossover_prob: f32,
-    selection_strategy_type: SelectionStrategyType,
 
     // Current generation number
     i_generation: usize,
 
     // Data for individuals
     ind_data: IndividualData,
+
+    selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize,
+    neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize,
 }
 
 impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualData>
@@ -87,8 +91,24 @@ where
         inds.par_extend(
             (0..size)
                 .into_par_iter()
-                .map(|_| Self::_new_random_individual(&ind_data)),
+                .map_init(SmallRng::from_entropy, |rng, _| {
+                    Self::_new_random_individual(rng, &ind_data)
+                }),
         );
+
+        let selection_strategy_type = config
+            .may_get_enum("selection_strategy")
+            .unwrap()
+            .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE);
+
+        let selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize =
+            match selection_strategy_type {
+                SelectionStrategyType::Roulette => Self::_roulette_selection,
+                SelectionStrategyType::Tournament => Self::_single_tournament,
+            };
+
+        let neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize =
+            { Self::_l5_selection };
 
         Population {
             inds,
@@ -106,12 +126,10 @@ where
                 .may_get_float("crossover_prob")
                 .unwrap()
                 .unwrap_or(DEFAULT_CROSSOVER_PROB),
-            selection_strategy_type: config
-                .may_get_enum("selection_strategy")
-                .unwrap()
-                .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE),
             i_generation: 0,
             ind_data,
+            selection_fn,
+            neighbours_fn,
         }
     }
 
@@ -124,42 +142,37 @@ where
         let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
 
         // Do selection and crossover/mutation in parallel for each individual
-        next_gen_inds.par_extend((0..pop_size).into_par_iter().map(|i| {
-            let mut rng = thread_rng();
+        next_gen_inds.par_extend((0..pop_size).into_par_iter().map_init(
+            || (SmallRng::from_entropy(), [0usize; MAX_NEIGHBOURS]),
+            |(rng, neigh_buf), i| {
+                // Select 5 individuals
+                let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, neigh_buf);
+                let indices = &neigh_buf[..n_neigh];
 
-            // Select 5 individuals
-            let indices = Self::_l5_selection(i, self.pop_width, self.pop_height);
+                // Decide whether to do crossover or mutation
+                let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                    // Do crossover
 
-            // Decide whether to do crossover or mutation
-            let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
-                // Do crossover
+                    // Select two individuals
+                    let (first_ind, second_ind) = Self::_dual_tournament(indices, &self.inds);
 
-                // Select two individuals
-                let (first_ind, second_ind) = Self::_dual_tournament(&indices, &self.inds);
+                    self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, rng)
+                } else {
+                    // Do mutation
 
-                self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, &mut rng)
-            } else {
-                // Do mutation
+                    // Select one individual based on the selection type
+                    let selected_ind_index = (self.selection_fn)(rng, indices, &self.inds);
 
-                // Select one individual based on the selection type
-                let selected_ind_index = match self.selection_strategy_type {
-                    SelectionStrategyType::Roulette => {
-                        Self::_roulette_selection(&mut rng, &indices, &self.inds)
-                    }
-                    SelectionStrategyType::Tournament => {
-                        Self::_single_tournament(&indices, &self.inds)
-                    }
+                    let mut res = self.inds[selected_ind_index].clone();
+                    res.mutate(&self.ind_data, rng, self.mut_prob, self.mut_amount);
+                    res
                 };
 
-                let mut res = self.inds[selected_ind_index].clone();
-                res.mutate(&self.ind_data, &mut rng, self.mut_prob, self.mut_amount);
+                // Count fitness of the new individual and return it
+                res.count_fitness(&self.ind_data);
                 res
-            };
-
-            // Count fitness of the new individual and return it
-            res.count_fitness(&self.ind_data);
-            res
-        }));
+            },
+        ));
 
         // Swap the current generation with the next generation and increment the generation counter
         std::mem::swap(&mut self.inds, &mut next_gen_inds);
@@ -168,15 +181,14 @@ where
 
     // Function returns the best individual in the current generation
     pub fn get_best(&self) -> &Individual {
-        let mut best_ind = &self.inds[0];
-
-        for i in 1..self.inds.len() {
-            if self.inds[i].get_fitness() > best_ind.get_fitness() {
-                best_ind = &self.inds[i];
-            }
-        }
-
-        best_ind
+        self.inds
+            .iter()
+            .max_by(|a, b| {
+                a.get_fitness()
+                    .partial_cmp(&b.get_fitness())
+                    .expect("fitness must not be NaN")
+            })
+            .expect("population must not be empty")
     }
 
     // Function creates a visualization of the current generation in the form of an PNG image
@@ -197,37 +209,31 @@ where
     // Private functions
 
     // Function returns the indices of 5 neighbours of i in a + shape
-    fn _l5_selection(i: usize, pop_width: usize, pop_height: usize) -> Vec<usize> {
-        // Get x and y coordinates of i
-        let x: usize = i % pop_width;
-        let y: usize = i / pop_width;
+    #[inline]
+    fn _l5_selection(i: usize, w: usize, h: usize, buf: &mut [usize; MAX_NEIGHBOURS]) -> usize {
+        let x = i % w;
+        let y = i / w;
 
-        // Compute indices of neighbors, using wrapping for out-of-bounds indices
-        let left_neighbour = if x > 0 { i - 1 } else { i + pop_width - 1 };
-        let right_neighbour = if x + 1 < pop_width {
-            i + 1
-        } else {
-            i + 1 - pop_width
-        };
-        let top_neighbour = if y > 0 {
-            i - pop_width
-        } else {
-            i + pop_width * (pop_height - 1)
-        };
-        let bottom_neighbour = if y + 1 < pop_height {
-            i + pop_width
-        } else {
-            i - pop_width * (pop_height - 1)
-        };
+        // wrap in X
+        let xl = (x + w - 1) % w;
+        let xr = (x + 1) % w;
 
-        // Return indices of 5 neighbours in a + shape with i in the middle
-        vec![
-            i,
-            left_neighbour,
-            right_neighbour,
-            top_neighbour,
-            bottom_neighbour,
-        ]
+        // wrap in Y
+        let yt = (y + h - 1) % h;
+        let yb = (y + 1) % h;
+
+        // Precompute row offsets
+        let row = y * w;
+        let row_yt = yt * w;
+        let row_yb = yb * w;
+
+        buf[0] = i; // center
+        buf[1] = row + xl; // left
+        buf[2] = row + xr; // right
+        buf[3] = row_yt + x; // up
+        buf[4] = row_yb + x; // down
+
+        5
     }
 
     fn _normalize_component(
@@ -312,17 +318,16 @@ where
     }
 
     // Function creates a new individual with randomised values and counts its fitness
-    fn _new_random_individual(ind_data: &IndividualData) -> Individual {
-        let mut rng = rand::thread_rng();
-        let mut curr_gen_ind = Individual::new_randomised(ind_data, &mut rng);
+    fn _new_random_individual(rng: &mut SmallRng, ind_data: &IndividualData) -> Individual {
+        let mut curr_gen_ind = Individual::new_randomised(ind_data, rng);
         curr_gen_ind.count_fitness(ind_data);
         curr_gen_ind
     }
 
-    /// Private methods
+    // Private methods
 
     // Function returns the index of the best individual in the tournament
-    fn _single_tournament(indices: &[usize], inds: &[Individual]) -> usize {
+    fn _single_tournament(_rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
         for &index in indices.iter().skip(1) {
@@ -334,7 +339,7 @@ where
         best_i
     }
 
-    fn _roulette_selection(rng: &mut ThreadRng, indices: &[usize], inds: &[Individual]) -> usize {
+    fn _roulette_selection(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
         // Get min fitness
         let mut min_fitness = inds[indices[0]].get_fitness();
         for &index in indices.iter() {
@@ -374,11 +379,7 @@ where
     }
 
     // Function selects two individuals using roulette selection
-    fn _dual_rulette(
-        rng: &mut ThreadRng,
-        indices: &[usize],
-        inds: &[Individual],
-    ) -> (usize, usize) {
+    fn _dual_rulette(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> (usize, usize) {
         // Select the first individual
         let first = Self::_roulette_selection(rng, indices, inds);
 
@@ -437,43 +438,51 @@ mod tests {
 
     #[test]
     fn test_l5_selection() {
+        let mut neigh_buf = [0usize; MAX_NEIGHBOURS];
         let pop_width = 5;
         let pop_height = 5;
 
         // indices goes like [middle, left, right, up, down]
         // Test top-left corner
         let i = 0;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![0, 4, 1, 20, 5]);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
+        assert_eq!(neighbors, [0, 4, 1, 20, 5]);
 
         // Test top-right corner
         let i = 4;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![4, 3, 0, 24, 9]);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
+        assert_eq!(neighbors, [4, 3, 0, 24, 9]);
 
         // Test bottom-left corner
         let i = 20;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![20, 24, 21, 15, 0]);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
+        assert_eq!(neighbors, [20, 24, 21, 15, 0]);
 
         // Test bottom-right corner
         let i = 24;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![24, 23, 20, 19, 4]);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
+        assert_eq!(neighbors, [24, 23, 20, 19, 4]);
 
         // Test middle element
         let i = 12;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![12, 11, 13, 7, 17]);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
+        assert_eq!(neighbors, [12, 11, 13, 7, 17]);
 
         // Test bottom-middle element
         let i = 22;
-        let neighbors = TestPopulation::_l5_selection(i, pop_width, pop_height);
-        assert_eq!(neighbors, vec![22, 21, 23, 17, 2]);
+        let n_neigh = TestPopulation::_l5_selection(i, pop_width, pop_height, &mut neigh_buf);
+        let neighbors = &neigh_buf[..n_neigh];
+        assert_eq!(neighbors, [22, 21, 23, 17, 2]);
     }
 
     #[test]
     fn test_single_tournament() {
+        let mut rng = SmallRng::from_entropy();
         let mut vec_ind = Vec::new();
         for i in 0..6 {
             vec_ind.push(MockIndividual {
@@ -483,10 +492,10 @@ mod tests {
             });
         }
 
-        let res = TestPopulation::_single_tournament(&vec![0, 3, 2, 1], &mut vec_ind);
+        let res = TestPopulation::_single_tournament(&mut rng, &vec![0, 3, 2, 1], &mut vec_ind);
         assert_eq!(res, 3);
 
-        let res = TestPopulation::_single_tournament(&vec![3, 0, 2, 4], &mut vec_ind);
+        let res = TestPopulation::_single_tournament(&mut rng, &vec![3, 0, 2, 4], &mut vec_ind);
         assert_eq!(res, 4);
     }
 

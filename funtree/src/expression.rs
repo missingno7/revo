@@ -1,11 +1,14 @@
 use crate::leaf::{Leaf, LeafType};
 use crate::operation::{Operation, OperationType};
-use rand::rngs::ThreadRng;
+use rand::rngs::SmallRng;
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 use std::default::Default;
+use std::fmt;
 use std::mem::swap;
 use std::str::FromStr;
+
+const EXP_CHARS: &str = "+/^*";
 
 #[derive(Clone)]
 pub enum Expr {
@@ -79,7 +82,7 @@ impl Expression {
     }
 
     // Generate a random expression
-    pub fn new_randomised(rng: &mut ThreadRng, max_depth: u16) -> Self {
+    pub fn new_randomised(rng: &mut SmallRng, max_depth: u16) -> Self {
         let minus = rng.gen_bool(0.5);
 
         if max_depth == 0 || rng.gen_bool(0.5) {
@@ -113,7 +116,7 @@ impl Expression {
         (a, b)
     }
 
-    pub fn mutate(&mut self, rng: &mut ThreadRng, mut_prob: f32, mut_amount: f32) {
+    pub fn mutate(&mut self, rng: &mut SmallRng, mut_prob: f32, mut_amount: f32) {
         // Change the sign of the expression
         if rng.gen_range(0.0..1.0) < mut_prob {
             self.minus = !self.minus;
@@ -131,7 +134,7 @@ impl Expression {
         }
     }
 
-    pub fn choose_random_node(&self, rng: &mut ThreadRng) -> &Expression {
+    pub fn choose_random_node(&self, rng: &mut SmallRng) -> &Expression {
         // Get all nodes in the expression
         let nodes = self.get_nodes();
 
@@ -436,7 +439,7 @@ impl Expression {
                         // ?? / -1.0 = -??
                         if right_value == -1.0 {
                             let mut left_clone = left.clone();
-                            left_clone.minus = !left_clone.minus != self.minus;
+                            left_clone.minus = left_clone.minus == self.minus;
                             return left_clone;
                         }
                     }
@@ -466,8 +469,10 @@ impl Expression {
     /// The caller must ensure that there are no other mutable references to the same data,
     /// otherwise this function can violate Rust's aliasing rules.
     #[allow(clippy::mut_from_ref)]
+    #[allow(invalid_reference_casting)]
+    #[allow(invalid_reference_casting)]
     pub unsafe fn as_mut(&self) -> &mut Expression {
-        #[allow(clippy::cast_ref_to_mut)]
+        #[allow(invalid_reference_casting)]
         &mut *(self as *const _ as *mut _)
     }
 }
@@ -478,22 +483,20 @@ impl Default for Expression {
     }
 }
 
-impl ToString for Expression {
-    fn to_string(&self) -> String {
-        let mut s = String::new();
-
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.expr {
-            Expr::Leaf(leaf) => s.push_str(&leaf.to_string(self.minus)),
+            Expr::Leaf(leaf) => {
+                write!(f, "{}", leaf.to_string(self.minus))
+            }
             Expr::Op(op) => {
                 if self.minus {
-                    s.push('-');
+                    write!(f, "-{}", op)
+                } else {
+                    write!(f, "{}", op)
                 }
-
-                s.push_str(&op.to_string())
             }
         }
-
-        s
     }
 }
 
@@ -508,24 +511,24 @@ impl FromStr for Expression {
 
         // Most inner
         if !s.contains('(') && !s.contains(')') {
-            if let Some(op) = s.find(|c| c == '+' || c == '/' || c == '^' || c == '*') {
+            return if let Some(op) = s.find(|c| "+/^*".contains(c)) {
                 let left_expr = Self::from_str(&s[..op])?;
                 let right_expr = Self::from_str(&s[op + 1..])?;
                 let operation_type = OperationType::from_str(&s[op..op + 1])?;
 
-                return Ok(Expression::new_operation(
+                Ok(Expression::new_operation(
                     left_expr,
                     right_expr,
                     operation_type,
                     false,
-                ));
+                ))
             } else if s == "x" {
-                return Ok(Expression::new_variable(false));
+                Ok(Expression::new_variable(false))
             } else if s == "-x" {
-                return Ok(Expression::new_variable(true));
+                Ok(Expression::new_variable(true))
             } else {
-                return Ok(Expression::new_constant(s.parse::<f64>().unwrap()));
-            }
+                Ok(Expression::new_constant(s.parse::<f64>().unwrap()))
+            };
         }
 
         let left_start = s.find('(').unwrap_or(0);
@@ -556,9 +559,7 @@ impl FromStr for Expression {
         }
 
         // left is actually right - left part is missing () marks
-        if let Some(op_mark_i) =
-            s[..left_start].find(|c| c == '+' || c == '/' || c == '^' || c == '*')
-        {
+        if let Some(op_mark_i) = s[..left_start].find(|c| EXP_CHARS.contains(c)) {
             let real_left_expr = Self::from_str(&s[..op_mark_i])?;
 
             let op_type = OperationType::from_str(&s[op_mark_i..op_mark_i + 1])?;
@@ -573,16 +574,14 @@ impl FromStr for Expression {
 
         let s_remaining = &s[left_end + 2..];
 
-        let op_type: Option<OperationType> =
-            match s_remaining.find(|c| c == '+' || c == '/' || c == '^' || c == '*') {
-                None => None,
-                Some(i) => Some(OperationType::from_str(&s_remaining[i..i + 1])?),
-            };
+        let op_type: Option<OperationType> = match s_remaining.find(|c| EXP_CHARS.contains(c)) {
+            None => None,
+            Some(i) => Some(OperationType::from_str(&s_remaining[i..i + 1])?),
+        };
 
         let mut right_start = s_remaining.find('(').unwrap_or(1);
 
-        if let Some(op_mark_i) = s_remaining.find(|c| c == '+' || c == '/' || c == '^' || c == '*')
-        {
+        if let Some(op_mark_i) = s_remaining.find(|c| EXP_CHARS.contains(c)) {
             right_start = op_mark_i;
         }
 
@@ -633,6 +632,7 @@ impl PartialEq<Self> for Expression {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::SeedableRng;
 
     #[test]
     fn from_string() {
@@ -647,7 +647,7 @@ mod tests {
         assert_eq!(original_string, new_string);
 
         // Test with 10000 random expressions
-        let mut rng = rand::thread_rng();
+        let mut rng = SmallRng::from_entropy();
         for _ in 0..10000 {
             let exp = Expression::new_randomised(&mut rng, 5);
 

@@ -1,5 +1,5 @@
 use image::RgbImage;
-use rand::prelude::ThreadRng;
+use rand::prelude::SmallRng;
 use rand::Rng;
 use revo::config::Config;
 use revo::evo_individual::{EvoIndividual, EvoIndividualData, Visualise};
@@ -30,7 +30,7 @@ pub struct BasicIndividual {
 }
 
 impl EvoIndividual<BasicIndividualData> for BasicIndividual {
-    fn new_randomised(ind_data: &BasicIndividualData, rng: &mut ThreadRng) -> Self {
+    fn new_randomised(ind_data: &BasicIndividualData, rng: &mut SmallRng) -> Self {
         BasicIndividual {
             fitness: 0.0,
             foo: ind_data.value + rng.gen_range(0.0..10.0),
@@ -41,7 +41,7 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
     fn mutate(
         &mut self,
         _ind_data: &BasicIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
         mut_prob: f32,
         mut_amount: f32,
     ) {
@@ -58,7 +58,7 @@ impl EvoIndividual<BasicIndividualData> for BasicIndividual {
         &self,
         another_ind: &BasicIndividual,
         _ind_data: &BasicIndividualData,
-        rng: &mut ThreadRng,
+        rng: &mut SmallRng,
     ) -> BasicIndividual {
         let ratio = rng.gen_range(0.0..1.0);
 
