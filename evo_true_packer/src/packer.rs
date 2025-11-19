@@ -4,7 +4,7 @@ use imageproc::drawing::draw_filled_rect_mut;
 use imageproc::rect::Rect;
 use rand::rngs::SmallRng;
 use rand::Rng;
-use rand_distr::{Normal, Distribution};
+use rand_distr::{Distribution, Normal};
 use revo::evo_individual::{EvoIndividual, Visualise};
 
 /// x, y, w, h – in the internal layout coordinate system
@@ -109,19 +109,16 @@ impl PackerIndividual {
     }
 
     /// Total overlap area – sum of intersections of all rectangle pairs.
-    fn compute_overlap_area(placements: &[(u32, u32, u32, u32)]) -> f64 {
-        let n = placements.len();
+    fn compute_overlap_area_simple(placements: &[(u32, u32, u32, u32)]) -> f64 {
         let mut overlap: f64 = 0.0;
 
-        for i in 0..n {
-            let (x1, y1, w1, h1) = placements[i];
+        for (i, &(x1, y1, w1, h1)) in placements.iter().enumerate() {
             let x1_min = x1 as i64;
             let x1_max = (x1 + w1) as i64;
             let y1_min = y1 as i64;
             let y1_max = (y1 + h1) as i64;
 
-            for j in (i + 1)..n {
-                let (x2, y2, w2, h2) = placements[j];
+            for &(x2, y2, w2, h2) in placements.iter().skip(i + 1) {
                 let x2_min = x2 as i64;
                 let x2_max = (x2 + w2) as i64;
                 let y2_min = y2 as i64;
@@ -159,16 +156,8 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
 
             // Try to scatter them randomly roughly inside the screen;
             // the layout is relative anyway, so this is not a hard constraint.
-            let max_x = if ind_data.screen_width > w {
-                ind_data.screen_width - w
-            } else {
-                0
-            };
-            let max_y = if ind_data.screen_height > h {
-                ind_data.screen_height - h
-            } else {
-                0
-            };
+            let max_x = ind_data.screen_width.saturating_sub(w);
+            let max_y = ind_data.screen_height.saturating_sub(h);
 
             let x = if max_x > 0 {
                 rng.gen_range(0..=max_x) as f32
@@ -303,7 +292,7 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
 
         let area = (width as u64 * height as u64) as f64;
 
-        let overlap_area = Self::compute_overlap_area(&placements);
+        let overlap_area = Self::compute_overlap_area_simple(&placements);
 
         let lambda = ind_data.overlap_penalty;
 
@@ -349,7 +338,6 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         (a, b)
     }
 }
-
 impl Visualise<PackerIndividualData> for PackerIndividual {
     fn visualise(&self, ind_data: &PackerIndividualData) -> RgbImage {
         let (placements, width, height) = self.compute_layout(ind_data);
@@ -369,11 +357,11 @@ impl Visualise<PackerIndividualData> for PackerIndividual {
         // -------------------------------
         // Draw rectangles (original code)
         // -------------------------------
-        for (i, (x, y, w, h)) in placements.iter().enumerate() {
-            let sx = (*x as f32 * scale).round() as i32;
-            let sy = (*y as f32 * scale).round() as i32;
-            let sw = (*w as f32 * scale).max(1.0).round() as u32;
-            let sh = (*h as f32 * scale).max(1.0).round() as u32;
+        for (i, &(x, y, w, h)) in placements.iter().enumerate() {
+            let sx = (x as f32 * scale).round() as i32;
+            let sy = (y as f32 * scale).round() as i32;
+            let sw = (w as f32 * scale).max(1.0).round() as u32;
+            let sh = (h as f32 * scale).max(1.0).round() as u32;
 
             let rect = Rect::at(sx, sy).of_size(sw, sh);
 
@@ -388,17 +376,14 @@ impl Visualise<PackerIndividualData> for PackerIndividual {
         // ----------------------------------------------------
         // Highlight overlaps - bright red overlay (semi-opaque)
         // ----------------------------------------------------
-        let n = placements.len();
-
-        for i in 0..n {
-            let (x1, y1, w1, h1) = placements[i];
+        for (i, &(x1, y1, w1, h1)) in placements.iter().enumerate() {
             let x1_min = x1 as i32;
             let x1_max = (x1 + w1) as i32;
             let y1_min = y1 as i32;
             let y1_max = (y1 + h1) as i32;
 
-            for j in (i + 1)..n {
-                let (x2, y2, w2, h2) = placements[j];
+            // iterate only over rectangles with index > i
+            for &(x2, y2, w2, h2) in placements.iter().skip(i + 1) {
                 let x2_min = x2 as i32;
                 let x2_max = (x2 + w2) as i32;
                 let y2_min = y2 as i32;

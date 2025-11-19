@@ -90,7 +90,7 @@ impl EvoIndividualData for PackerIndividualData {
             config
                 .may_get_float("overlap_penalty")
                 .unwrap()
-                .unwrap_or(DEFAULT_OVERLAP_PENALTY) as f64,
+                .unwrap_or(DEFAULT_OVERLAP_PENALTY),
         )
     }
 }

@@ -14,17 +14,13 @@ fn main() {
     let _ = fs::remove_dir_all(output_dir);
     fs::create_dir(output_dir).unwrap();
 
-    // Load the population config and create the individual data
     let config = Config::new(DEFAULT_CONFIG_FILENAME);
     let visualise = config.may_get_bool("visualise").unwrap().unwrap_or(false);
 
-    // Create the population
     let mut pop: Population<PackerIndividual, PackerIndividualData> = Population::new(&config);
 
-    // Get the best individual
     let mut all_best_ind = pop.get_at(0, 0).clone();
 
-    // Run the evolution
     loop {
         let best_ind = pop.get_best();
 
@@ -36,6 +32,7 @@ fn main() {
                 pop.get_generation(),
                 all_best_ind.get_fitness()
             );
+
             let image = all_best_ind.visualise(pop.get_individual_data());
             image
                 .save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
@@ -49,7 +46,7 @@ fn main() {
                 .unwrap();
         }
 
-        // Advance to the next generation
+        // Advance to next generation
         pop.next_gen();
     }
 }
