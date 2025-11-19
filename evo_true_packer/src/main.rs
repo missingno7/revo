@@ -9,7 +9,7 @@ use revo::population::Population;
 use std::fs;
 
 fn main() {
-    // Prepare output directory and remove old files if they exist
+    // Prepare output directory and remove old files
     let output_dir = "./out";
     let _ = fs::remove_dir_all(output_dir);
     fs::create_dir(output_dir).unwrap();
@@ -27,12 +27,13 @@ fn main() {
         if best_ind.get_fitness() > all_best_ind.get_fitness() {
             all_best_ind = best_ind.clone();
 
-            println!(
-                "Round {}, best fitness: {}",
-                pop.get_generation(),
-                all_best_ind.get_fitness()
-            );
+            // Compute density of this best individual
+            let (placements, w, h) = all_best_ind.compute_layout(pop.get_individual_data());
+            let density = PackerIndividual::compute_density(&placements, w, h);
 
+            println!("Round {}, density: {:.2}%", pop.get_generation(), density);
+
+            // Save image of best solution
             let image = all_best_ind.visualise(pop.get_individual_data());
             image
                 .save(format!("{}/best_{}.png", output_dir, pop.get_generation()).as_str())
@@ -46,7 +47,7 @@ fn main() {
                 .unwrap();
         }
 
-        // Advance to next generation
+        // Next generation
         pop.next_gen();
     }
 }

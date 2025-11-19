@@ -49,7 +49,7 @@ impl PackerIndividual {
     }
 
     /// Computes the layout – shifts it so that min_x = 0 and min_y = 0.
-    fn compute_layout(&self, ind_data: &PackerIndividualData) -> LayoutResult {
+    pub fn compute_layout(&self, ind_data: &PackerIndividualData) -> LayoutResult {
         let n = ind_data.rects.len();
         if n == 0 {
             return (Vec::new(), 0, 0);
@@ -108,32 +108,71 @@ impl PackerIndividual {
         (placements, width as u32, height as u32)
     }
 
-    /// Total overlap area – sum of intersections of all rectangle pairs.
-    fn compute_overlap_area_simple(placements: &[(u32, u32, u32, u32)]) -> f64 {
+    /// Computes intersection of two rectangles in layout coordinates.
+    /// Returns (x, y, w, h) of the intersection, or None if they do not overlap.
+    fn rect_intersection(a: RectPlacement, b: RectPlacement) -> Option<RectPlacement> {
+        let (x1, y1, w1, h1) = a;
+        let (x2, y2, w2, h2) = b;
+
+        let x1_min = x1 as i64;
+        let x1_max = (x1 + w1) as i64;
+        let y1_min = y1 as i64;
+        let y1_max = (y1 + h1) as i64;
+
+        let x2_min = x2 as i64;
+        let x2_max = (x2 + w2) as i64;
+        let y2_min = y2 as i64;
+        let y2_max = (y2 + h2) as i64;
+
+        let ox1 = x1_min.max(x2_min);
+        let oy1 = y1_min.max(y2_min);
+        let ox2 = x1_max.min(x2_max);
+        let oy2 = y1_max.min(y2_max);
+
+        if ox2 > ox1 && oy2 > oy1 {
+            let ow = (ox2 - ox1) as u32;
+            let oh = (oy2 - oy1) as u32;
+            Some((ox1 as u32, oy1 as u32, ow, oh))
+        } else {
+            None
+        }
+    }
+
+    /// Total overlap area – naive O(n²) version, but using the shared intersection helper.
+    fn compute_overlap_area_simple(placements: &[RectPlacement]) -> f64 {
         let mut overlap: f64 = 0.0;
 
-        for (i, &(x1, y1, w1, h1)) in placements.iter().enumerate() {
-            let x1_min = x1 as i64;
-            let x1_max = (x1 + w1) as i64;
-            let y1_min = y1 as i64;
-            let y1_max = (y1 + h1) as i64;
-
-            for &(x2, y2, w2, h2) in placements.iter().skip(i + 1) {
-                let x2_min = x2 as i64;
-                let x2_max = (x2 + w2) as i64;
-                let y2_min = y2 as i64;
-                let y2_max = (y2 + h2) as i64;
-
-                let overlap_w = (x1_max.min(x2_max) - x1_min.max(x2_min)).max(0);
-                let overlap_h = (y1_max.min(y2_max) - y1_min.max(y2_min)).max(0);
-
-                if overlap_w > 0 && overlap_h > 0 {
-                    overlap += (overlap_w as f64) * (overlap_h as f64);
+        for (i, &r1) in placements.iter().enumerate() {
+            for &r2 in placements.iter().skip(i + 1) {
+                if let Some((_, _, ow, oh)) = Self::rect_intersection(r1, r2) {
+                    overlap += (ow as f64) * (oh as f64);
                 }
             }
         }
 
         overlap
+    }
+
+    /// Computes the packing density in percent.
+    /// density = (sum of areas of rectangles) / (bounding box area) * 100.0
+    pub fn compute_density(placements: &[RectPlacement], width: u32, height: u32) -> f64 {
+        if width == 0 || height == 0 {
+            return 0.0;
+        }
+
+        let mut total_rect_area = 0u64;
+
+        for &(_, _, w, h) in placements {
+            total_rect_area += w as u64 * h as u64;
+        }
+
+        let bbox_area = width as u64 * height as u64;
+
+        if bbox_area == 0 {
+            return 0.0;
+        }
+
+        (total_rect_area as f64 / bbox_area as f64) * 100.0
     }
 }
 
@@ -208,9 +247,9 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
                     let dy = dist.sample(rng);
 
                     // Optionally clamp extreme jumps, e.g. to 3σ
-                    let max_jump = 3.0 * sigma;
-                    let dx = dx.clamp(-max_jump, max_jump);
-                    let dy = dy.clamp(-max_jump, max_jump);
+                    //let max_jump = 3.0 * sigma;
+                    //let dx = dx.clamp(-max_jump, max_jump);
+                    //let dy = dy.clamp(-max_jump, max_jump);
 
                     self.xs[i] += dx;
                     self.ys[i] += dy;
@@ -304,35 +343,19 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
     }
 
     fn get_visuals(&self, ind_data: &PackerIndividualData) -> (f64, f64) {
-        // Visual embedding only for debugging / 2D population projection.
-        let (placements, width, height) = self.compute_layout(ind_data);
+        let n = ind_data.rects.len();
 
-        if placements.is_empty() || width == 0 || height == 0 {
-            return (0.0, 0.0);
-        }
+        let mut a = 0f64;
+        let mut b = 0f64;
 
-        let mut a = 0.0f64;
-        let mut b = 0.0f64;
-
-        let w = width as f64;
-        let h = height as f64;
-
-        for (i, &(x, y, rw, rh)) in placements.iter().enumerate() {
-            let fx = x as f64 / w;
-            let fy = y as f64 / h;
-            let fw = rw as f64 / w;
-            let fh = rh as f64 / h;
-            let t = i as f64;
-
-            a += (fx + 1.3 * fw + 0.2 * t).sin();
-            b += (fy + 0.7 * fh - 0.3 * t).cos();
-        }
-
-        for (i, &r) in self.rotations.iter().enumerate() {
-            let v = if r { 1.0 } else { -1.0 };
-            let t = i as f64;
-            a += (v * 2.0 + 0.3 * t).sin();
-            b += (v * 2.0 - 0.5 * t).cos();
+        for i in 0..n {
+            if i % 2 == 0 {
+                a += self.xs[i] as f64;
+                b += self.ys[i] as f64;
+            } else {
+                a -= self.xs[i] as f64;
+                b -= self.ys[i] as f64;
+            }
         }
 
         (a, b)
@@ -341,75 +364,79 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
 impl Visualise<PackerIndividualData> for PackerIndividual {
     fn visualise(&self, ind_data: &PackerIndividualData) -> RgbImage {
         let (placements, width, height) = self.compute_layout(ind_data);
+        let scaling_factor: u32 = 5;
 
-        let mut img = RgbImage::new(ind_data.screen_width, ind_data.screen_height);
-
+        // If there is nothing to draw, return empty image
         if width == 0 || height == 0 || placements.is_empty() {
-            return img;
+            return RgbImage::new(1, 1);
         }
 
-        // Scale layout to screen size
-        let scale = f32::min(
-            ind_data.screen_width as f32 / width as f32,
-            ind_data.screen_height as f32 / height as f32,
-        );
+        // First render at 1:1 layout resolution
+        let mut base_img = RgbImage::new(width, height);
 
-        // -------------------------------
-        // Draw rectangles (original code)
-        // -------------------------------
+        // --------------------------------------
+        // 1) Draw all rectangles in layout space
+        // --------------------------------------
         for (i, &(x, y, w, h)) in placements.iter().enumerate() {
-            let sx = (x as f32 * scale).round() as i32;
-            let sy = (y as f32 * scale).round() as i32;
-            let sw = (w as f32 * scale).max(1.0).round() as u32;
-            let sh = (h as f32 * scale).max(1.0).round() as u32;
+            let sx = x as i32;
+            let sy = y as i32;
+            let sw = w.max(1);
+            let sh = h.max(1);
 
             let rect = Rect::at(sx, sy).of_size(sw, sh);
 
-            // Pseudo colors based on index
+            // Pseudo-colors based on index
             let r = (50 + (i * 37) % 205) as u8;
             let g = (80 + (i * 71) % 175) as u8;
             let b = (100 + (i * 53) % 155) as u8;
 
-            draw_filled_rect_mut(&mut img, rect, Rgb([r, g, b]));
+            draw_filled_rect_mut(&mut base_img, rect, Rgb([r, g, b]));
         }
 
-        // ----------------------------------------------------
-        // Highlight overlaps - bright red overlay (semi-opaque)
-        // ----------------------------------------------------
-        for (i, &(x1, y1, w1, h1)) in placements.iter().enumerate() {
-            let x1_min = x1 as i32;
-            let x1_max = (x1 + w1) as i32;
-            let y1_min = y1 as i32;
-            let y1_max = (y1 + h1) as i32;
+        // -------------------------------------------------------
+        // 2) Draw overlaps in layout space (still unscaled)
+        // -------------------------------------------------------
+        for i in 0..placements.len() {
+            let r1 = placements[i];
 
-            // iterate only over rectangles with index > i
-            for &(x2, y2, w2, h2) in placements.iter().skip(i + 1) {
-                let x2_min = x2 as i32;
-                let x2_max = (x2 + w2) as i32;
-                let y2_min = y2 as i32;
-                let y2_max = (y2 + h2) as i32;
-
-                // Compute intersection
-                let ox1 = x1_min.max(x2_min);
-                let oy1 = y1_min.max(y2_min);
-                let ox2 = x1_max.min(x2_max);
-                let oy2 = y1_max.min(y2_max);
-
-                if ox2 > ox1 && oy2 > oy1 {
-                    // Convert to screen coords
-                    let sx = (ox1 as f32 * scale).round() as i32;
-                    let sy = (oy1 as f32 * scale).round() as i32;
-                    let sw = ((ox2 - ox1) as f32 * scale).max(1.0).round() as u32;
-                    let sh = ((oy2 - oy1) as f32 * scale).max(1.0).round() as u32;
+            for (_, &r2) in placements.iter().enumerate().skip(i + 1) {
+                if let Some((ox, oy, ow, oh)) = PackerIndividual::rect_intersection(r1, r2) {
+                    let sx = ox as i32;
+                    let sy = oy as i32;
+                    let sw = ow.max(1);
+                    let sh = oh.max(1);
 
                     let overlap_rect = Rect::at(sx, sy).of_size(sw, sh);
 
-                    // Bright red overlay
-                    draw_filled_rect_mut(&mut img, overlap_rect, Rgb([255, 0, 0]));
+                    // Solid red for overlapping area
+                    draw_filled_rect_mut(&mut base_img, overlap_rect, Rgb([255, 0, 0]));
                 }
             }
         }
 
-        img
+        // -------------------------------------------------------
+        // 3) Integer-scale the image by scaling_factor
+        // -------------------------------------------------------
+        let scaled_w = width * scaling_factor;
+        let scaled_h = height * scaling_factor;
+
+        let mut scaled_img = RgbImage::new(scaled_w, scaled_h);
+
+        for y in 0..height {
+            for x in 0..width {
+                let pixel = base_img.get_pixel(x, y);
+
+                // Write a scaling_factor × scaling_factor block
+                for dy in 0..scaling_factor {
+                    for dx in 0..scaling_factor {
+                        let sx = x * scaling_factor + dx;
+                        let sy = y * scaling_factor + dy;
+                        scaled_img.put_pixel(sx, sy, *pixel);
+                    }
+                }
+            }
+        }
+
+        scaled_img
     }
 }

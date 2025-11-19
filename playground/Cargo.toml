@@ -16,4 +16,4 @@ revo = { path = "../revo", version = "*" }
 social_distance =  { path = "../social_distance", version = "*" }
 evo_salesman = { path = "../evo_salesman", version = "*" }
 funtree = { path = "../funtree", version = "*" }
-
+evo_true_packer = {path = "../evo_true_packer", version = "*"}

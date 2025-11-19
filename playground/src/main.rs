@@ -2,6 +2,8 @@ use revo::population::Population;
 
 use evo_salesman::salesman::SalesmanIndividual;
 use evo_salesman::salesman_data::SalesmanIndividualData;
+use evo_true_packer::packer::PackerIndividual;
+use evo_true_packer::packer_data::PackerIndividualData;
 use funtree::funtree_data::FuntreeIndividualData;
 use funtree::funtree_individual::FuntreeIndividual;
 use playground::main_app::MainApp;
@@ -17,6 +19,8 @@ pub enum ExampleType {
     SocialDistance,
     #[strum(serialize = "funtree")]
     Funtree,
+    #[strum(serialize = "packer")]
+    Packer,
 }
 
 fn main() {
@@ -36,6 +40,10 @@ fn main() {
         }
         ExampleType::Salesman => {
             let pop = Population::<SalesmanIndividual, SalesmanIndividualData>::new(&config);
+            MainApp::new(pop, &config)
+        }
+        ExampleType::Packer => {
+            let pop = Population::<PackerIndividual, PackerIndividualData>::new(&config);
             MainApp::new(pop, &config)
         }
     };
