@@ -227,8 +227,8 @@ impl PackerIndividual {
                 min_y = y;
             }
 
-            let right = x.saturating_add(w);
-            let bottom = y.saturating_add(h);
+            let right = x + w;
+            let bottom = y + h;
 
             if right > max_x {
                 max_x = right;
@@ -325,13 +325,11 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
             let i = rng.gen_range(0..n);
 
             // Movement
-            if rng.gen::<f32>() < move_prob {
-                target.untouch(i, &self.layout);
-                let dx: f32 = rng.sample::<f32, _>(StandardNormal) * sigma;
-                let dy: f32 = rng.sample::<f32, _>(StandardNormal) * sigma;
-                target.xs[i] += dx as u32;
-                target.ys[i] += dy as u32;
-            }
+            target.untouch(i, &self.layout);
+            let dx: f32 = rng.sample::<f32, _>(StandardNormal) * sigma;
+            let dy: f32 = rng.sample::<f32, _>(StandardNormal) * sigma;
+            target.xs[i] += dx as u32;
+            target.ys[i] += dy as u32;
         }
 
         let flips = Self::get_n_prob(n, rot_prob, rng);
