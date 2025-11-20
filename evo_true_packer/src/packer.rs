@@ -4,7 +4,7 @@ use imageproc::drawing::draw_filled_rect_mut;
 use imageproc::rect::Rect;
 use rand::rngs::SmallRng;
 use rand::Rng;
-use rand_distr::{Distribution, Normal};
+use rand_distr::StandardNormal;
 use revo::evo_individual::{EvoIndividual, Visualise};
 
 /// x, y, w, h – in the internal layout coordinate system
@@ -22,13 +22,16 @@ pub struct PackerIndividual {
     rotations: Vec<bool>,
     untouched: Vec<bool>,
     overlap_surface: u64,
+
+    // Cache
+    layout: Vec<RectPlacement>,
 }
 
 impl PackerIndividual {
     fn new_with_data(n_rects: usize, xs: Vec<u32>, ys: Vec<u32>, rotations: Vec<bool>) -> Self {
-        assert_eq!(xs.len(), n_rects);
-        assert_eq!(ys.len(), n_rects);
-        assert_eq!(rotations.len(), n_rects);
+        debug_assert_eq!(xs.len(), n_rects);
+        debug_assert_eq!(ys.len(), n_rects);
+        debug_assert_eq!(rotations.len(), n_rects);
 
         PackerIndividual {
             fitness: 0.0,
@@ -37,11 +40,12 @@ impl PackerIndividual {
             rotations,
             untouched: vec![false; n_rects],
             overlap_surface: 0,
+            layout: vec![(0u32, 0u32, 0u32, 0u32); n_rects],
         }
     }
 
     /// Returns (x, y, w, h) for the i-th rectangle in *layout* coordinates (float).
-    fn rect_f32(&self, ind_data: &PackerIndividualData, i: usize) -> RectPlacement {
+    fn rect_placement(&self, ind_data: &PackerIndividualData, i: usize) -> RectPlacement {
         let mut w = ind_data.rects[i].w;
         let mut h = ind_data.rects[i].h;
 
@@ -58,95 +62,84 @@ impl PackerIndividual {
         ind_data: &PackerIndividualData,
         normalised: bool,
     ) -> LayoutResult {
+        let mut layout = self.layout.clone();
+
         let n = ind_data.rects.len();
         if n == 0 {
             return (Vec::new(), 0, 0);
         }
 
-        let mut min_x = u32::MAX;
-        let mut min_y = u32::MAX;
-        let mut max_x = 0u32;
-        let mut max_y = 0u32;
-
-        // Final placements – only one allocation
-        let mut placements: Vec<RectPlacement> = Vec::with_capacity(n);
-
-        for i in 0..n {
-            // This now returns integer coords and sizes
-            let (x, y, w, h) = self.rect_f32(ind_data, i);
-
-            // Track bounding box
-            if x < min_x {
-                min_x = x;
-            }
-            if y < min_y {
-                min_y = y;
-            }
-
-            let right = x.saturating_add(w);
-            let bottom = y.saturating_add(h);
-
-            if right > max_x {
-                max_x = right;
-            }
-            if bottom > max_y {
-                max_y = bottom;
-            }
-
-            placements.push((x, y, w, h));
+        // Recalculate layout
+        for (i, item) in layout.iter_mut().enumerate().take(n) {
+            *item = self.rect_placement(ind_data, i);
         }
 
-        // Degenerate safety (should not really happen, but guards against weird inputs)
-        if max_x <= min_x {
-            max_x = min_x + 1;
-        }
-        if max_y <= min_y {
-            max_y = min_y + 1;
-        }
-
-        let width = max_x - min_x;
-        let height = max_y - min_y;
+        let (max_x, min_x, max_y, min_y) = self.get_bounding_box();
 
         if normalised {
             // Normalize to (0,0) in place
-            for (x, y, _, _) in placements.iter_mut() {
+            for (x, y, _, _) in layout.iter_mut() {
                 *x -= min_x;
                 *y -= min_y;
             }
         }
 
-        (placements, width, height)
+        (layout, max_x - min_x, max_y - min_y)
     }
     /// Computes intersection of two rectangles in layout coordinates.
     /// Returns (x, y, w, h) of the intersection, or None if they do not overlap.
+    #[inline(always)]
     fn rect_intersection(a: RectPlacement, b: RectPlacement) -> Option<RectPlacement> {
+        let (ax, ay, aw, ah) = a;
+        let (bx, by, bw, bh) = b;
+
+        let ox1 = ax.max(bx);
+        let oy1 = ay.max(by);
+
+        let ox2 = (ax + aw).min(bx + bw);
+        let oy2 = (ay + ah).min(by + bh);
+
+        // Compute widths/height first
+        let ow = ox2.wrapping_sub(ox1);
+        let oh = oy2.wrapping_sub(oy1);
+
+        // Branchless check (unsigned wrap ensures negative becomes huge)
+        if ow as i32 <= 0 || oh as i32 <= 0 {
+            return None;
+        }
+
+        Some((ox1, oy1, ow, oh))
+    }
+
+    /// Returns overlap area of two rectangles, or 0 if they do not overlap.
+    /// This is optimized for very hot paths.
+    /// Adds overlap area of two rectangles to `acc`, if they overlap.
+    #[inline(always)]
+    fn overlap_area(a: RectPlacement, b: RectPlacement) -> u64 {
         let (x1, y1, w1, h1) = a;
         let (x2, y2, w2, h2) = b;
 
-        let x1_min = x1 as i64;
-        let x1_max = (x1 + w1) as i64;
-        let y1_min = y1 as i64;
-        let y1_max = (y1 + h1) as i64;
+        let x1_max = x1 + w1;
+        let y1_max = y1 + h1;
+        let x2_max = x2 + w2;
+        let y2_max = y2 + h2;
 
-        let x2_min = x2 as i64;
-        let x2_max = (x2 + w2) as i64;
-        let y2_min = y2 as i64;
-        let y2_max = (y2 + h2) as i64;
-
-        let ox1 = x1_min.max(x2_min);
-        let oy1 = y1_min.max(y2_min);
+        let ox1 = x1.max(x2);
         let ox2 = x1_max.min(x2_max);
-        let oy2 = y1_max.min(y2_max);
-
-        if ox2 > ox1 && oy2 > oy1 {
-            let ow = (ox2 - ox1) as u32;
-            let oh = (oy2 - oy1) as u32;
-            Some((ox1 as u32, oy1 as u32, ow, oh))
-        } else {
-            None
+        if ox2 <= ox1 {
+            return 0;
         }
-    }
 
+        let oy1 = y1.max(y2);
+        let oy2 = y1_max.min(y2_max);
+        if oy2 <= oy1 {
+            return 0;
+        }
+
+        let ow = ox2 - ox1;
+        let oh = oy2 - oy1;
+        (ow as u64) * (oh as u64)
+    }
     /// Computes the packing density in percent.
     /// density = (sum of areas of rectangles) / (bounding box area) * 100.0
     pub fn compute_density(placements: &[RectPlacement], width: u32, height: u32) -> f64 {
@@ -170,77 +163,81 @@ impl PackerIndividual {
     }
 
     pub fn untouch(&mut self, i: usize, placements: &[RectPlacement]) {
-        // If this rectangle is already marked as changed, do nothing.
+        // If this rectangle is already marked as changed, nothing to do.
         if !self.untouched[i] {
             return;
         }
 
-        // If there is no overlap at all, nothing to subtract – just mark as changed.
-        if self.overlap_surface == 0 {
-            self.untouched[i] = false;
-            return;
-        }
-
-        let n = self.untouched.len();
+        let n = placements.len();
+        debug_assert_eq!(n, self.untouched.len());
 
         // Subtract old overlaps where rectangle i participates and the other
-        // rectangle is still "untouched" (i.e., its old overlaps are still in the sum).
+        // rectangle is still "untouched" (its old overlaps are still in the sum).
         for j in 0..n {
-            if j == i {
+            // Skip self and already-changed rectangles.
+            if !self.untouched[j] || j == i {
                 continue;
             }
 
-            if self.untouched[j] {
-                if let Some((_, _, ow, oh)) = Self::rect_intersection(placements[i], placements[j])
-                {
-                    self.overlap_surface -= ow as u64 * oh as u64;
-                }
-            }
+            self.overlap_surface -= Self::overlap_area(placements[i], placements[j]);
         }
 
         // Mark i as changed: its overlaps will be recomputed later.
         self.untouched[i] = false;
     }
 
-    pub fn update_overlap_surface(&mut self, placements: &[RectPlacement]) {
-        let n = placements.len();
+    pub fn update_overlap_surface(&mut self, ind_data: &PackerIndividualData) {
+        let n = self.layout.len();
 
-        // Add new overlaps for all pairs where at least one endpoint is changed.
-        // We must add each unordered pair {i, j} exactly once.
+        // Iterate over all unordered pairs {i, j} exactly once using j < i.
         for i in 0..n {
-            if self.untouched[i] {
-                continue;
+            if !self.untouched[i] {
+                self.layout[i] = self.rect_placement(ind_data, i);
             }
-
-            for j in 0..n {
-                if j == i {
+            for j in 0..i {
+                // Skip pairs where both rectangles are untouched (i.e., neither changed).
+                if self.untouched[i] && self.untouched[j] {
                     continue;
                 }
 
-                if self.untouched[j] {
-                    // changed–unchanged pair: this pair is not in the sum yet, add it once
-                    if let Some((_, _, ow, oh)) =
-                        Self::rect_intersection(placements[i], placements[j])
-                    {
-                        self.overlap_surface += ow as u64 * oh as u64;
-                    }
-                } else {
-                    // changed–changed pair: add only once, for i < j
-                    if i < j {
-                        if let Some((_, _, ow, oh)) =
-                            Self::rect_intersection(placements[i], placements[j])
-                        {
-                            self.overlap_surface += ow as u64 * oh as u64;
-                        }
-                    }
-                }
+                // Add overlap if it exists.
+                self.overlap_surface += Self::overlap_area(self.layout[i], self.layout[j]);
             }
         }
 
-        // All rectangles are now up-to-date: their overlaps are part of overlap_surface.
+        // Mark all rectangles as up-to-date.
+        self.untouched.fill(true);
+    }
+
+    pub fn get_bounding_box(&self) -> (u32, u32, u32, u32) {
+        let mut min_x = u32::MAX;
+        let mut min_y = u32::MAX;
+        let mut max_x = 0u32;
+        let mut max_y = 0u32;
+
+        let n = self.layout.len();
         for i in 0..n {
-            self.untouched[i] = true;
+            let (x, y, w, h) = self.layout[i];
+
+            // Track bounding box
+            if x < min_x {
+                min_x = x;
+            }
+            if y < min_y {
+                min_y = y;
+            }
+
+            let right = x.saturating_add(w);
+            let bottom = y.saturating_add(h);
+
+            if right > max_x {
+                max_x = right;
+            }
+            if bottom > max_y {
+                max_y = bottom;
+            }
         }
+        (max_x, min_x, max_y, min_y)
     }
 }
 
@@ -300,13 +297,6 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         let swap_prob = ind_data.swap_prob;
         let sigma = ind_data.move_amount as f32;
 
-        // Ensure target has correct length
-        if target.xs.len() != n {
-            target.xs.resize(n, 0);
-            target.ys.resize(n, 0);
-            target.rotations.resize(n, false);
-        }
-
         // Copy current genome into target
         target.xs.copy_from_slice(&self.xs);
         target.ys.copy_from_slice(&self.ys);
@@ -314,32 +304,21 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         target.untouched.copy_from_slice(&self.untouched);
         target.overlap_surface = self.overlap_surface;
 
-        // Precompute Gaussian
-        let normal = if sigma > 0.0 {
-            Some(Normal::new(0.0, sigma).unwrap())
-        } else {
-            None
-        };
-
-        let (placements, _, _) = target.compute_layout(ind_data, false);
-
         for i in 0..n {
             // Movement
             if rng.gen::<f32>() < move_prob {
-                if let Some(dist) = &normal {
-                    target.untouch(i, &placements);
-                    let dx = dist.sample(rng);
-                    let dy = dist.sample(rng);
-                    target.xs[i] += dx as u32;
-                    target.ys[i] += dy as u32;
-                }
+                target.untouch(i, &self.layout);
+                let dx: f32 = rng.sample::<f32, _>(StandardNormal) * sigma;
+                let dy: f32 = rng.sample::<f32, _>(StandardNormal) * sigma;
+                target.xs[i] += dx as u32;
+                target.ys[i] += dy as u32;
             }
 
             // Do not flip squares
             if ind_data.rects[i].w != ind_data.rects[i].h {
                 // Rotation flip
                 if rng.gen::<f32>() < rot_prob {
-                    target.untouch(i, &placements);
+                    target.untouch(i, &self.layout);
                     target.rotations[i] = !target.rotations[i];
                 }
             }
@@ -355,13 +334,19 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
                 if !(ind_data.rects[i].w == ind_data.rects[j].w
                     && ind_data.rects[i].h == ind_data.rects[j].h)
                 {
-                    target.untouch(i, &placements);
-                    target.untouch(j, &placements);
+                    target.untouch(i, &self.layout);
+                    target.untouch(j, &self.layout);
 
                     target.xs.swap(i, j);
                     target.ys.swap(i, j);
                     target.rotations.swap(i, j);
                 }
+            }
+        }
+
+        for i in 0..n {
+            if target.untouched[i] {
+                target.layout[i] = self.layout[i];
             }
         }
     }
@@ -376,19 +361,11 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
     ) {
         let n = self.xs.len();
 
-        // Resize target if necessary
-        if target.xs.len() != n {
-            target.xs.resize(n, 0);
-            target.ys.resize(n, 0);
-            target.rotations.resize(n, false);
-        }
-
         for i in 0..n {
             let alpha: f32 = rng.gen();
 
             // Interpolated crossover
             let x = (alpha * self.xs[i] as f32 + (1.0 - alpha) * another_ind.xs[i] as f32) as u32;
-
             let y = (alpha * self.ys[i] as f32 + (1.0 - alpha) * another_ind.ys[i] as f32) as u32;
 
             let rot = if rng.gen_bool(0.5) {
@@ -403,19 +380,14 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         }
         target.overlap_surface = 0;
         target.untouched.fill(false);
+        // No need to copy layout as it gets recalculated completely
     }
 
     fn count_fitness(&mut self, ind_data: &PackerIndividualData) {
-        let (placements, width, height) = self.compute_layout(ind_data, false);
+        self.update_overlap_surface(ind_data);
+        let (max_x, min_x, max_y, min_y) = self.get_bounding_box();
 
-        if width == 0 || height == 0 || placements.is_empty() {
-            self.fitness = f64::NEG_INFINITY;
-            return;
-        }
-
-        let area = width as u64 * height as u64;
-
-        self.update_overlap_surface(&placements);
+        let area = (max_x - min_x) as u64 * (max_y - min_y) as u64;
 
         let lambda = ind_data.overlap_penalty;
         self.fitness = -(area as f64 + lambda * self.overlap_surface as f64);
@@ -559,7 +531,7 @@ mod tests {
 
         let overlap_area_gt = compute_overlap_area_simple(&placements);
 
-        ind.update_overlap_surface(&placements);
+        ind.update_overlap_surface(&ind_data);
 
         assert_eq!(ind.overlap_surface, overlap_area_gt);
 
@@ -572,7 +544,7 @@ mod tests {
         let (placements, _, _) = ind.compute_layout(&ind_data, false);
         let overlap_area_gt = compute_overlap_area_simple(&placements);
 
-        ind.update_overlap_surface(&placements);
+        ind.update_overlap_surface(&ind_data);
 
         assert_eq!(ind.overlap_surface, overlap_area_gt);
 
@@ -585,7 +557,7 @@ mod tests {
         let (placements, _, _) = ind.compute_layout(&ind_data, false);
         let overlap_area_gt = compute_overlap_area_simple(&placements);
 
-        ind.update_overlap_surface(&placements);
+        ind.update_overlap_surface(&ind_data);
 
         assert_eq!(ind.overlap_surface, overlap_area_gt);
 
@@ -595,10 +567,10 @@ mod tests {
 
         assert_eq!(ind.overlap_surface, 0);
 
-        ind.update_overlap_surface(&placements);
+        ind.update_overlap_surface(&ind_data);
         assert_eq!(ind.overlap_surface, overlap_area_gt);
 
-        ind.update_overlap_surface(&placements);
+        ind.update_overlap_surface(&ind_data);
         assert_eq!(ind.overlap_surface, overlap_area_gt);
     }
 }
