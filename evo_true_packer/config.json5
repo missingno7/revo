@@ -1,22 +1,22 @@
 {
   // Population parameters
-  "pop_width": 1024,
-  "pop_height": 1024,
+  "pop_width": 10000,
+  "pop_height": 16,
   "mut_prob": 0.01,
-  "crossover_prob": 0.4,
+  "crossover_prob": 0.3,
   "visualise": false,
   "selection_strategy": "tournament", // "roulette", "tournament"
 
   // Packer parameters
-  "n_rects": 20,
+  "n_rects": 30,
   "rect_min": 1,
   "rect_max": 5,
   "swap_prob": 0.01,
   "move_prob": 0.01,
   "move_amount": 5,
   "rot_prob": 0.01,
-  "overlap_penalty": 5.0,
-  "screen_width": 30,
-  "screen_height": 30,
+  "overlap_penalty": 10.0,
+  "screen_width": 50,
+  "screen_height": 50,
   "scaling_factor": 5,
 }

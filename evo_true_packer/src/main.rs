@@ -34,7 +34,7 @@ fn main() {
             let density = PackerIndividual::compute_density(&placements, w, h);
 
             println!(
-                "Round {}, density: {:.2}%, avg gen: {}",
+                "Round {}, density: {:.2}%, avg gen: {:.2} ms",
                 pop.get_generation(),
                 density,
                 sum_next_gen_ms as f64 / pop.get_generation() as f64
