@@ -21,6 +21,10 @@ pub enum SalesmanInitType {
     Insertion,
     #[strum(serialize = "greedy")]
     GreedyJoining,
+    #[strum(serialize = "two_opt")]
+    TwoOpt,
+    #[strum(serialize = "auto")]
+    Auto,
 }
 
 #[derive(Clone)]

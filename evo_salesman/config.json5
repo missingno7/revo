@@ -1,17 +1,17 @@
 {
   // Population parameters
-  "pop_width": 1000,
-  "pop_height": 8,
+  "pop_width": 1024,
+  "pop_height": 16,
   "mut_prob": 0.02,
   "crossover_prob": 0.1,
   "visualise": false,
   "selection_strategy": "tournament", // "roulette", "tournament"
 
   // TSP parameters
-  "n_cities": 200,
+  "n_cities": 500,
   "screen_width": 1000,
   "screen_height": 1000,
   "shift_prob": 0.4,
   "rev_prob": 0.4,
-  "init_type": "insertion" // "naive", "noise", "insertion", "greedy"
+  "init_type": "auto" // "naive", "noise", "insertion", "greedy", "two_opt"
 }
