@@ -7,6 +7,7 @@ use revo::config::{Config, DEFAULT_CONFIG_FILENAME};
 use revo::evo_individual::{EvoIndividual, Visualise};
 use revo::population::Population;
 use std::fs;
+use std::time::Instant;
 
 fn main() {
     // Prepare output directory and remove old files
@@ -20,6 +21,7 @@ fn main() {
     let mut pop: Population<PackerIndividual, PackerIndividualData> = Population::new(&config);
 
     let mut all_best_ind = pop.get_at(0, 0).clone();
+    let mut sum_next_gen_ms: u128 = 0;
 
     loop {
         let best_ind = pop.get_best();
@@ -31,7 +33,12 @@ fn main() {
             let (placements, w, h) = all_best_ind.compute_layout(pop.get_individual_data());
             let density = PackerIndividual::compute_density(&placements, w, h);
 
-            println!("Round {}, density: {:.2}%", pop.get_generation(), density);
+            println!(
+                "Round {}, density: {:.2}%, avg gen: {}",
+                pop.get_generation(),
+                density,
+                sum_next_gen_ms as f64 / pop.get_generation() as f64
+            );
 
             // Save image of best solution
             let image = all_best_ind.visualise(pop.get_individual_data());
@@ -48,6 +55,9 @@ fn main() {
         }
 
         // Next generation
+        let t0 = Instant::now();
         pop.next_gen();
+        let dt = t0.elapsed().as_millis();
+        sum_next_gen_ms += dt;
     }
 }

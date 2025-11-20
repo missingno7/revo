@@ -1,7 +1,7 @@
 {
   // Population parameters
-  "pop_width": 10000,
-  "pop_height": 4,
+  "pop_width": 1024,
+  "pop_height": 1024,
   "mut_prob": 0.01,
   "crossover_prob": 0.4,
   "visualise": false,

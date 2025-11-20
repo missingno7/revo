@@ -29,6 +29,7 @@ pub enum SelectionStrategyType {
 pub struct Population<Individual, IndividualData> {
     // Current and next generation of individuals
     inds: Vec<Individual>,
+    next_inds: Vec<Individual>,
 
     // Population size
     pop_width: usize,
@@ -95,6 +96,7 @@ where
                     Self::_new_random_individual(rng, &ind_data)
                 }),
         );
+        let next_inds = inds.clone();
 
         let selection_strategy_type = config
             .may_get_enum("selection_strategy")
@@ -112,6 +114,7 @@ where
 
         Population {
             inds,
+            next_inds,
             pop_width,
             pop_height,
             mut_prob: config
@@ -136,46 +139,38 @@ where
     // Function moves the population to the next generation
     // It does selection, crossover/mutation and counts fitness for each individual
     pub fn next_gen(&mut self) {
-        let pop_size = self.inds.len();
-
-        // Create a new vector for the next generation
-        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
-
         // Do selection and crossover/mutation in parallel for each individual
-        next_gen_inds.par_extend((0..pop_size).into_par_iter().map_init(
+        self.next_inds.par_iter_mut().enumerate().for_each_init(
             || (SmallRng::from_entropy(), [0usize; MAX_NEIGHBOURS]),
-            |(rng, neigh_buf), i| {
-                // Select 5 individuals
+            |(rng, neigh_buf), (i, dst)| {
                 let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, neigh_buf);
                 let indices = &neigh_buf[..n_neigh];
 
-                // Decide whether to do crossover or mutation
-                let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
-                    // Do crossover
-
-                    // Select two individuals
+                if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     let (first_ind, second_ind) = Self::_dual_tournament(indices, &self.inds);
-
-                    self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, rng)
+                    self.inds[first_ind].crossover_into(
+                        &self.inds[second_ind],
+                        dst,
+                        &self.ind_data,
+                        rng,
+                    );
                 } else {
-                    // Do mutation
-
-                    // Select one individual based on the selection type
                     let selected_ind_index = (self.selection_fn)(rng, indices, &self.inds);
+                    self.inds[selected_ind_index].mutate_into(
+                        dst,
+                        &self.ind_data,
+                        rng,
+                        self.mut_prob,
+                        self.mut_amount,
+                    );
+                }
 
-                    let mut res = self.inds[selected_ind_index].clone();
-                    res.mutate(&self.ind_data, rng, self.mut_prob, self.mut_amount);
-                    res
-                };
-
-                // Count fitness of the new individual and return it
-                res.count_fitness(&self.ind_data);
-                res
+                dst.count_fitness(&self.ind_data);
             },
-        ));
+        );
 
         // Swap the current generation with the next generation and increment the generation counter
-        std::mem::swap(&mut self.inds, &mut next_gen_inds);
+        std::mem::swap(&mut self.inds, &mut self.next_inds);
         self.i_generation += 1;
     }
 

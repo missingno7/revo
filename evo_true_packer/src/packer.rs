@@ -217,8 +217,10 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         PackerIndividual::new_with_data(n, xs, ys, rotations)
     }
 
-    fn mutate(
-        &mut self,
+    // mutate_into: in-place mutation without allocating new vectors
+    fn mutate_into(
+        &self,
+        target: &mut Self,
         ind_data: &PackerIndividualData,
         rng: &mut SmallRng,
         _mut_prob: f32,
@@ -228,11 +230,21 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         let move_prob = ind_data.move_prob;
         let rot_prob = ind_data.rot_prob;
         let swap_prob = ind_data.swap_prob;
-
-        // We interpret move_amount as 1σ
         let sigma = ind_data.move_amount as f32;
 
-        // If sigma <= 0, simply do not move
+        // Ensure target has correct length
+        if target.xs.len() != n {
+            target.xs.resize(n, 0.0);
+            target.ys.resize(n, 0.0);
+            target.rotations.resize(n, false);
+        }
+
+        // Copy current genome into target
+        target.xs.copy_from_slice(&self.xs);
+        target.ys.copy_from_slice(&self.ys);
+        target.rotations.copy_from_slice(&self.rotations);
+
+        // Precompute Gaussian
         let normal = if sigma > 0.0 {
             Some(Normal::new(0.0, sigma).unwrap())
         } else {
@@ -240,61 +252,56 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         };
 
         for i in 0..n {
-            // Movement – Gaussian-distributed step
+            // Movement
             if rng.gen::<f32>() < move_prob {
                 if let Some(dist) = &normal {
                     let dx = dist.sample(rng);
                     let dy = dist.sample(rng);
-
-                    // Optionally clamp extreme jumps, e.g. to 3σ
-                    //let max_jump = 3.0 * sigma;
-                    //let dx = dx.clamp(-max_jump, max_jump);
-                    //let dy = dy.clamp(-max_jump, max_jump);
-
-                    self.xs[i] += dx;
-                    self.ys[i] += dy;
+                    target.xs[i] += dx;
+                    target.ys[i] += dy;
                 }
             }
 
-            // Flip rotation
+            // Rotation flip
             if rng.gen::<f32>() < rot_prob {
-                self.rotations[i] = !self.rotations[i];
+                target.rotations[i] = !target.rotations[i];
             }
 
-            // Swap – keep it uniformly random
+            // Swap
             if rng.gen::<f32>() < swap_prob {
                 let mut j = rng.gen_range(0..n);
                 if j == i {
                     j = (j + 1) % n;
                 }
-
-                self.xs.swap(i, j);
-                self.ys.swap(i, j);
-                self.rotations.swap(i, j);
+                target.xs.swap(i, j);
+                target.ys.swap(i, j);
+                target.rotations.swap(i, j);
             }
         }
     }
 
-    fn crossover(
+    // crossover_into: writes crossover result directly into target without allocations
+    fn crossover_into(
         &self,
-        another_ind: &PackerIndividual,
+        another_ind: &Self,
+        target: &mut Self,
         _ind_data: &PackerIndividualData,
         rng: &mut SmallRng,
-    ) -> PackerIndividual {
+    ) {
         let n = self.xs.len();
-        if n == 0 {
-            return self.clone();
+
+        // Resize target if necessary
+        if target.xs.len() != n {
+            target.xs.resize(n, 0.0);
+            target.ys.resize(n, 0.0);
+            target.rotations.resize(n, false);
         }
 
-        let mut xs = Vec::with_capacity(n);
-        let mut ys = Vec::with_capacity(n);
-        let mut rotations = Vec::with_capacity(n);
-
         for i in 0..n {
-            // Some mixing + interpolation – smoother search space
             let alpha: f32 = rng.gen();
             let use_self = rng.gen_bool(0.5);
 
+            // Interpolated crossover
             let x = if use_self {
                 alpha * self.xs[i] + (1.0 - alpha) * another_ind.xs[i]
             } else {
@@ -313,12 +320,10 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
                 another_ind.rotations[i]
             };
 
-            xs.push(x);
-            ys.push(y);
-            rotations.push(rot);
+            target.xs[i] = x;
+            target.ys[i] = y;
+            target.rotations[i] = rot;
         }
-
-        PackerIndividual::new_with_data(n, xs, ys, rotations)
     }
 
     fn count_fitness(&mut self, ind_data: &PackerIndividualData) {
