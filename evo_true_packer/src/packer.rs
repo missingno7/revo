@@ -4,7 +4,7 @@ use imageproc::drawing::draw_filled_rect_mut;
 use imageproc::rect::Rect;
 use rand::rngs::SmallRng;
 use rand::Rng;
-use rand_distr::StandardNormal;
+use rand_distr::{Poisson, StandardNormal};
 use revo::evo_individual::{EvoIndividual, Visualise};
 
 /// x, y, w, h – in the internal layout coordinate system
@@ -239,6 +239,22 @@ impl PackerIndividual {
         }
         (max_x, min_x, max_y, min_y)
     }
+
+    #[inline(always)]
+    fn get_n_prob(n: usize, p: f32, rng: &mut impl Rng) -> usize {
+        if n == 0 || p <= 0.0 {
+            return 0;
+        }
+        if p >= 1.0 {
+            return n;
+        }
+
+        let lambda = p * n as f32;
+        let dist = Poisson::new(lambda as f64).unwrap();
+
+        let k = rng.sample(dist) as usize;
+        k.min(n)
+    }
 }
 
 impl EvoIndividual<PackerIndividualData> for PackerIndividual {
@@ -304,7 +320,10 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
         target.untouched.copy_from_slice(&self.untouched);
         target.overlap_surface = self.overlap_surface;
 
-        for i in 0..n {
+        let moves = Self::get_n_prob(n, move_prob, rng);
+        for _ in 0..moves {
+            let i = rng.gen_range(0..n);
+
             // Movement
             if rng.gen::<f32>() < move_prob {
                 target.untouch(i, &self.layout);
@@ -313,8 +332,11 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
                 target.xs[i] += dx as u32;
                 target.ys[i] += dy as u32;
             }
+        }
 
-            // Do not flip squares
+        let flips = Self::get_n_prob(n, rot_prob, rng);
+        for _ in 0..flips {
+            let i = rng.gen_range(0..n);
             if ind_data.rects[i].w != ind_data.rects[i].h {
                 // Rotation flip
                 if rng.gen::<f32>() < rot_prob {
@@ -322,25 +344,26 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
                     target.rotations[i] = !target.rotations[i];
                 }
             }
+        }
 
-            // Swap
-            if rng.gen::<f32>() < swap_prob {
-                let mut j = rng.gen_range(0..n);
-                if j == i {
-                    j = (j + 1) % n;
-                }
+        let swaps = Self::get_n_prob(n, swap_prob, rng);
+        for _ in 0..swaps {
+            let i = rng.gen_range(0..n);
+            let mut j = rng.gen_range(0..n);
+            if j == i {
+                j = (j + 1) % n;
+            }
 
-                // Do not switch same shaped rectangles
-                if !(ind_data.rects[i].w == ind_data.rects[j].w
-                    && ind_data.rects[i].h == ind_data.rects[j].h)
-                {
-                    target.untouch(i, &self.layout);
-                    target.untouch(j, &self.layout);
+            // Do not switch same shaped rectangles
+            if !(ind_data.rects[i].w == ind_data.rects[j].w
+                && ind_data.rects[i].h == ind_data.rects[j].h)
+            {
+                target.untouch(i, &self.layout);
+                target.untouch(j, &self.layout);
 
-                    target.xs.swap(i, j);
-                    target.ys.swap(i, j);
-                    target.rotations.swap(i, j);
-                }
+                target.xs.swap(i, j);
+                target.ys.swap(i, j);
+                target.rotations.swap(i, j);
             }
         }
 
