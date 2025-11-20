@@ -52,55 +52,71 @@ impl PackerIndividual {
         (self.xs[i], self.ys[i], w, h)
     }
 
-    /// Computes the layout – shifts it so that min_x = 0 and min_y = 0.
-    pub fn compute_layout(&self, ind_data: &PackerIndividualData) -> LayoutResult {
+    /// Computes the layout
+    pub fn compute_layout(
+        &self,
+        ind_data: &PackerIndividualData,
+        normalised: bool,
+    ) -> LayoutResult {
         let n = ind_data.rects.len();
         if n == 0 {
             return (Vec::new(), 0, 0);
         }
 
-        // First, look at the float coordinates and compute their bounding box
         let mut min_x = u32::MAX;
         let mut min_y = u32::MAX;
-        let mut max_x = u32::MIN;
-        let mut max_y = u32::MIN;
+        let mut max_x = 0u32;
+        let mut max_y = 0u32;
 
-        let mut raw: Vec<RectPlacement> = Vec::with_capacity(n);
+        // Final placements – only one allocation
+        let mut placements: Vec<RectPlacement> = Vec::with_capacity(n);
 
         for i in 0..n {
+            // This now returns integer coords and sizes
             let (x, y, w, h) = self.rect_f32(ind_data, i);
-            raw.push((x, y, w, h));
 
+            // Track bounding box
             if x < min_x {
                 min_x = x;
             }
             if y < min_y {
                 min_y = y;
             }
-            if x + w > max_x {
-                max_x = x + w;
+
+            let right = x.saturating_add(w);
+            let bottom = y.saturating_add(h);
+
+            if right > max_x {
+                max_x = right;
             }
-            if y + h > max_y {
-                max_y = y + h;
+            if bottom > max_y {
+                max_y = bottom;
             }
+
+            placements.push((x, y, w, h));
+        }
+
+        // Degenerate safety (should not really happen, but guards against weird inputs)
+        if max_x <= min_x {
+            max_x = min_x + 1;
+        }
+        if max_y <= min_y {
+            max_y = min_y + 1;
         }
 
         let width = max_x - min_x;
         let height = max_y - min_y;
 
-        // Normalized layout – shift to (0,0) and round to pixels
-        let mut placements: Vec<RectPlacement> = Vec::with_capacity(n);
-        for (x, y, w, h) in raw {
-            let nx = x - min_x;
-            let ny = y - min_y;
-            let nw = w.max(1);
-            let nh = h.max(1);
-            placements.push((nx, ny, nw, nh));
+        if normalised {
+            // Normalize to (0,0) in place
+            for (x, y, _, _) in placements.iter_mut() {
+                *x -= min_x;
+                *y -= min_y;
+            }
         }
 
         (placements, width, height)
     }
-
     /// Computes intersection of two rectangles in layout coordinates.
     /// Returns (x, y, w, h) of the intersection, or None if they do not overlap.
     fn rect_intersection(a: RectPlacement, b: RectPlacement) -> Option<RectPlacement> {
@@ -305,7 +321,7 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
             None
         };
 
-        let (placements, _, _) = target.compute_layout(ind_data);
+        let (placements, _, _) = target.compute_layout(ind_data, false);
 
         for i in 0..n {
             // Movement
@@ -386,11 +402,11 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
             target.rotations[i] = rot;
         }
         target.overlap_surface = 0;
-        target.untouched = vec![false; n];
+        target.untouched.fill(false);
     }
 
     fn count_fitness(&mut self, ind_data: &PackerIndividualData) {
-        let (placements, width, height) = self.compute_layout(ind_data);
+        let (placements, width, height) = self.compute_layout(ind_data, false);
 
         if width == 0 || height == 0 || placements.is_empty() {
             self.fitness = f64::NEG_INFINITY;
@@ -430,7 +446,7 @@ impl EvoIndividual<PackerIndividualData> for PackerIndividual {
 }
 impl Visualise<PackerIndividualData> for PackerIndividual {
     fn visualise(&self, ind_data: &PackerIndividualData) -> RgbImage {
-        let (placements, width, height) = self.compute_layout(ind_data);
+        let (placements, width, height) = self.compute_layout(ind_data, true);
         let scaling_factor: u32 = 5;
 
         // If there is nothing to draw, return empty image
@@ -539,7 +555,7 @@ mod tests {
 
         let mut ind = PackerIndividual::new_with_data(n_rects, xs, ys, rotations);
 
-        let (placements, _, _) = ind.compute_layout(&ind_data);
+        let (placements, _, _) = ind.compute_layout(&ind_data, false);
 
         let overlap_area_gt = compute_overlap_area_simple(&placements);
 
@@ -553,7 +569,7 @@ mod tests {
         assert_ne!(ind.overlap_surface, overlap_area_gt);
 
         // Recompute placements
-        let (placements, _, _) = ind.compute_layout(&ind_data);
+        let (placements, _, _) = ind.compute_layout(&ind_data, false);
         let overlap_area_gt = compute_overlap_area_simple(&placements);
 
         ind.update_overlap_surface(&placements);
@@ -566,7 +582,7 @@ mod tests {
         ind.xs[2] += 1;
 
         // Recompute placements
-        let (placements, _, _) = ind.compute_layout(&ind_data);
+        let (placements, _, _) = ind.compute_layout(&ind_data, false);
         let overlap_area_gt = compute_overlap_area_simple(&placements);
 
         ind.update_overlap_surface(&placements);

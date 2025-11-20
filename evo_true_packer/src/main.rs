@@ -30,7 +30,7 @@ fn main() {
             all_best_ind = best_ind.clone();
 
             // Compute density of this best individual
-            let (placements, w, h) = all_best_ind.compute_layout(pop.get_individual_data());
+            let (placements, w, h) = all_best_ind.compute_layout(pop.get_individual_data(), false);
             let density = PackerIndividual::compute_density(&placements, w, h);
 
             println!(
