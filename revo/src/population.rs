@@ -1,12 +1,12 @@
 use super::evo_individual::EvoIndividual;
 use crate::config::Config;
 use crate::evo_individual::EvoIndividualData;
-use crate::rand::SeedableRng;
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
 use rand::rngs::SmallRng;
 use rand::Rng;
+use rand::SeedableRng;
 use rayon::prelude::*;
 use strum_macros::{Display, EnumIter, EnumString};
 
