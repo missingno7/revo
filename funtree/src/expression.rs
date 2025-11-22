@@ -143,7 +143,7 @@ impl Expression {
     }
 
     pub fn choose_random_node_mut(&mut self, rng: &mut SmallRng) -> &mut Expression {
-        let n_nodes = self.get_nodes().len();
+        let n_nodes = self.get_nodes_count();
         let mut num = rng.gen_range(0..n_nodes);
 
         self.get_nth_node_mut(&mut num).unwrap()
@@ -176,6 +176,18 @@ impl Expression {
         nodes
     }
 
+    pub fn get_nodes_count(&self) -> usize {
+        let mut n: usize = 0;
+        self._count_nodes(&mut n);
+        n
+    }
+    pub fn _count_nodes(&self, n: &mut usize) {
+        *n += 1;
+        match &self.expr {
+            Expr::Leaf(_) => (),
+            Expr::Op(op) => op.count_nodes(n),
+        }
+    }
     pub fn copy_to(&self, other: &mut Expression) {
         other.minus = self.minus;
         other.expr = self.expr.clone();
