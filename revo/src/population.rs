@@ -1,12 +1,12 @@
 use super::evo_individual::EvoIndividual;
 use crate::config::Config;
 use crate::evo_individual::EvoIndividualData;
-use crate::rand::SeedableRng;
 use crate::utils::{IndexedLabData, LabData};
 use image::RgbImage;
 use lab::Lab;
 use rand::rngs::SmallRng;
 use rand::Rng;
+use rand::SeedableRng;
 use rayon::prelude::*;
 use strum_macros::{Display, EnumIter, EnumString};
 
@@ -29,6 +29,7 @@ pub enum SelectionStrategyType {
 pub struct Population<Individual, IndividualData> {
     // Current and next generation of individuals
     inds: Vec<Individual>,
+    next_inds: Vec<Individual>,
 
     // Population size
     pop_width: usize,
@@ -45,6 +46,7 @@ pub struct Population<Individual, IndividualData> {
     // Data for individuals
     ind_data: IndividualData,
 
+    // Selection and neighbourhood functions resolved once at construction
     selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize,
     neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize,
 }
@@ -95,6 +97,7 @@ where
                     Self::_new_random_individual(rng, &ind_data)
                 }),
         );
+        let next_inds = inds.clone();
 
         let selection_strategy_type = config
             .may_get_enum("selection_strategy")
@@ -112,6 +115,7 @@ where
 
         Population {
             inds,
+            next_inds,
             pop_width,
             pop_height,
             mut_prob: config
@@ -136,46 +140,47 @@ where
     // Function moves the population to the next generation
     // It does selection, crossover/mutation and counts fitness for each individual
     pub fn next_gen(&mut self) {
-        let pop_size = self.inds.len();
-
-        // Create a new vector for the next generation
-        let mut next_gen_inds: Vec<Individual> = Vec::with_capacity(pop_size);
-
         // Do selection and crossover/mutation in parallel for each individual
-        next_gen_inds.par_extend((0..pop_size).into_par_iter().map_init(
+        self.next_inds.par_iter_mut().enumerate().for_each_init(
             || (SmallRng::from_entropy(), [0usize; MAX_NEIGHBOURS]),
-            |(rng, neigh_buf), i| {
+            |(rng, neigh_buf), (i, dst)| {
                 // Select 5 individuals
                 let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, neigh_buf);
                 let indices = &neigh_buf[..n_neigh];
 
                 // Decide whether to do crossover or mutation
-                let mut res = if rng.gen_range(0.0..1.0) < self.crossover_prob {
+                if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     // Do crossover
 
                     // Select two individuals
                     let (first_ind, second_ind) = Self::_dual_tournament(indices, &self.inds);
-
-                    self.inds[first_ind].crossover(&self.inds[second_ind], &self.ind_data, rng)
+                    self.inds[first_ind].crossover_into(
+                        &self.inds[second_ind],
+                        dst,
+                        &self.ind_data,
+                        rng,
+                    );
                 } else {
                     // Do mutation
 
                     // Select one individual based on the selection type
                     let selected_ind_index = (self.selection_fn)(rng, indices, &self.inds);
+                    self.inds[selected_ind_index].mutate_into(
+                        dst,
+                        &self.ind_data,
+                        rng,
+                        self.mut_prob,
+                        self.mut_amount,
+                    );
+                }
 
-                    let mut res = self.inds[selected_ind_index].clone();
-                    res.mutate(&self.ind_data, rng, self.mut_prob, self.mut_amount);
-                    res
-                };
-
-                // Count fitness of the new individual and return it
-                res.count_fitness(&self.ind_data);
-                res
+                // Count fitness of the new individual
+                dst.count_fitness(&self.ind_data);
             },
-        ));
+        );
 
         // Swap the current generation with the next generation and increment the generation counter
-        std::mem::swap(&mut self.inds, &mut next_gen_inds);
+        std::mem::swap(&mut self.inds, &mut self.next_inds);
         self.i_generation += 1;
     }
 
@@ -238,32 +243,41 @@ where
 
     fn _normalize_component(
         data: &mut [IndexedLabData],
-        mut get_component: impl FnMut(&LabData) -> f64,
-        mut set_component: impl FnMut(&mut LabData, f64),
+        get_component: impl Fn(&LabData) -> f64 + Copy,
+        set_component: impl Fn(&mut LabData, f64) + Copy,
         min_val: f64,
         max_val: f64,
     ) {
         let len = data.len();
-        let eps = 1e-9;
+        if len == 0 {
+            return;
+        }
 
+        let eps = 1e-9;
+        let range = max_val - min_val;
+        let denom = if len > 1 { (len - 1) as f64 } else { 1.0 };
+
+        // Sort by component
         data.sort_by(|a, b| {
             get_component(&a.data)
                 .partial_cmp(&get_component(&b.data))
                 .unwrap()
         });
-        let mut last_val = get_component(&data.last().unwrap().data);
-        let mut last_val_normalised = 0.0;
 
-        for (i, value) in data.iter_mut().enumerate() {
-            let current_val = get_component(&value.data);
+        let mut last_val = get_component(&data[0].data);
+        let mut last_norm = min_val;
+        set_component(&mut data[0].data, last_norm);
 
-            if (current_val - last_val).abs() < eps {
-                set_component(&mut value.data, last_val_normalised);
+        for (i, item) in data.iter_mut().enumerate().skip(1) {
+            let v = get_component(&item.data);
+
+            if (v - last_val).abs() < eps {
+                set_component(&mut item.data, last_norm);
             } else {
-                last_val = current_val;
-                let normalised_val = ((i as f64) * (max_val - min_val)) / len as f64 + min_val;
-                set_component(&mut value.data, normalised_val);
-                last_val_normalised = normalised_val;
+                last_val = v;
+                let norm = min_val + (i as f64) * range / denom;
+                set_component(&mut item.data, norm);
+                last_norm = norm;
             }
         }
     }
@@ -327,6 +341,7 @@ where
     // Private methods
 
     // Function returns the index of the best individual in the tournament
+    #[inline]
     fn _single_tournament(_rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
         let mut best_i = indices[0];
 
@@ -339,65 +354,140 @@ where
         best_i
     }
 
+    #[inline]
     fn _roulette_selection(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> usize {
-        // Get min fitness
+        // find min to keep weights positive
         let mut min_fitness = inds[indices[0]].get_fitness();
-        for &index in indices.iter() {
-            let fitness = inds[index].get_fitness();
-            if fitness < min_fitness {
-                min_fitness = fitness;
+        for &i in &indices[1..] {
+            let f = inds[i].get_fitness();
+            if f < min_fitness {
+                min_fitness = f;
             }
         }
 
-        // Calculate the sum of fitnesses
-        let mut fitness_sum = 0.0;
-        for &index in indices.iter() {
-            // subtract the min fitness to avoid negative values
-            fitness_sum += inds[index].get_fitness() - min_fitness;
-        }
-
-        // Calculate the probabilities of each individual
-        let mut probabilities = Vec::with_capacity(indices.len());
-        for &index in indices.iter() {
-            // subtract the min fitness to avoid negative values
-            let prob = (inds[index].get_fitness() - min_fitness) / fitness_sum;
-            probabilities.push(prob);
-        }
-
-        // Select an individual based on the probabilities
-        let rand_val = rng.gen_range(0.0..1.0);
+        // compute sum of weights
         let mut sum = 0.0;
-        for i in 0..indices.len() {
-            sum += probabilities[i];
-            if sum > rand_val {
-                return indices[i];
-            }
+        for &i in indices {
+            sum += inds[i].get_fitness() - min_fitness;
         }
 
-        // If the loop didn't return, return the last index
+        if sum <= 0.0 {
+            return indices[rng.gen_range(0..indices.len())];
+        }
+
+        let mut target = rng.gen_range(0.0..sum);
+
+        for &i in indices {
+            let w = inds[i].get_fitness() - min_fitness;
+            if target <= w {
+                return i;
+            }
+            target -= w;
+        }
+
         *indices.last().unwrap()
     }
 
-    // Function selects two individuals using roulette selection
-    fn _dual_rulette(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> (usize, usize) {
-        // Select the first individual
-        let first = Self::_roulette_selection(rng, indices, inds);
+    #[inline]
+    fn _roulette_selection_excluding(
+        rng: &mut SmallRng,
+        indices: &[usize],
+        inds: &[Individual],
+        excluded: usize,
+    ) -> usize {
+        debug_assert!(indices.len() >= 2);
 
-        // Remove the first index from the indices vector to avoid selecting the same individual twice
-        let mut indices2 = Vec::with_capacity(indices.len() - 1);
-        for item in indices {
-            if item != &first {
-                indices2.push(*item);
+        // 1) find min fitness among non-excluded
+        let mut min_fitness = f64::INFINITY;
+        let mut have_any = false;
+
+        for &idx in indices {
+            if idx == excluded {
+                continue;
             }
+            let f = inds[idx].get_fitness();
+            if f < min_fitness {
+                min_fitness = f;
+            }
+            have_any = true;
         }
 
-        // Select the second individual
-        let second = Self::_roulette_selection(rng, &indices2, inds);
+        // if there is no other candidate (shouldn't happen if len >= 2)
+        if !have_any {
+            return excluded;
+        }
+
+        // 2) compute sum of shifted fitness among non-excluded
+        let mut sum = 0.0;
+        for &idx in indices {
+            if idx == excluded {
+                continue;
+            }
+            sum += inds[idx].get_fitness() - min_fitness;
+        }
+
+        // all equal or numerically degenerate → uniform among non-excluded
+        if sum <= 0.0 {
+            // count how many non-excluded
+            let mut count = 0;
+            for &idx in indices {
+                if idx != excluded {
+                    count += 1;
+                }
+            }
+
+            let mut k = rng.gen_range(0..count);
+            for &idx in indices {
+                if idx == excluded {
+                    continue;
+                }
+                if k == 0 {
+                    return idx;
+                }
+                k -= 1;
+            }
+
+            // fallback – should not happen
+            return excluded;
+        }
+
+        // 3) roulette among non-excluded
+        let mut target = rng.gen_range(0.0..sum);
+
+        for &idx in indices {
+            if idx == excluded {
+                continue;
+            }
+            let w = inds[idx].get_fitness() - min_fitness;
+            if target <= w {
+                return idx;
+            }
+            target -= w;
+        }
+
+        // numerical fallback: last non-excluded
+        let mut last = excluded;
+        for &idx in indices {
+            if idx != excluded {
+                last = idx;
+            }
+        }
+        last
+    }
+
+    // Function selects two individuals using roulette selection
+    #[inline]
+    fn _dual_rulette(rng: &mut SmallRng, indices: &[usize], inds: &[Individual]) -> (usize, usize) {
+        debug_assert!(indices.len() >= 2);
+
+        let first = Self::_roulette_selection(rng, indices, inds);
+        let second = Self::_roulette_selection_excluding(rng, indices, inds, first);
 
         (first, second)
     }
 
     // Function returns the indices of the two best individuals in the tournament
+    #[inline]
     fn _dual_tournament(indices: &[usize], inds: &[Individual]) -> (usize, usize) {
         let mut best_i = indices[0];
         let mut second_best_i = indices[1];

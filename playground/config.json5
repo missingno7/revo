@@ -1,21 +1,21 @@
 {
  // General population parameters
- "pop_width": 50,
- "pop_height": 50,
+ "pop_width": 200,
+ "pop_height": 200,
  "mut_prob": 0.02,
  "mut_amount": 10.0,
  "crossover_prob": 0.1,
  "selection_strategy": "tournament", // "tournament", "roulette"
 
  // Playground parameters
- "example": "salesman", // "salesman", "social_distance", "funtree"
+ "example": "salesman", // "salesman", "social_distance", "funtree", "packer"
  "display_width": 500,
  "display_height":  500,
 
  // Salesman parameters
  "n_cities": 100,
- "screen_width": 600,
- "screen_height":  600,
+ //"screen_width": 600,
+ //"screen_height":  600,
  "shift_prob": 0.4,
  "rev_prob": 0.4,
  "init_type": "greedy", // "naive", "noise", "insertion", "greedy"
@@ -28,5 +28,17 @@
  "plot_width": 600,
  "plot_height":  600,
  "max_depth": 5,
- "values": "-4:4, -3:3, -2:2, -1:1, 0:0, 1:1, 2:2, 3:3, 4:4" // "x1:y1,x2:y2,..."
+ "values": "-4:4, -3:3, -2:2, -1:1, 0:0, 1:1, 2:2, 3:3, 4:4", // "x1:y1,x2:y2,..."
+
+ // Packer parameters
+ "n_rects": 20,
+ "rect_min": 1,
+ "rect_max": 10,
+ "swap_prob": 0.01,
+ "move_prob": 0.01,
+ "move_amount": 5,
+ "rot_prob": 0.01,
+ "overlap_penalty": 10.0,
+ "screen_width": 600,
+ "screen_height": 600
 }

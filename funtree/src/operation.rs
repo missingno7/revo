@@ -98,6 +98,22 @@ impl Operation {
         self.right.append_nodes(nodes);
     }
 
+    pub fn get_nth_node_mut(&mut self, n: &mut usize) -> Option<&mut Expression> {
+        if let Some(res) = self.left.get_nth_node_mut(n) {
+            return Some(res);
+        }
+        if let Some(res) = self.right.get_nth_node_mut(n) {
+            return Some(res);
+        }
+
+        None
+    }
+
+    pub fn count_nodes(&self, n: &mut usize) {
+        self.left._count_nodes(n);
+        self.right._count_nodes(n);
+    }
+
     pub fn get_left(&self) -> &Expression {
         &self.left
     }

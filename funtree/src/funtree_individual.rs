@@ -155,7 +155,7 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
         rng: &mut SmallRng,
     ) -> FuntreeIndividual {
         // Select random source genom and copy the other not selected genom to destination genom
-        let (source_genom, dest_ind) = if rng.gen_bool(0.5) {
+        let (source_genom, mut dest_ind) = if rng.gen_bool(0.5) {
             (&another_ind, self.clone())
         } else {
             (&self, another_ind.clone())
@@ -163,10 +163,10 @@ impl EvoIndividual<FuntreeIndividualData> for FuntreeIndividual {
 
         // Choose random node in source and destination genom
         let source_genom_it = source_genom.genom.choose_random_node(rng);
-        let dest_genom_it = dest_ind.genom.choose_random_node(rng);
+        let dest_genom_it = dest_ind.genom.choose_random_node_mut(rng);
 
         // Copy data from selected source node to selected destination node
-        unsafe { source_genom_it.copy_to(dest_genom_it.as_mut()) }
+        source_genom_it.copy_to(dest_genom_it);
 
         dest_ind
     }
@@ -269,7 +269,7 @@ mod tests {
         let right_mul_1 = Expression::new_leaf(4.0, LeafType::Variable, true);
         let mul_1 =
             Expression::new_operation(left_mul_1, right_mul_1, OperationType::Multiplication, true);
-        let ind_2 = FuntreeIndividual {
+        let mut ind_2 = FuntreeIndividual {
             fitness: 0.0,
             genom: mul_1,
         };
@@ -280,12 +280,11 @@ mod tests {
 
         // Get references to nodes
         let ind_1_nodes = ind_1.genom.get_nodes();
-        let ind_2_nodes = ind_2.genom.get_nodes();
+        //let ind_2_nodes = ind_2.genom.get_nodes();
+        let ind_2_node = ind_2.genom.get_nth_node_mut(&mut 1).unwrap();
 
         // Perform crossover on nodes
-        unsafe {
-            ind_1_nodes[0].copy_to(ind_2_nodes[1].as_mut());
-        }
+        ind_1_nodes[0].copy_to(ind_2_node);
 
         // Copy root node from ind_1 to left child of ind_2
         assert_eq!(ind_2.genom.to_string(), "-(-(-1.00 + 2.00) * -x)");

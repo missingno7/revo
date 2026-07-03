@@ -142,6 +142,25 @@ impl Expression {
         nodes[rng.gen_range(0..nodes.len())]
     }
 
+    pub fn choose_random_node_mut(&mut self, rng: &mut SmallRng) -> &mut Expression {
+        let n_nodes = self.get_nodes_count();
+        let mut num = rng.gen_range(0..n_nodes);
+
+        self.get_nth_node_mut(&mut num).unwrap()
+    }
+
+    pub fn get_nth_node_mut(&mut self, n: &mut usize) -> Option<&mut Expression> {
+        if *n == 0 {
+            return Some(self);
+        }
+        *n -= 1;
+
+        match &mut self.expr {
+            Expr::Leaf(_) => None,
+            Expr::Op(op) => op.get_nth_node_mut(n),
+        }
+    }
+
     // Append all nodes in the expression to the given vector
     pub fn append_nodes<'a>(&'a self, nodes: &mut Vec<&'a Expression>) {
         nodes.push(self);
@@ -157,6 +176,18 @@ impl Expression {
         nodes
     }
 
+    pub fn get_nodes_count(&self) -> usize {
+        let mut n: usize = 0;
+        self._count_nodes(&mut n);
+        n
+    }
+    pub fn _count_nodes(&self, n: &mut usize) {
+        *n += 1;
+        match &self.expr {
+            Expr::Leaf(_) => (),
+            Expr::Op(op) => op.count_nodes(n),
+        }
+    }
     pub fn copy_to(&self, other: &mut Expression) {
         other.minus = self.minus;
         other.expr = self.expr.clone();
@@ -459,22 +490,6 @@ impl Expression {
             }
         }
     }
-
-    /// # Safety
-    ///
-    /// This function dereferences a raw pointer obtained by casting `self` as a `*const`
-    /// pointer and then casting it to a `*mut` pointer. Calling this function with an invalid
-    /// `self` pointer or an already mutably borrowed reference can result in undefined behavior.
-    ///
-    /// The caller must ensure that there are no other mutable references to the same data,
-    /// otherwise this function can violate Rust's aliasing rules.
-    #[allow(clippy::mut_from_ref)]
-    #[allow(invalid_reference_casting)]
-    #[allow(invalid_reference_casting)]
-    pub unsafe fn as_mut(&self) -> &mut Expression {
-        #[allow(invalid_reference_casting)]
-        &mut *(self as *const _ as *mut _)
-    }
 }
 
 impl Default for Expression {
@@ -759,5 +774,25 @@ mod tests {
 
         let exp = Expression::from_str("((3*(x/2))*4)").unwrap();
         assert_eq!(exp.simplify().to_string(), "((x / 2.00) * 12.00)");
+    }
+
+    #[test]
+    fn test_nth() {
+        let mut exp = Expression::from_str("(((x^x)+2)+(3+(x^x))) + 5").unwrap();
+
+        // 0 is self
+        let selected_node = exp.get_nth_node_mut(&mut 0).unwrap();
+        assert_eq!(selected_node.to_string(), exp.to_string());
+
+        let selected_node = exp.get_nth_node_mut(&mut 1).unwrap();
+        let expected_node = Expression::from_str(" (((x ^ x) + 2.00) + (3.00 + (x ^ x)))").unwrap();
+        assert_eq!(selected_node.to_string(), expected_node.to_string());
+
+        let selected_node = exp.get_nth_node_mut(&mut 12).unwrap();
+        let expected_node = Expression::from_str("5.00").unwrap();
+        assert_eq!(selected_node.to_string(), expected_node.to_string());
+
+        // out of range
+        assert!(exp.get_nth_node_mut(&mut 13).is_none());
     }
 }
