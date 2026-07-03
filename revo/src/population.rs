@@ -46,7 +46,9 @@ pub struct Population<Individual, IndividualData> {
     // Data for individuals
     ind_data: IndividualData,
 
-    selection_strategy: SelectionStrategyType,
+    // Selection and neighbourhood functions resolved once at construction
+    selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize,
+    neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize,
 }
 
 impl<Individual: EvoIndividual<IndividualData>, IndividualData: EvoIndividualData>
@@ -97,10 +99,19 @@ where
         );
         let next_inds = inds.clone();
 
-        let selection_strategy = config
+        let selection_strategy_type = config
             .may_get_enum("selection_strategy")
             .unwrap()
             .unwrap_or(DEFAULT_SELECTION_STRATEGY_TYPE);
+
+        let selection_fn: fn(&mut SmallRng, &[usize], &[Individual]) -> usize =
+            match selection_strategy_type {
+                SelectionStrategyType::Roulette => Self::_roulette_selection,
+                SelectionStrategyType::Tournament => Self::_single_tournament,
+            };
+
+        let neighbours_fn: fn(usize, usize, usize, &mut [usize; MAX_NEIGHBOURS]) -> usize =
+            { Self::_l5_selection };
 
         Population {
             inds,
@@ -121,7 +132,8 @@ where
                 .unwrap_or(DEFAULT_CROSSOVER_PROB),
             i_generation: 0,
             ind_data,
-            selection_strategy,
+            selection_fn,
+            neighbours_fn,
         }
     }
 
@@ -133,9 +145,10 @@ where
             || (SmallRng::from_entropy(), [0usize; MAX_NEIGHBOURS]),
             |(rng, neigh_buf), (i, dst)| {
                 // Select 5 individuals
-                let n_neigh = Self::_l5_selection(i, self.pop_width, self.pop_height, neigh_buf);
+                let n_neigh = (self.neighbours_fn)(i, self.pop_width, self.pop_height, neigh_buf);
                 let indices = &neigh_buf[..n_neigh];
 
+                // Decide whether to do crossover or mutation
                 if rng.gen_range(0.0..1.0) < self.crossover_prob {
                     // Do crossover
 
@@ -151,14 +164,7 @@ where
                     // Do mutation
 
                     // Select one individual based on the selection type
-                    let selected_ind_index = match self.selection_strategy {
-                        SelectionStrategyType::Roulette => {
-                            Self::_roulette_selection(rng, indices, &self.inds)
-                        }
-                        SelectionStrategyType::Tournament => {
-                            Self::_single_tournament(rng, indices, &self.inds)
-                        }
-                    };
+                    let selected_ind_index = (self.selection_fn)(rng, indices, &self.inds);
                     self.inds[selected_ind_index].mutate_into(
                         dst,
                         &self.ind_data,
@@ -168,6 +174,7 @@ where
                     );
                 }
 
+                // Count fitness of the new individual
                 dst.count_fitness(&self.ind_data);
             },
         );

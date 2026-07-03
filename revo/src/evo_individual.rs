@@ -7,8 +7,10 @@ pub trait EvoIndividualData: Send + Sync {
 }
 
 pub trait EvoIndividual<Data>: Sized + Clone + Send + Sync {
+    // Create a new individual with randomised values
     fn new_randomised(data: &Data, rng: &mut SmallRng) -> Self;
 
+    /// Mutate the genome of the individual.
     /// Default mutate uses `mutate_into`.
     /// Implementors MUST override at least one of `mutate` or `mutate_into`
     /// to avoid infinite recursion.
@@ -17,9 +19,9 @@ pub trait EvoIndividual<Data>: Sized + Clone + Send + Sync {
         // If `mutate_into` is overridden, this will use the optimized path.
         let tmp = self.clone();
         tmp.mutate_into(self, data, rng, mut_prob, mut_amount);
-        *self = tmp;
     }
 
+    /// Return a new individual with a genome that is a crossover of two individuals.
     /// Default crossover uses `crossover_into`.
     /// Implementors MUST override at least one of `crossover`
     /// or `crossover_into` to avoid infinite recursion.
@@ -30,10 +32,16 @@ pub trait EvoIndividual<Data>: Sized + Clone + Send + Sync {
         out
     }
 
+    // Count the fitness of the individual
     fn count_fitness(&mut self, data: &Data);
+
+    // Get the fitness of the individual
     fn get_fitness(&self) -> f64;
+
+    // Get the A and B values of the individual for visualisation
     fn get_visuals(&self, data: &Data) -> (f64, f64);
 
+    /// Write a mutated copy of `self` into `target`.
     /// Default clone + mutate that can be overridden
     fn mutate_into(
         &self,
@@ -47,6 +55,7 @@ pub trait EvoIndividual<Data>: Sized + Clone + Send + Sync {
         target.mutate(data, rng, mut_prob, mut_amount);
     }
 
+    /// Write the crossover of `self` and `other` into `target`.
     /// Default crossover into that can be overridden
     fn crossover_into(&self, other: &Self, target: &mut Self, data: &Data, rng: &mut SmallRng) {
         *target = self.crossover(other, data, rng);
