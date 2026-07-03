@@ -309,6 +309,79 @@ impl SalesmanIndividual {
             fitness: 0.0,
         }
     }
+
+    /// Local 2-opt optimization over the current genome
+    fn two_opt_improve(&mut self, ind_data: &SalesmanIndividualData) {
+        let n = self.genom.len();
+        if n < 4 {
+            return;
+        }
+
+        loop {
+            let mut best_gain: i64 = 0;
+            let mut best_i: usize = 0;
+            let mut best_j: usize = 0;
+
+            for i in 0..n {
+                let a_idx = self.genom[i] as usize;
+                let b_idx = self.genom[(i + 1) % n] as usize;
+
+                let a = &ind_data.coords[a_idx];
+                let b = &ind_data.coords[b_idx];
+
+                for j in (i + 2)..n {
+                    // Must not be an edge adjacent to (i, i+1) via wrap-around
+                    if (j + 1) % n == i {
+                        continue;
+                    }
+
+                    let c_idx = self.genom[j] as usize;
+                    let d_idx = self.genom[(j + 1) % n] as usize;
+
+                    let c = &ind_data.coords[c_idx];
+                    let d = &ind_data.coords[d_idx];
+
+                    // current = (a-b) + (c-d)
+                    let current = Coord::distance_euclid(a, b) + Coord::distance_euclid(c, d);
+                    // new = (a-c) + (b-d)
+                    let new = Coord::distance_euclid(a, c) + Coord::distance_euclid(b, d);
+
+                    if new < current {
+                        let gain = current - new;
+                        if gain > best_gain {
+                            best_gain = gain;
+                            best_i = i;
+                            best_j = j;
+                        }
+                    }
+                }
+            }
+
+            if best_gain > 0 {
+                // 2-opt = reverse segment (best_i+1 ..= best_j)
+                self.reverse_part(best_i + 1, best_j);
+            } else {
+                break;
+            }
+        }
+    }
+
+    /// Individual initialization: random permutation + local 2-opt
+    fn new_random_2opt(ind_data: &SalesmanIndividualData, rng: &mut SmallRng) -> Self {
+        // Random permutation as in new_random_noise
+        let mut genom: Vec<u16> = (0_u16..ind_data.coords.len() as u16).collect();
+        genom.shuffle(rng);
+
+        let mut ind = SalesmanIndividual {
+            genom,
+            fitness: 0.0,
+        };
+
+        // Local improvement using 2-opt
+        ind.two_opt_improve(ind_data);
+
+        ind
+    }
 }
 
 impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
@@ -318,6 +391,24 @@ impl EvoIndividual<SalesmanIndividualData> for SalesmanIndividual {
             SalesmanInitType::Noise => Self::new_random_noise(ind_data, rng),
             SalesmanInitType::Insertion => Self::new_random_insertion(ind_data, rng),
             SalesmanInitType::GreedyJoining => Self::new_random_greedy_joining(ind_data, rng),
+            SalesmanInitType::TwoOpt => Self::new_random_2opt(ind_data, rng),
+            SalesmanInitType::Auto => {
+                let r: f32 = rng.gen();
+
+                if r < 0.01 {
+                    // 1 % – more expensive but higher-quality start: random + 2-opt
+                    Self::new_random_2opt(ind_data, rng)
+                } else if r < 0.34 {
+                    // ~33 % – nearest-neighbour / naive initialization
+                    Self::new_random_naive(ind_data, rng)
+                } else if r < 0.67 {
+                    // ~33 % – insertion heuristic
+                    Self::new_random_insertion(ind_data, rng)
+                } else {
+                    // ~33 % – greedy joining (path merging heuristic)
+                    Self::new_random_greedy_joining(ind_data, rng)
+                }
+            }
         }
     }
 
